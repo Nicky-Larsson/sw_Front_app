@@ -1,8 +1,7 @@
 <template>
     <div>
-        <h1>Led Pannel</h1>
-        <br>
-        <p>Here you can find all the led pannels that we have in our gallery.</p>
+        <img src="/led.jpg" alt="logo fusée" class="h-24 p-1  object-contain ">
+
     </div>
 </template>
 

@@ -1,15 +1,23 @@
 <template>
   <div>
-    <headline-swip/>
 
-    <p class="text-lg">
-      Welcome to the home page of our website. Here you can find all the information you need about our website.
-    </p>
+    <div class="container mx-auto pt-5  ">
+      <div class="bg-green-700  container relative w-full h-122 overflow-hidden">
+         <headline-swip/> 
+      </div>
+      
+     <div class="bg-red-700 h-150  container ">  
+      <p class="text-lg">
+        Welcome to the home page of our website. Here you can find all the information you need about our website.
+      </p>
+     </div>
 
-    <br>
-    <p class="text-lg">
-      You can find all the ad banners that we have in our gallery by clicking on the "Ad Banner" link in the navigation bar.
-    </p>
+      <br>
+    </div>
+    
+
+
+
 
   </div>
 </template>
@@ -24,4 +32,11 @@ onMounted(() => {
     initFlowbite();
   })
 })
+
+
+
 </script>
+
+<style>
+
+</style>
