@@ -6,41 +6,6 @@
 
 
 
-      <!-- Partie accueil   pt-8 pb-8 max-h-2  -->
-          
-<!--       <div id="accueil" class="mt-32 px-4 text-center sm:mt-28">
-        <h1
-          class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl"
-        >
-          <span class="block xl:inline">FAITES DÉCOLER VOTRE</span>
-          <span class="block text-blue-600 xl:inline">BUSINESS EN LIGNE</span>
-        </h1>
-
-        <p
-          class="mt-3 max-w-sm mx-auto text-gray-700 sm:text-lg md:mt-5 md:text-xl md:max-w-2xl lg:max-w-3xl"
-        >
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Vel odio,
-          odit asperiores corrupti adipisci nihil sequi?
-        </p>
-
-        <div class="mt-5 max-w-md mx-auto flex justify-center md:mt-8">
-          <a
-            href="#"
-            class="rounded-md shadow flex items-center justify-center w-32 md:w-40 mr-3 px-8 py-3 text-sm sm:text-base font-medium text-white bg-blue-600 md:py-4 md:text-ld md:px-10"
-          >
-            Commencer
-          </a>
-
-          <a
-            href="#"
-            class="rounded-md shadow flex items-center justify-center w-32 md:w-40 mr-3 px-8 py-3 ring-1 ring-gray-200 text-sm sm:text-base font-medium text-black-500 bg-white hover:bg-gray-50 md:py-4 md:text-ld md:px-10"
-          >
-            Démo
-          </a>
-        </div>
-      </div> -->
-
-
 <!-- 
     <nuxt-link to="/"> Home </nuxt-link>
 
@@ -68,10 +33,13 @@
  
  -->
     <slot/>
-    <bottomNav3/>
+
+    <bottomNav2 @orderLeftMenu="triggerLeftMenu" @orderRightMenu="triggerRightMenu"/>
     
-    <LeftMenu/>
-    <RightMenu/>
+    <LeftMenu :leftStarted="leftStarted" 
+              @update:leftStarted="triggerLeftMenu" />
+    <RightMenu :rightStarted="rightStarted" 
+              @update:rightStarted="triggerRightMenu" />
     <br>
     <br>
     <br>
@@ -82,14 +50,29 @@
 
 <script setup>
 import { ref } from 'vue'
-import { onMounted } from 'vue'
+
+const leftStarted = ref(false)
+const rightStarted = ref(false)
+
+const triggerLeftMenu = () => {
+  leftStarted.value = !leftStarted.value;
+  console.log(leftStarted.value);
+}
+
+const triggerRightMenu = () => {
+  rightStarted.value = !rightStarted.value;
+  console.log(rightStarted.value);
+}
+
+
+/* import { onMounted } from 'vue'
 import { useFlowbite } from '~/composables/useFlowbite';
 
 onMounted(() => {
   useFlowbite(() => {
     initFlowbite();
   })
-})
+}) */
 
 //    <!-- <nuxt-link to="/users/[oeuvre]/tomes/2/liens"> liens </nuxt-link>
 //    <nuxt-link to="/promo/[oeuvre]/tomes/1"> promo </nuxt-link> -->

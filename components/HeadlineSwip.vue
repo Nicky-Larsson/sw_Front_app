@@ -23,7 +23,7 @@ const images = [ '/dragon_quest_1.jpg',
 const config = {
   height: '480',
   itemsToShow: 'auto',
-  gap: 20,
+  gap: 150,
   autoplay: 6000,
   breakpointMode: 'viewport',
   dir:'rtl',
