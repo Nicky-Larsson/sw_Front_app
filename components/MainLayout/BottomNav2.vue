@@ -12,7 +12,7 @@
             </button>
 
 
-            <button type="button" class="inline-flex flex-col items-center justify-center  border-gray-200 border-x hover:bg-gray-50 dark:hover:bg-gray-800 group dark:border-gray-600">
+            <button @click="clickCloseMenu" type="button" class="inline-flex flex-col items-center justify-center  border-gray-200 border-x hover:bg-gray-50 dark:hover:bg-gray-800 group dark:border-gray-600">
             <nuxt-link to="/" class="mx-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
                 class="w-8 h-8 mb-0 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-500 mx-auto">
@@ -24,7 +24,7 @@
             </button>
 
 
-            <button type="button" class="inline-flex flex-col items-center justify-center  border-gray-200 border-x hover:bg-gray-50 dark:hover:bg-gray-800 group dark:border-gray-600">
+            <button @click="clickCloseMenu" type="button" class="inline-flex flex-col items-center justify-center  border-gray-200 border-x hover:bg-gray-50 dark:hover:bg-gray-800 group dark:border-gray-600">
             <nuxt-link to="/Fanossoura" class="mx-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
                             class="w-8 h-8 mb-0 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-500 mx-auto">
@@ -34,7 +34,7 @@
             </nuxt-link>
             </button>
 
-            <button type="button" class="inline-flex flex-col items-center justify-center  border-gray-200 border-x hover:bg-gray-50 dark:hover:bg-gray-800 group dark:border-gray-600">
+            <button @click="clickCloseMenu" type="button" class="inline-flex flex-col items-center justify-center  border-gray-200 border-x hover:bg-gray-50 dark:hover:bg-gray-800 group dark:border-gray-600">
             <nuxt-link to="/ArtGallery" class="mx-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" 
                      class="w-8 h-8 mb-0 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-500 mx-auto">
@@ -67,10 +67,14 @@
 import { ref } from 'vue'
 import { defineEmits } from 'vue'
 
-const emit = defineEmits(['orderLeftMenu','orderRightMenu'])
+const emit = defineEmits(['orderLeftMenu','orderRightMenu','orderCloseMenu'])
 
 const clickLeftMenu = () => {
   emit('orderLeftMenu')
+}
+
+const clickCloseMenu = () => {
+  emit('orderCloseMenu')
 }
 
 const clickRightMenu = () => {

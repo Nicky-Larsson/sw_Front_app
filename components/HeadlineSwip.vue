@@ -24,7 +24,7 @@ const config = {
   height: '480',
   itemsToShow: 'auto',
   gap: 150,
-  autoplay: 6000,
+  autoplay: 7000,
   breakpointMode: 'viewport',
   dir:'rtl',
   transition: 1400,

@@ -34,18 +34,18 @@
  -->
     <slot/>
 
-    <bottomNav2 @orderLeftMenu="triggerLeftMenu" @orderRightMenu="triggerRightMenu"/>
+    <bottomNav2 @orderLeftMenu="triggerLeftMenu" 
+                @orderRightMenu="triggerRightMenu"
+                @orderCloseMenu="triggerCloseMenu"/>
     
     <LeftMenu :leftStarted="leftStarted" 
-              @update:leftStarted="triggerLeftMenu" />
-    <RightMenu :rightStarted="rightStarted" 
-              @update:rightStarted="triggerRightMenu" />
-    <br>
-    <br>
-    <br>
+              @update:leftStarted="triggerLeftMenu"/>
+
+    <RightMenu :rightStarted="rightStarted"
+              @update:rightStarted="triggerRightMenu"/>
+    <br><br><br>
   </div>
 </template>
-
 
 
 <script setup>
@@ -56,12 +56,19 @@ const rightStarted = ref(false)
 
 const triggerLeftMenu = () => {
   leftStarted.value = !leftStarted.value;
+  rightStarted.value = false
   console.log(leftStarted.value);
 }
 
 const triggerRightMenu = () => {
   rightStarted.value = !rightStarted.value;
+  leftStarted.value = false
   console.log(rightStarted.value);
+}
+
+const triggerCloseMenu = () => {
+  rightStarted.value = false;
+  leftStarted.value = false
 }
 
 

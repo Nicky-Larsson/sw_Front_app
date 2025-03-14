@@ -18,6 +18,9 @@ export default defineNuxtConfig({
     plugins: [
       tailwindcss()
     ],
+    optimizeDeps: {
+      exclude: ["nuxt-tailwind-kit"],
+    },
   },
   modules: [
     'vue3-carousel-nuxt'

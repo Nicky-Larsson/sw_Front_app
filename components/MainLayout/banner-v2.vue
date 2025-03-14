@@ -58,7 +58,7 @@
       </nav>
  
       <!-- Navigation mobile -->
-      <nav class="absolute top-2 w-12/12 left-1/2 transform -translate-x-1/2 shadow-md ring-1 ring-black ring-opacity-5  md:hidden rounded-lg bg-white">
+      <nav class="absolute top-0 w-12/12 left-1/2 transform -translate-x-1/2 shadow-md ring-1 ring-black ring-opacity-5  md:hidden rounded-lg bg-white">
       
           <div class="bg-black  p-1 h-22 flex items-center justify-between">
 
