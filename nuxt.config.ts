@@ -19,12 +19,11 @@ export default defineNuxtConfig({
       tailwindcss()
     ],
     optimizeDeps: {
-      exclude: ["nuxt-tailwind-kit"],
+      exclude: ["fsevents"],
     },
   },
   modules: [
-    'vue3-carousel-nuxt'
-  ],
+    'vue3-carousel-nuxt'],
   imports:{
     dirs:[
       'composables',
