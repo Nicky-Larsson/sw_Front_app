@@ -11,11 +11,8 @@
                   <img src="/simowarch_logo.jpeg" alt="Logo Description" class="w-30 h-30 mr-4">
                   <nuxt-link  @click="toggleMenu" to="/authentication/signin" class="text-blue-500 hover:text-blue-700"></nuxt-link>
                 </li>
-                
-                <!-- Langue -->
-                <li class="text-2xl py-4">Langue</li>
 
-                <li class="relative">
+                <!-- <li class="relative">
                     <button class="flex items-center gap-2 p-2"  @click="toggleVisibility">
                       <img src="/flags/ma_flag.jpg" alt="Darija" class="w-6 h-5" />
                       <span> Darija</span>
@@ -36,13 +33,18 @@
                         </li>
                       </ul>
                     </div>
-                </li>
+                </li> -->
 
-                <li class="text-2xl py-4">
-                  <button id="toggleButton" @click="toggleList">{{ selectedItem }}</button>
-                  <ul id="myList" class="hidden" @click="selectItem">
-                    <li>
-                      <img src="/flags/ma_flag.jpg" alt="Darija" class="w-6 h-5" />
+                  <!-- <button id="toggleButton" @click="toggleList">{{ selectedItem }}</button> -->
+                <!-- <li class="text-2xl py-4">
+
+                  <button class="flex items-center gap-2 p-0"  @click="toggleList">
+                    <img src="/flags/ma_flag.jpg" alt="Darija" class="w-6 h-5" />
+                    <span> {{ selectedItem }}</span>
+                  </button>
+                  <ul ref="list" id="myList" :class="{'hidden': isHidden}" @click="selectItem">
+                    <li class="hover:bg-gray-100 cursor-pointer px-4 py-2">
+                      <img src="/flags/ma_flag.jpg" alt="Darija" class="w-6 h-5 inline-block" />
                       <span> Darija</span>                      
                     </li>
                     <li class="hover:bg-gray-100 cursor-pointer px-4 py-2">
@@ -59,15 +61,75 @@
                     </li>
                   </ul>
                   <li id="selectedItem"></li>
+                </li> -->
+
+
+                <li class="text-2xl py-4">
+                  <!-- <button id="toggleButton" @click="toggleList">{{ selectedItem }}</button> -->
+                  <div class="flex justify-normal  ">
+                  <Icon name="ri:earth-line"  size="150%" />
+                  <button class="flex items-center gap-2 pl-3"  @click="toggleList">
+                    <img :src="selectedItem.image" alt="Darija" class="w-6 h-5 " />
+                    <span> {{ selectedItem.text }}</span>
+                  </button>
+                  </div>
+                  <ul ref="list" id="myList" :class="{'hidden': isHidden}" @click="selectItem">
+                    <!-- <li class="hover:bg-gray-100 cursor-pointer px-4 py-2">
+                      <img src="/flags/ma_flag.jpg" alt="Darija" class="w-6 h-5 inline-block" />
+                      <span> Darija</span>                      
+                    </li> -->
+                    <li v-for="item in filteredItems" :key="item.id" @click="handleClick(item)"
+                                               class="hover:bg-gray-100 cursor-pointer px-4 py-2">
+                      <img :src="item.image" :alt="item.alt" class="w-6 h-5 inline-block">
+                      <span class="pl-2"> {{ item.text }}</span>
+                    </li>
+                  </ul>
                 </li>
 
+                <li class="text-2xl py-4 inline-block">
+                  <button class="flex items-center gap-2 p-0"  @click="toggleList">
+                    <div class="flex justify-center items-center">
+                    <Icon name="flowbite:book-open-outline"  size="150%" />
+                    </div>
+                    <span> bibliotheque</span>
+                  </button>               
+                </li>
 
+                <li class="text-2xl py-4 inline-block">
+                  <button class="flex items-center gap-2 p-0"  @click="toggleList">
+                    <div class="flex justify-center items-center pt-1">
+                      <Icon name="guidance:gallery"  size="140%" />
+                    </div>
+                    <span> Gallery Expo</span>
+                  </button>               
+                </li>
 
-                <li class="text-2xl py-4">Bibliotheque</li>
-                <li class="text-2xl py-4">Gallery Expo</li>
-                <li class="text-2xl py-4">Installer App</li>
-                <li class="text-2xl py-4">About Us</li>
-                <li class="text-2xl py-4">Mentions Legales</li>
+                <li class="text-2xl py-4 inline-block">
+                  <button class="flex items-center gap-2 p-0"  @click="toggleList">
+                    <div class="flex justify-center items-center pt-1">
+                      <Icon name="material-symbols-light:install-mobile-outline"  size="150%" />
+                    </div>
+                    <span> Installer App</span>
+                  </button>               
+                </li>
+
+                <li class="text-2xl py-4 inline-block">
+                  <button class="flex items-center gap-2 p-0"  @click="toggleList">
+                    <div class="flex justify-center items-center pt-1">
+                      <Icon name="guidance:gallery"  size="150%" />
+                    </div>
+                    <span> About Us</span>
+                  </button>               
+                </li>
+
+                <li class="text-2xl py-4 inline-block">
+                  <button class="flex items-center gap-2 p-0"  @click="toggleList">
+                    <div class="flex justify-center items-center pt-1">
+                      <Icon name="guidance:gallery"  size="150%" />
+                    </div>
+                    <span> Mentions Legales</span>
+                  </button>               
+                </li>
             </ul>
           </div>
         </div>
@@ -76,21 +138,52 @@
 </template>
 
 <script setup>
-import { ref, defineProps } from 'vue'
-///////////////
+import { ref, defineProps, onMounted  } from 'vue'
 
-const selectedItem = ref('French')
+///////////////
+const list = ref(null);
+
+const isHidden = ref(true);
+
+const items = ref([
+  { id: 2, image: '/flags/ar_flag.jpg', alt: 'Arabic', text: 'Arabic' },
+  { id: 1, image: '/flags/ma_flag.jpg', alt: 'Morrocan', text: 'Darija' },
+  { id: 4, image: '/flags/en_flag.jpg', alt: 'English', text: 'English'},
+  { id: 3, image: '/flags/fr_flag.jpg', alt: 'French', text: 'French' },
+])
+
+
+const selectedItem = ref({ image:items.value[3].image, text:items.value[3].text});
+
+const filteredItems = computed(() => {
+  return items.value.filter(item => item.text !== selectedItem.value.text);
+});
+
+
+const hideSelected = () => {
+  console.log(items.value)
+  console.log(selectedItem.value)
+}
+
+function handleClick(item) {
+  // console.log('Clicked item:', item);
+  selectedItem.value.image = item.image;
+  selectedItem.value.text = item.text;
+  hideSelected()
+  // isHidden.value = !isHidden.value;
+}
 
 const toggleList = () => {
-  const list = document.getElementById('myList')
-  list.classList.toggle('hidden')
+  // hideSelected()
+  // console.log(list);
+  //const list = document.getElementById('myList')
+  //list.classList.toggle('hidden')
+  isHidden.value = !isHidden.value;
 }
 
 const selectItem = (event) => {
-  selectedItem.value = event.target.textContent
-  const list = document.getElementById('myList')
-
-  list.classList.toggle('hidden')
+  // selectedItem.value = event.target.textContent
+  isHidden.value = !isHidden.value;
 }
 
 

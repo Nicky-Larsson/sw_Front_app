@@ -5,7 +5,7 @@
     >
       <nav class="hidden flex  mx-auto relative md:flex items-center justify-center">
         <div class=" md:left-0 md:inline md:absolute">
-          <a href="#accueil">
+          <a href="/">
             <img
               class="pl-4 pt-8 pb-2 w-auto h-26"
               src="/simowarch_logo.jpeg"
@@ -17,7 +17,7 @@
         <ul class="text-white md:flex md:space-x-25 md:pt-6 ">
           <li>
             <a
-              href="#accueil"
+              href="/"
               class=" font-medium text-lg text-black-500 hover:text-gray-900"
               >Accueil</a
             >
@@ -25,7 +25,7 @@
 
           <li>
             <a
-              href="#services"
+              href="/s"
               class="font-medium text-lg text-black-500 hover:text-gray-900"
               >Services</a
             >
@@ -33,7 +33,7 @@
 
           <li>
             <a
-              href="#tarifs"
+              href="/"
               class="font-medium text-lg text-black-500 hover:text-gray-900"
               >Nos tarifs</a
             >
@@ -41,7 +41,7 @@
 
           <li>
             <a
-              href="#contact"
+              href="/"
               class="font-medium text-lg text-black-500 hover:text-gray-900"
               >Contact</a
             >
@@ -62,7 +62,7 @@
       
           <div class="bg-black  p-1 h-22 flex items-center justify-between">
 
-              <a href="#accueil">
+              <a href="/">
                 <img src="/simowarch_logo.jpeg" alt="logo fusée" class="h-22 w-auto  object-contain">
               </a>
 

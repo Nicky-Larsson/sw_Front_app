@@ -4,6 +4,10 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
 
+  build: {
+    // transpile: ['@vue-hero-icons/outline'],
+  },
+
   components:[
     {
       path:'~/components',
@@ -22,8 +26,7 @@ export default defineNuxtConfig({
       exclude: ["fsevents"],
     },
   },
-  modules: [
-    'vue3-carousel-nuxt'],
+  modules: ['vue3-carousel-nuxt', '@nuxt/icon'],
   imports:{
     dirs:[
       'composables',
