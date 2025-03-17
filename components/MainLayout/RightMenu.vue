@@ -2,41 +2,39 @@
     <div>
       <transition name="slide-right">
 
-        <div v-if="rightStarted" class="fixed z-40  top-0 right-0 h-full w-64 bg-gray-800  flex flex-col justify-center items-center transition-transform duration-300 ease-in-out">
-          <div @click="toggleMenu" class="fixed inset-0 bg-red-300 opacity-50"></div>
-          <div @click.stop class="bg-gray-700 text-white pl-6 pt-4 w-65 h-[98%] rounded shadow-lg relative">
+        <div v-if="rightStarted" class="fixed z-30  top-0 right-0  w-60
+                                        bg-orange-500  justify-center  transition-transform duration-300 ease-in-out">
+          <div @click="toggleMenu" class="fixed inset-0 bg-gray-700 opacity-40"></div>
+          <div @click.stop class="bg-gray-800 text-gray-300 pl-3 pt-4 w-65 h-190 rounded shadow-lg relative">
             <!-- <button @click="toggleMenu" class="absolute top-0 right-0 mt-4 mr-4">X</button> -->
             <ul>
-
-
-                
-                <li class="text-4xl py-4 flex items-center ">
-                  <nuxt-link class="flex items-center p-2  w-50 bg-blue-500 text-white rounded"
+                <li class="text-4xl pr-4 py-3 w-full flex justify-center items-center ">
+                  <nuxt-link class="flex items-center p-2 w-50 bg-blue-500 hover:bg-blue-400 text-white rounded "
                           to="/authentication/signin" tag="button"  @click="toggleMenu">
                       <Icon name="material-symbols:person" class="scale-100 pl-10"  />
                       <span class="pl-5 pb-2"> Login</span> 
                   </nuxt-link>
-                </li>              
-  
-                <li class="text-xl py-6 inline-block"  @click="toggleMenu" >
-                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
-                    <div class="flex justify-center items-center">
-                    <Icon name="ix:history-list"  size="150%" />
-                    </div>
-                    <span class="pl-2"> Historiques Achats </span>
-                  </nuxt-link>               
-                </li> 
+                </li>
 
-                <li class="text-xl py-6 inline-block"  @click="toggleMenu" >
-                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
+                <li class="text-xl pl-4 py-4 inline-block w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
+                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/checkout/shoppingCart">
                     <div class="flex justify-center items-center">
-                    <Icon name="ri:shopping-basket-2-line"  size="170%" />
+                    <Icon name="mdi:cart-variant"  size="170%" />
                     </div>
                     <span class="pl-2"> Mon Panier </span>
                   </nuxt-link>               
+                </li> <!-- ri:shopping-basket-2-line -->
+
+                <li class="text-xl pl-4 py-4 inline-block w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
+                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/user/buyingList">
+                    <div class="flex justify-center items-center">
+                    <Icon name="ix:history-list"  size="150%" />
+                    </div>
+                    <span class="pl-2"> Achats </span>
+                  </nuxt-link>               
                 </li> 
 
-                <li class="text-xl py-6 inline-block"  @click="toggleMenu" >
+                <li class="text-xl pl-4 py-4 inline-block w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
                   <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
                     <div class="flex justify-center items-center">
                     <Icon name="material-symbols:featured-seasonal-and-gifts"  size="150%" />
@@ -45,7 +43,7 @@
                   </nuxt-link>               
                 </li>
 
-                <li class="text-xl py-6"  @click="toggleMenu" >
+                <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
                   <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
                     <div class="flex justify-center items-center">
                     <Icon name="ri:poker-hearts-line"  size="150%" />
@@ -54,7 +52,7 @@
                   </nuxt-link>               
                 </li>
 
-                <li class="text-xl py-6 inline-block"  @click="toggleMenu" >
+                <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
                   <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
                     <div class="flex justify-center items-center">
                     <Icon name="material-symbols:manage-accounts"  size="150%" />
@@ -63,7 +61,7 @@
                   </nuxt-link>               
                 </li>
 
-                <li class="text-xl py-6 inline-block"  @click="toggleMenu" >
+                <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
                   <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
                     <div class="flex justify-center items-center">
                     <Icon name="solar:help-linear"  size="150%" />
@@ -72,7 +70,24 @@
                   </nuxt-link>               
                 </li>
 
-                <li class="text-xl py-6 inline-block"  @click="toggleMenu" >
+
+                <li class="text-xl pl-3 py-4 border-b-1 border-t-1 border-black-500 pt-1 hover:bg-gray-800"  @click="toggleMenu">
+                  <!-- <button id="toggleButton" @click="toggleList">{{ selectedItem }}</button> -->
+                  <div class="w-full hover:text-blue-500 ">
+                    <div class="flex items-center justify-left pt-1 w-full  hover:text-blue-500" @click="toggleList">
+                      <Icon name="pepicons-print:paint-pallet"  size="200%"/> 
+                      <span class="text pl-2"> Discover Fresco :</span>
+                    </div>
+                    <nuxt-link class="flex justify-start gap-5 pl-11 pt-2"  tag="button"  to="/">
+                        <Icon name="bxl:instagram"  size="130%" class="text-orange-500"/>
+                        <Icon name="simple-icons:tiktok"  size="120%" />
+                        <Icon name="entypo-social:facebook"  size="120%" class="text-blue-500" />
+                    </nuxt-link>                    
+                  </div>
+                </li>
+
+
+                <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
                   <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
                     <div class="flex justify-center items-center">
                     <Icon name="codicon:sign-out"  size="150%" />

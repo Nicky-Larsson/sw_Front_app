@@ -1,6 +1,6 @@
 <template>
 <!-- sm : 640px, md à 768px, lg à 1024px, xl à 1280px, et 2xl à 1536px. -->
-  <Carousel v-bind="config" class="bg-blue-700" :components="{ Slide, Navigation }">
+  <Carousel v-bind="config" class="bg-blue-900" :components="{ Slide, Navigation }">
     <Slide v-for="image in images" :key="image.id" >
       <img :src="image" alt="image"/>
     </Slide>

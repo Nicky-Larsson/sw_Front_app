@@ -1,7 +1,7 @@
 <template>
     
     <section
-      class="bg-blue-700 h-20 "
+      class="bg-blue-800 h-20 "
     >
       <nav class="hidden flex  mx-auto relative md:flex items-center justify-center">
         <div class=" md:left-0 md:inline md:absolute">
@@ -18,38 +18,41 @@
           <li>
             <a
               href="/"
-              class=" font-medium text-lg text-black-500 hover:text-gray-900"
+              class=" font-medium text-lg text-black-500 hover:text-orange-300"
               >Accueil</a
             >
           </li>
 
           <li>
             <a
-              href="/s"
-              class="font-medium text-lg text-black-500 hover:text-gray-900"
-              >Services</a
+              href="/Fanossoura"
+              class="font-medium text-lg text-black-500 hover:text-orange-300"
+              >Bibliotheque</a
             >
           </li>
 
           <li>
             <a
               href="/"
-              class="font-medium text-lg text-black-500 hover:text-gray-900"
+              class="font-medium text-lg text-black-500 hover:text-orange-300"
               >Nos tarifs</a
             >
           </li>
 
           <li>
-            <a
-              href="/"
-              class="font-medium text-lg text-black-500 hover:text-gray-900"
-              >Contact</a
-            >
+            <div class="flex items-center bg-gray-700  text-white shadow-md rounded-md  
+                         hover:bg-blue-900  hover:text-yellow-400">
+              <nuxt-link tag="button" to="/" class="font-medium text-lg text-black-500 hover:text-orange-300">
+                  Contact
+              </nuxt-link>
+            </div>
           </li>
         </ul>
+
+
         
         <nuxt-link class="flex items-center gap-2 p-0 text-white mr-6 mt-6  shadow-md px-6 py-2
-                  rounded-md  hover:bg-blue-900 md:block md:absolute md:right-0"  
+                  rounded-md  hover:bg-blue-900 md:block md:absolute md:right-0 hover:text-yellow-400"  
                     tag="button"  to="/checkout/shoppingCart">
           <div class="flex justify-center items-center pb-2">
             <Icon name="ri:shopping-basket-2-line"  size="300%" />
@@ -60,53 +63,27 @@
       </nav>
  
       <!-- Navigation mobile -->
-      <nav class="absolute top-0 w-12/12 left-1/2 transform -translate-x-1/2 shadow-md ring-1 ring-black ring-opacity-5  md:hidden rounded-lg bg-white">
+      <nav class="absolute top-0 w-12/12 left-1/2 transform -translate-x-1/2 shadow-md ring-1 ring-black ring-opacity-5  lg:hidden rounded-lg bg-red-600">
       
           <div class="bg-black  p-1 h-22 flex items-center justify-between">
 
               <a href="/">
-                <img src="/simowarch_logo.jpeg" alt="logo fusée" class="h-22 w-auto  object-contain">
+                 <img src="/simowarch_logo.jpeg" alt="logo fusée" class="h-22 w-auto  object-contain">
               </a>
 
               <led-pannel/>
 
               <div class="mr-0 object-contain pt-2" >
-                <nuxt-link class="icone-toggle bg-gray-900 rounded-md p-1 h-15 sm:h-17  inline-flex items-center justify-center 
-                               text-white  " tag="button"  to="/checkout/shoppingCart">
-                    <Icon name="clarity:shopping-cart-line"  size="380%" />
-                </nuxt-link>
+                  <nuxt-link class="bg-gray-900 rounded-md p-0 h-15 sm:h-18  inline-flex items-center justify-center 
+                                text-white  " tag="button"  to="/checkout/shoppingCart">
+                      <Icon name="mdi:cart-variant"  size="380%" />
+                  </nuxt-link>
               </div>
              <!--  iconoir:cart-alt    solar:cart-5-linear  mage:basket -->
 
           </div>
 
-          <ul class="toggle-menu hidden p-20">
 
-            <li>
-              <a href="#accueil" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
-                Accueil
-              </a>
-            </li>
-
-            <li>
-              <a href="#services" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
-                Services
-              </a>
-            </li>
-
-            <li>
-              <a href="#tarifs" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
-                Nos tarifs
-              </a>
-            </li>
-
-            <li>
-              <a href="#contact" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50">
-                Contact
-              </a>
-            </li>
-
-          </ul>
       
       </nav>
 
@@ -118,13 +95,6 @@
 import { ref, onMounted } from 'vue';
 
 const menuResponsive = ref(null);
-const iconeToggle = ref(null);
 
-onMounted(() => {
-  menuResponsive.value = document.querySelector('.toggle-menu');
-  iconeToggle.value = document.querySelector('.icone-toggle');
-  iconeToggle.value.addEventListener('click', () => {
-    menuResponsive.value.classList.toggle('hidden');
-  });
-});
+
 </script>

@@ -1,7 +1,7 @@
 <template>
   <div>
 
-    <div class="container mx-auto pt-5  ">
+    <div class="container mx-auto pt-3  ">
       <div class="bg-green-700  container relative w-full h-122 overflow-hidden">
          <headline-swip/> 
       </div>

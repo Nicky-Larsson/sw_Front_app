@@ -48,7 +48,6 @@
                 <label for="remember-me" class="ml-2 block text-sm text-gray-900">Remember me</label>
                 </div>
 
-                <a href="#" class="text-sm font-medium text-green-600 hover:text-green-500">Need help to sign up ?</a>
             </div>
 
             <button class="w-full py-3 px-4 mt-4 rounded-md shadow-sm text-sm font-medium text-white bg-green-800">Sign up</button>

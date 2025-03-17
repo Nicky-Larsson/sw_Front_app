@@ -10,10 +10,9 @@
         <label for="password">Password:</label>
         <input type="password" id="password" name="password">
         <br>
-        <label for="confirmPassword">Confirm Password:</label>
-        <input type="password" id="confirmPassword" name="confirmPassword">
+        <nuxt-link to="/authentication/signup" class="text-blue-400 " > create new account </nuxt-link>
         <br>
-        <button type="submit">Sign Ip</button>
+        <button type="submit" class="fill-green-500">Sign Ip</button>
         </form>
     </div>
 </template>
