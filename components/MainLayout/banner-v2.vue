@@ -48,13 +48,15 @@
           </li>
         </ul>
         
-        <button
-          href="#"
-          class=" mr-6 mt-6  shadow-md px-8 py-2 border font-medium rounded-md 
-                 text-indigo-600 bg-white hover:bg-gray-50 md:block md:absolute md:right-0"
-        >
-          Log in
-        </button>
+        <nuxt-link class="flex items-center gap-2 p-0 text-white mr-6 mt-6  shadow-md px-6 py-2
+                  rounded-md  hover:bg-blue-900 md:block md:absolute md:right-0"  
+                    tag="button"  to="/checkout/shoppingCart">
+          <div class="flex justify-center items-center pb-2">
+            <Icon name="ri:shopping-basket-2-line"  size="300%" />
+            <span class="pl-5 pt-3 text-2xl">  Panier </span>
+          </div>
+        </nuxt-link> 
+
       </nav>
  
       <!-- Navigation mobile -->
@@ -68,11 +70,13 @@
 
               <led-pannel/>
 
-              <div class="mr-2 object-contain">
-                <button class="icone-toggle bg-orange-900 rounded-md p-2 w-auto pb-3 h-16 sm:h-17  inline-flex items-center justify-center ring-1 ring-black ring-opacity-20 ">
-                  <img src="/menu.svg" alt="icône de menu" class="h-15 w-15 object-contain">
-                </button>
+              <div class="mr-0 object-contain pt-2" >
+                <nuxt-link class="icone-toggle bg-gray-900 rounded-md p-1 h-15 sm:h-17  inline-flex items-center justify-center 
+                               text-white  " tag="button"  to="/checkout/shoppingCart">
+                    <Icon name="clarity:shopping-cart-line"  size="380%" />
+                </nuxt-link>
               </div>
+             <!--  iconoir:cart-alt    solar:cart-5-linear  mage:basket -->
 
           </div>
 
