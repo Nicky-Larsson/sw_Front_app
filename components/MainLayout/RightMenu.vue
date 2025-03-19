@@ -78,10 +78,10 @@
                       <Icon name="pepicons-print:paint-pallet"  size="200%"/> 
                       <span class="text pl-2"> Discover Fresco :</span>
                     </div>
-                    <nuxt-link class="flex justify-start gap-5 pl-11 pt-2"  tag="button"  to="/">
-                        <Icon name="bxl:instagram"  size="130%" class="text-orange-500"/>
+                    <nuxt-link class="flex justify-start gap-5 pl-11 pt-2 hover:text-blue-500"  tag="button"  to="/">
+                        <Icon name="bxl:instagram"  size="130%"/>
                         <Icon name="simple-icons:tiktok"  size="120%" />
-                        <Icon name="entypo-social:facebook"  size="120%" class="text-blue-500" />
+                        <Icon name="entypo-social:facebook"  size="120%" />
                     </nuxt-link>                    
                   </div>
                 </li>
