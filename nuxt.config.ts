@@ -26,7 +26,11 @@ export default defineNuxtConfig({
       exclude: ["fsevents"],
     },
   },
-  modules: ['vue3-carousel-nuxt', '@nuxt/icon'],
+  modules: [
+    'vue3-carousel-nuxt',
+    '@nuxt/icon',
+    '@nuxt/image'
+  ],
   imports:{
     dirs:[
       'composables',

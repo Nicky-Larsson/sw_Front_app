@@ -1,6 +1,6 @@
 <template>
 
-  <div>
+  <div class="bg-orange-950">
     
     <banner-v2/>
 
@@ -33,6 +33,7 @@
  
  -->
     <slot/>
+
 
     <bottomNav2 @orderLeftMenu="triggerLeftMenu" 
                 @orderRightMenu="triggerRightMenu"

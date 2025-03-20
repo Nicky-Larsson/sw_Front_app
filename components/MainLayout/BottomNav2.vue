@@ -1,5 +1,5 @@
 <template>
-    <div class="fixed bottom-0 right-0 z-50 w-full h-17 bg-black border-t text-gray-400  border-gray-200  dark:border-gray-600">
+    <div class="fixed bottom-0 right-0 z-50 w-full h-18 bg-black border-t text-gray-400  border-gray-200  dark:border-gray-600">
         <div class="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
 
             <button @click="clickLeftMenu" type="button" class="inline-flex flex-col items-center justify-center  border-gray-200 border-x hover:bg-gray-50 dark:hover:bg-gray-800 group dark:border-gray-600">

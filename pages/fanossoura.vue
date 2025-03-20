@@ -1,8 +1,8 @@
 <template>
-    <div>
-        <h1>Fanossoura</h1>
-        <br>
-        <p>Here you can find all the fanossoura that we have in our gallery.</p>
+    <div class="container mx-auto pt-2 md:w-[35%]">
+      <nuxt-link to="">
+        <NuxtImg src="/library.jpg" alt="image" class="w-350 h-140  object-fill" />
+      </nuxt-link>
     </div>
 </template>
 
@@ -12,10 +12,5 @@ import { ref } from 'vue'
 </script>
 
 <style scoped>
-    h1 {
-        text-align: center;
-    }
-    p {
-        text-align: center;
-    }
+
 </style>

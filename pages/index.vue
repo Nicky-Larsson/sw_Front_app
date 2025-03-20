@@ -1,19 +1,24 @@
 <template>
 
-  <div class="container mx-auto pt-3">
+  <div class="container mx-auto pt-3 md:w-[60%] ">
     <section class="bg-green-700  container relative w-full h-110 overflow-hidden">
         <HeadlineSwip/>
     </section>
     
-    <section class="bg-red-700 h-138  container ">
+    <div class="bg-red-700 h-full  ">
       <ScrollAnimation :imageName="'sunset_CL'"/>
-    </section>
-
-    <section class="bg-red-700 h-135  container ">
       <ScrollAnimation :imageName="'land_illusion'"/>
-    </section>
+      <ScrollAnimation :imageName="'book_promo'"/>
+      <BooksSwipe :bookName="'Sunset_Land_Tomes'" />
+      <ScrollAnimation :imageName="'SN_T2_Promo'"/>
+      <BookPromo :bookPromoName="'bookDesc'"/>
+      <ScrollAnimation :imageName="'expo_Promo'"/>
+      <div class="pb-[20%]"></div>
+      <ScrollAnimation :imageName="'Tbourida_arrrival'"/>
+      <footerMain/>
 
-    <br>
+    </div>
+
   </div>
 
 

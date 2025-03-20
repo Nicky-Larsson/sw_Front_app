@@ -1,8 +1,8 @@
 <template>
-    <div>
-        <h1>Art Gallery</h1>
-        <br>
-        <p>Here you can find all the art pieces that we have in our gallery.</p>
+    <div class="container mx-auto pt-0 md:w-[35%]">
+      <nuxt-link to="">
+        <NuxtImg src="/art_expo.jpg" alt="image" class="w-full" />
+      </nuxt-link>
     </div>
 </template>
 
@@ -11,12 +11,6 @@ import { ref } from 'vue'
 
 </script>
 
-
 <style scoped>
-    h1 {
-        text-align: center;
-    }
-    p {
-        text-align: center;
-    }
+
 </style>

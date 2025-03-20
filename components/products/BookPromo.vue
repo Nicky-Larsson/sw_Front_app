@@ -1,28 +1,31 @@
 <template>
-
-    <div class="pt-1 pb-1">
+    
+    <div class="container mx-auto pt-2 pb-2">
       <!-- <img :src="bookList[props.bookName]" alt="image" class="w-full h-50 object-contain"/> -->
     <NuxtImg
-        :src="bookList[props.bookName]"
-        class="w-900 h-45  md:h-80 object-cover "
+        :src="bookList[props.bookPromoName]"
+        class="w-full object-cover "
         alt="image"
         fit="contain"/>
     </div>
+
 </template>
 
 <script setup>
-
-import { ref, defineProps } from 'vue'
+ import { ref, defineProps } from 'vue'
 
 const props = defineProps({
-  bookName: String
+  bookPromoName: String
 })
 
 
 const bookList = {
-    Sunset_Land_Tomes: '/Sunset_Land_Tomes.jpg'
+    bookDesc: '/book_Desc.jpg'
 }
 
 
-
 </script>
+
+<style scoped>
+
+</style>
