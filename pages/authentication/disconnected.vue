@@ -2,7 +2,7 @@
 <template>
 
     
-    <div class="flex bg-gray-50 ">
+ <div class="text-amber-50 pt-10 text-2xl">
         
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +10,7 @@
         <div class="flex-1 flex flex-col justify-center py-1 px-4 sm:px-6 lg:px-20 lg:flex-none xl:px-24">
 
             <div class="mx-auto" >
-                <h2 class="mt-6 text-2xl font-extrabold text-gray-900 md:text-3xl">Take a breath, sign up</h2>
+                <h2 class="mt-6 text-2xl font-extrabold text-gray-300 md:text-3xl">Thank you ! </h2>
 
                 <nuxt-link to="/authentication/signin" class="mt-2 text-sm font-medium text-green-600 hover:text-gren-500">Already have an account ? Sign in </nuxt-link>
 
@@ -19,7 +19,7 @@
             
         
         <div class="mt-2">
-        <p class="px-2 mb-2 mt-4 text-center text-gray-500">you are Disconected</p>
+        <p class="px-2 mb-2 mt-4 text-center text-gray-100">you are Disconected</p>
         </div>
 
 

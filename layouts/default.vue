@@ -11,7 +11,7 @@
 
     
     <nuxt-link to="/ArtGallery"> Art Gallery </nuxt-link>
-    <nuxt-link to="/Fanossoura"> Your Library </nuxt-link>
+    <nuxt-link to="/Fanoorassm/3d-library"> Your Library </nuxt-link>
 
 
     
@@ -58,13 +58,11 @@ const rightStarted = ref(false)
 const triggerLeftMenu = () => {
   leftStarted.value = !leftStarted.value;
   rightStarted.value = false
-  console.log(leftStarted.value);
 }
 
 const triggerRightMenu = () => {
   rightStarted.value = !rightStarted.value;
   leftStarted.value = false
-  console.log(rightStarted.value);
 }
 
 const triggerCloseMenu = () => {
@@ -89,128 +87,5 @@ onMounted(() => {
 
 
 <style scoped>
-  a {
-    margin-right: 10px;
-  }
-  a:hover {
-    text-decoration: underline;
-  }
-  .active {
-    color: red;
-  }
-  .active:hover {
-    color: red;
-  }
-  .active:visited {
-    color: red;
-  }
-  .active:active {
-    color: red;
-  }
-  .active:focus {
-    color: red;
-  }
-  .active:link {
-    color: red;
-  }
-  .active:after {
-    color: red;
-  }
-  .active:before {
-    color: red;
-  }
-  .active:lang {
-    color: red;
-  }
-  .active:visited {
-    color: red;
-  }
-  .active:visited:hover {
-    color: red;
-  }
-  .active:visited:active {
-    color: red;
-  }
-  .active:visited:focus {
-    color: red;
-  }
-  .active:visited:link {
-    color: red;
-  }
-  .active:visited:after {
-    color: red;
-  }
-  .active:visited:before {
-    color: red;
-  }
-  .active:visited:lang {
-    color: red;
-  }
-  .active:visited {
-    color: red;
-  }
-  .active:visited:hover {
-    color: red;
-  }
-  .active:visited:active {
-    color: red;
-  }
-  .active:visited:focus {
-    color: red;
-  }
-  .active:visited:link {
-    color: red;
-  }
-  .active:visited:after {
-    color: red;
-  }
-  .active:visited:before {
-    color: red;
-  }
-  .active:visited:lang {
-    color: red;
-  }
-  .active:visited {
-    color: red;
-  }
-  .active:visited:hover {
-    color: red;
-  }
-  .active:visited:active {
-    color: red;
-  }
-  .active:visited:focus {
-    color: red;
-  }
-  .active:visited:link {
-    color: red;
-  }
-  .active:visited:after {
-    color: red;
-  }
-  .active:visited:before {
-    color: red;
-  }
-  .active:visited:lang {
-    color: red;
-  }
-  .active:visited {
-    color: red;
-  }
- .active:visited:hover {
-    color: red;
-  }
-  .active:visited:active {
-    color: red;
-  }
-  .active:visited:focus {
-    color: red;
-  }
-  .active:visited:link {
-    color: red;
-  } 
-  .active:hover {
-    color: red;
-  }
-
+ 
 </style>

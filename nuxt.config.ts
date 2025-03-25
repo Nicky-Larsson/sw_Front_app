@@ -29,7 +29,7 @@ export default defineNuxtConfig({
   modules: [
     'vue3-carousel-nuxt',
     '@nuxt/icon',
-    '@nuxt/image'
+    '@nuxt/image',
   ],
   imports:{
     dirs:[

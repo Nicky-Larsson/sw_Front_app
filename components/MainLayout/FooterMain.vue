@@ -8,7 +8,6 @@
 
 
 <script setup>
-import { ref, defineProps } from 'vue'
-console.log('Footer');
+import { ref} from 'vue'
 
 </script>

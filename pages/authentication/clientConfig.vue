@@ -1,5 +1,5 @@
 <template>
-    <div>
+ <div class="text-amber-50 pt-10 text-2xl">
         <h1>Client Account Page</h1>
         <br>
         <div>

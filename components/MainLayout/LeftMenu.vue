@@ -54,7 +54,7 @@
 
 
                 <li class="text-xl py-4 inline-block w-full  hover:bg-gray-700 hover:text-blue-500  pl-2" @click="toggleMenu">
-                  <nuxt-link class="flex items-center gap-2 p-0" tag="button" to="/Fanossoura"  >
+                  <nuxt-link class="flex items-center gap-2 p-0" tag="button" to="/Fanoorassm/3d-library"  >
                     <div class="flex justify-center items-center">
                     <Icon name="flowbite:book-open-outline"  size="155%" />
                     </div>

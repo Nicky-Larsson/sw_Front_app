@@ -25,7 +25,7 @@
 
           <li>
             <a
-              href="/Fanossoura"
+              href="/Fanoorassm/3d-library"
               class="font-medium text-lg text-black-500 hover:text-orange-300"
               >Bibliotheque</a
             >

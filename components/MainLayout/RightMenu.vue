@@ -35,7 +35,7 @@
                 </li> 
 
                 <li class="text-xl pl-4 py-4 inline-block w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
-                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
+                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/user/gift">
                     <div class="flex justify-center items-center">
                     <Icon name="material-symbols:featured-seasonal-and-gifts"  size="150%" />
                     </div>
@@ -44,7 +44,7 @@
                 </li>
 
                 <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
-                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
+                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/user/favorites">
                     <div class="flex justify-center items-center">
                     <Icon name="ri:poker-hearts-line"  size="150%" />
                     </div>
@@ -53,7 +53,7 @@
                 </li>
 
                 <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
-                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
+                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/user/accountSettings">
                     <div class="flex justify-center items-center">
                     <Icon name="material-symbols:manage-accounts"  size="150%" />
                     </div>
@@ -62,7 +62,7 @@
                 </li>
 
                 <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
-                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
+                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/user/help">
                     <div class="flex justify-center items-center">
                     <Icon name="solar:help-linear"  size="150%" />
                     </div>
@@ -71,14 +71,14 @@
                 </li>
 
 
-                <li class="text-xl pl-3 py-4 border-b-1 border-t-1 border-black-500 pt-1 hover:bg-gray-800"  @click="toggleMenu">
+                <li class="text-xl pl-3 py-4 border-b-1 border-t-1 border-black-500 pt-1 hover:bg-gray-800 "  @click="toggleMenu">
                   <!-- <button id="toggleButton" @click="toggleList">{{ selectedItem }}</button> -->
                   <div class="w-full hover:text-blue-500 ">
-                    <div class="flex items-center justify-left pt-1 w-full  hover:text-blue-500" @click="toggleList">
+                    <div class="flex items-center justify-left pt-1 w-full   hover:text-blue-500" @click="toggleList">
                       <Icon name="pepicons-print:paint-pallet"  size="200%"/> 
                       <span class="text pl-2"> Discover Fresco :</span>
                     </div>
-                    <nuxt-link class="flex justify-start gap-5 pl-11 pt-2 hover:text-blue-500"  tag="button"  to="/">
+                    <nuxt-link class="flex justify-start gap-5 pl-11 pt-2 hover:text-blue-500"  tag="button"  to="/socialNetwork">
                         <Icon name="bxl:instagram"  size="130%"/>
                         <Icon name="simple-icons:tiktok"  size="120%" />
                         <Icon name="entypo-social:facebook"  size="120%" />
@@ -88,7 +88,7 @@
 
 
                 <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
-                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/">
+                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/authentication/disconnected">
                     <div class="flex justify-center items-center">
                     <Icon name="codicon:sign-out"  size="150%" />
                     </div>
@@ -110,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps } from 'vue'
+import { ref} from 'vue'
 
 const props = defineProps({
   rightStarted: Boolean

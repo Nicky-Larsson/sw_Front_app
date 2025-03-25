@@ -1,5 +1,5 @@
 <template>
-    <div>
+ <div class="text-amber-50 pt-10 text-2xl">
         <h1>Mail Confirm Page</h1>
         <br>
         <form>

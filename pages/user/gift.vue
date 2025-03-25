@@ -1,5 +1,5 @@
 <template>
-        <div class="text-4xl">
+    <div class="text-amber-50 pt-10 text-2xl">
         <br>
         <h2>Gift</h2>
         <h2>Figurine 1 </h2>

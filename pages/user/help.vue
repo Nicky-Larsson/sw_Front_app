@@ -1,5 +1,5 @@
 <template>
-        <div class="text-4xl">
+    <div class="text-amber-50 pt-10 text-2xl">
         <br>
         <h2>Help and Support </h2>
         <h2>frequents question </h2>

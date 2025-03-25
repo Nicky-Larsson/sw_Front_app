@@ -1,10 +1,9 @@
 <template>
-    <div class="text-4xl">
+    <div class="text-4xl text-amber-50">
         <br>
         <h2>Social Network</h2>
-        <h2>Tome 1</h2>
-        <h2>Tome 2</h2>
-        <h2>Tome 3</h2>
+        <h2>Rjoing US see Fresco </h2>
+        <br>
 
             <div class="mt-1 flex justify-center">
 

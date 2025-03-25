@@ -1,5 +1,6 @@
 <template>
-    <div>
+ <div class="text-amber-50 pt-10 text-4xl">
+
         <h1>Payment Method Page</h1>
         <br>
         <form>
