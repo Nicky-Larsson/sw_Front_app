@@ -4,7 +4,7 @@
 
         <h1 class="text-8xl "> {{graphicNovelStore[0].name}}</h1>
         <div  class="mt-4 max-w-[1200px] mx-auto px-2">
-            <div v-if="products" class="grid xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-2 grid-cols-1 gap-23">
+            <div v-if="graphicNovelStore[0]" class="grid xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-2 grid-cols-1 gap-23">
                 <div v-for="volume in graphicNovelStore[0].volumes" :key="volume">
                     <productList :volume="volume"  />
                 </div>
@@ -58,21 +58,6 @@ const librarySet_1 = reactive({
                                     illustration_name: "Entrer to Fes Jdid",
                                     magazine_num: 1
                                 })
-
-const products = ref([
-    { id:1,  title: "title 1",  description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:2,  title: "title 2",  description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:3,  title: "title 3",  description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:4,  title: "title 4",  description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:5,  title: "title 5",  description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:6,  title: "title 6",  description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:7,  title: "title 7",  description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:8,  title: "title 8",  description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:9,  title: "title 9",  description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:10, title: "title 10", description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:11, title: "title 11", description: "this is a description", url:"https://picsum.photos/200/300", price: 99988},
-    { id:12, title: "title 12", description: "this is a description", url:"https://picsum.photos/200/300", price: 99988}
-])
 
 
 const graphicNovelStore = ref(

@@ -1,26 +1,36 @@
 <template>
     
     <section
-      class="bg-blue-800 h-20 "
+      class="bg-blue-800 h-15 "
     >
       <nav class="hidden flex  mx-auto relative md:flex items-center justify-center">
         <div class=" md:left-0 md:inline md:absolute">
           <a href="/">
             <img
-              class="pl-4 pt-8 pb-2 w-auto h-26"
+              class="pl-4 pt-7 pb-2 w-auto h-24"
               src="/simowarch_logo.jpeg"
               alt=""
             />
           </a>
         </div>
 
-        <ul class="text-white md:flex md:space-x-25 md:pt-6 ">
+        <ul class="text-white md:flex md:space-x-25 md:pt-3 ">
           <li>
-            <a
-              href="/"
-              class=" font-medium text-lg text-black-500 hover:text-orange-300"
-              >Accueil</a
-            >
+            <div class="flex items-center   text-white shadow-md rounded-md  
+                           hover:text-yellow-400">
+              <nuxt-link tag="button" to="/" class="font-medium text-lg text-black-500 hover:text-orange-300">
+                  Menu
+              </nuxt-link>
+            </div>
+          </li>
+
+          <li>
+            <div class="flex items-center   text-white shadow-md rounded-md  
+                           hover:text-yellow-400">
+              <nuxt-link tag="button" to="/" class="font-medium text-lg text-black-500 hover:text-orange-300">
+                  Accueil
+              </nuxt-link>
+            </div>
           </li>
 
           <li>
@@ -35,15 +45,15 @@
             <a
               href="/"
               class="font-medium text-lg text-black-500 hover:text-orange-300"
-              >Nos tarifs</a
+              >Gallery 3D</a
             >
           </li>
 
           <li>
-            <div class="flex items-center bg-gray-700  text-white shadow-md rounded-md  
-                         hover:bg-blue-900  hover:text-yellow-400">
+            <div class="flex items-center   text-white shadow-md rounded-md  
+                           hover:text-yellow-400">
               <nuxt-link tag="button" to="/" class="font-medium text-lg text-black-500 hover:text-orange-300">
-                  Contact
+                  Compte
               </nuxt-link>
             </div>
           </li>
@@ -51,10 +61,10 @@
 
 
         
-        <nuxt-link class="flex items-center gap-2 p-0 text-white mr-6 mt-6  shadow-md px-6 py-2
+        <nuxt-link class="flex items-center gap-2 p-0 text-white mr-6 mt-6  shadow-md px-4 py-2
                   rounded-md  hover:bg-blue-900 md:block md:absolute md:right-0 hover:text-yellow-400"  
                     tag="button"  to="/checkout/shoppingCart">
-          <div class="flex justify-center items-center pb-2">
+          <div class="flex justify-center items-center pb-3">
             <Icon name="ri:shopping-basket-2-line"  size="300%" />
             <span class="pl-5 pt-3 text-2xl">  Panier </span>
           </div>

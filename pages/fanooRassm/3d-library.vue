@@ -5,7 +5,7 @@
       </nuxt-link>
       <div class="flex flex-col text-amber-50 text-center text-4xl block"> 
 
-        <NuxtLink :to="`/Fanoorassm/${librarySet_1.grapicNovel}`">
+        <NuxtLink :to="`/Fanoorassm`">
             {{librarySet_1.grapicNovel}}
         </NuxtLink>
       </div>
