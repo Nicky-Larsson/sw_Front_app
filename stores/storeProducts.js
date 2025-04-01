@@ -25,9 +25,13 @@ export const useStoreProducts = defineStore('storeProducts', {
       productsLoaded: false
     }
   },
+  persist: {
+    storage: piniaPluginPersistedstate.localStorage(),
+  }, 
   actions: {
 
     async getProducts() {
+      if (this.products.length > 0) return;
       const querySnapshot = await getDocs(collection(db, 'volumes'))
       querySnapshot.forEach((doc) => {
         // console.log(doc.id, ' => ', doc.data())
@@ -43,17 +47,22 @@ export const useStoreProducts = defineStore('storeProducts', {
           thumbnail: doc.data().thumbnail
         }
         this.products.push(product)
-        // console.log('product: ', product)
+        
       })
-    }
-    
-    /*init() {
-      const storeAuth = useStoreAuth()
+      // console.log('product: Called in StoreProduct  <--------')
+    },
 
+    init() {
+      this.getProducts()
+      console.log('init: Called in StoreProduct  <--------')
+
+      /* const storeAuth = useStoreAuth()
       notesCollectionRef = collection(db, 'users', storeAuth.user.id, 'notes')
       notesCollectionQuery = query(notesCollectionRef, orderBy('date', 'desc'))
-      this.getNotes()
-    }, 
+      this.getNotes() */
+    },
+
+    /* 
     async getNotes() {
       this.notesLoaded = false
 

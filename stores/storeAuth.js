@@ -9,6 +9,9 @@ export const useStoreAuth = defineStore('storeAuth', {
       user: {}
     }
   },
+  persist: {
+    storage: piniaPluginPersistedstate.localStorage()  
+  },
   actions: {
     init() {
       
@@ -50,6 +53,7 @@ export const useStoreAuth = defineStore('storeAuth', {
     logoutUser() {
       signOut(auth).then(() => {
         console.log('User signed out')
+        this.user = {}
       }).catch((error) => {
         console.log(error.message)
       })

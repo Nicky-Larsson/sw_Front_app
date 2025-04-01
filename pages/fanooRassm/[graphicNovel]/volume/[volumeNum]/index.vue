@@ -69,17 +69,14 @@
 <script setup>
 
 import { useRoute } from 'vue-router'
-import { useUserStore } from '~/stores/user';
-import { useSessionStore } from '~/stores/session';
+import { useSessionStore } from '@/stores/storeSession';
 
 
 const route = useRoute()
 const infos = route.params
 const volumeParams = route.query
-const router = useRouter()
-const userStore = useUserStore()
 const sessionStore = useSessionStore()
-
+const router = useRouter()
 
 
 
@@ -90,7 +87,7 @@ const goBack = () => {
 }
 
 // console.log(volumeParams);
-// console.log(userStore.cart);
+// console.log(sessionStore.cart);
 
 let product = ref(null)
 let currentImage = ref(null)
@@ -108,13 +105,13 @@ watchEffect(() => {
     if (volumeParams) {
         currentImage.value = volumeParams.cover
         // images.value[0] = product.value.data.url
-        userStore.isLoading = false
+        sessionStore.isLoading = false
     }
 }) 
 
 const isInCart = computed(() => {
  let res = false
-    userStore.cart.forEach(prod => {
+    sessionStore.cart.forEach(prod => {
         // console.log(prod);
         // console.log(volumeParams);
         if (volumeParams.id == prod.id) {
@@ -133,9 +130,9 @@ const priceComputed = computed(() => {
 })
 
 const addToCart = () => {
-    userStore.cart.push(volumeParams)
     sessionStore.cart.push(volumeParams)
-    console.log(userStore.cart);
+    // sessionStore.cart.push(volumeParams)
+    console.log(sessionStore.cart);
 }
 
 

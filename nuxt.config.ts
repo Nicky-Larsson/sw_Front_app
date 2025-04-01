@@ -31,13 +31,16 @@ export default defineNuxtConfig({
     '@nuxt/icon',
     '@nuxt/image',
     '@pinia/nuxt',
-    'pinia-plugin-persistedstate',
+    'pinia-plugin-persistedstate/nuxt',
   ],
-supabase: {
-  url: process.env.SUPABASE_URL,
-  key: process.env.SUPABASE_KEY,
-  redirect: false
-},
+  /* piniaPluginPersistedstate: {
+    storage: 'localStorage', // 'sessionStorage', 'cookies'
+  }, */
+  /* supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_KEY,
+    redirect: false
+  }, */
   imports:{
     dirs:[
       'composables',

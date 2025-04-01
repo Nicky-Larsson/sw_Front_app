@@ -1,6 +1,8 @@
 <template>
+    <client-only>
+
         <div id="ShoppingCartPage" class="mt-4 max-w-[1200px] mx-auto px-2">
-            <div v-if="!userStore.cart.length" class="h-[500px] flex items-center justify-center">
+            <div v-if="!sessionStore.cart.length" class="h-[500px] flex items-center justify-center">
                 <div class="pt-20">
                     <img 
                         class="mx-auto"
@@ -35,13 +37,13 @@
                     <div class="bg-white rounded-lg p-4">
 
                         <div class="text-2xl font-bold mb-2">
-                            Shopping Cart ({{ userStore.cart.length }})
+                            Shopping Cart ({{ sessionStore.cart.length }})
                         </div>
 
                     </div>
 
                     <div id="Items" class="bg-white rounded-lg p-4 mt-4">
-                        <div v-for="product in userStore.cart">
+                        <div v-for="product in sessionStore.cart" :key="product.id">
                             <CartItem 
                                 :product="product" 
                                 :selectedArray="selectedArray"
@@ -85,7 +87,7 @@
 
                         <div class="text-lg font-semibold mb-2">Payment methods</div>
                         <div class="flex items-center justify-start gap-8 my-4">
-                            <div v-for="card in cards">
+                            <div v-for="(card, index) in cards" :key="index">
                                 <img class="h-6" :src="card">
                             </div>
                         </div>
@@ -101,27 +103,28 @@
                 </div>
             </div>
         </div>
+    </client-only>
 
 </template>
 
 <script setup>
-import { useUserStore } from '~/stores/user';
-import { useSessionStore } from '~/stores/session';
-const userStore = useUserStore()
-const sessionStore = useSessionStore()
+
+
+import { useSessionStore } from '@/stores/storeSession';
+
+const sessionStore = useSessionStore();
 
 
 // const user = useSupabaseUser()
-console.log(userStore.cart);
 console.log(sessionStore.cart);
 
-let selectedArray = ref([])
+let selectedArray = ref([]);
 
 
 
 onMounted(() => {
-    setTimeout(() => userStore.isLoading = false, 200)
-})
+    // setTimeout(() => sessionStore.isLoading = false, 200)
+});
 
 const cards = ref([
     '/payment/visa.png',
@@ -132,7 +135,7 @@ const cards = ref([
 
 const totalPriceComputed = computed(() => {
     let price = 0
-    userStore.cart.forEach(prod => {
+    sessionStore.cart.forEach(prod => {
         price +=  parseInt(prod.price)
         console.log(price);
     })
@@ -157,16 +160,16 @@ const selectedRadioFunc = (e) => {
 
 const goToCheckout = () => {
     let ids = []
-    userStore.checkout = []
+    sessionStore.checkout = []
 
 
     selectedArray.value.forEach(item => ids.push(item.id))
 
-    let res = userStore.cart.filter((item) => {
+    let res = sessionStore.cart.filter((item) => {
         return ids.indexOf(item.id) != -1
     })
 
-    res.forEach(item => userStore.checkout.push(toRaw(item)))
+    res.forEach(item => sessionStore.checkout.push(toRaw(item)))
 
 
     return navigateTo('/checkout/checkout')

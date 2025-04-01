@@ -1,4 +1,5 @@
 <template>
+   <client-only>
     <div class="bg-amber-600 container mx-auto pt-2 md:w-[85%]">
       <div class="flex flex-col text-amber-50 p-0 text-4xl block">
 
@@ -45,6 +46,7 @@
 
       </div>
     </div>
+    </client-only>
 </template>
 
 <script setup>
@@ -52,16 +54,22 @@ import { ref } from 'vue'
 import { onMounted } from 'vue'
 import { useStoreProducts } from '@/stores/storeProducts'
 
+import { useSessionStore } from '@/stores/storeSession';
+
+const sessionStore = useSessionStore()
+console.log("sessionStore Cart   from menu<<<---"  , sessionStore.cart);
+
+// onBeforeMount(async () => {
 
 const storeProducts = useStoreProducts()
-
-
+storeProducts.getProducts()
 
 onMounted(() => {
- storeProducts.getProducts()
+    storeProducts.getProducts()
 })
 
-// console.log("storeProducts", storeProducts);
+
+console.log("storeProducts", storeProducts.products);
 
 const librarySet_1 = reactive({
                                     grapicNovel: "sunsetLand",
@@ -76,7 +84,7 @@ const librarySet_1 = reactive({
 
 
 
-const graphicNovelStore = ref(
+/* const graphicNovelStore = ref(
       [{ id:1,
         name: "Sunset Land",
         volumes: [
@@ -290,6 +298,7 @@ const graphicNovelStore = ref(
      }]
 );
 
+ */
 
 const magazineStore = ref(
     {
@@ -316,7 +325,7 @@ const magazineStore = ref(
 
 const illustrations = ref();
 
-
+ 
 </script>
 
 <style lang="scss" scoped>
