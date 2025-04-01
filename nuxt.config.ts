@@ -23,7 +23,7 @@ export default defineNuxtConfig({
       tailwindcss()
     ],
     optimizeDeps: {
-      exclude: ["fsevents"],
+      exclude: ["fsevents", 'node_modules'],
     },
   },
   modules: [
@@ -33,6 +33,11 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     'pinia-plugin-persistedstate',
   ],
+supabase: {
+  url: process.env.SUPABASE_URL,
+  key: process.env.SUPABASE_KEY,
+  redirect: false
+},
   imports:{
     dirs:[
       'composables',
@@ -40,3 +45,14 @@ export default defineNuxtConfig({
     ]
   }
 })
+
+
+
+/* 
+    '@nuxtjs/supabase',
+
+supabase: {
+  url: process.env.SUPABASE_URL,
+  key: process.env.SUPABASE_KEY,
+  redirect: false
+}, */

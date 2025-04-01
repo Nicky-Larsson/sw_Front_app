@@ -2,9 +2,9 @@
     <div class="text-4xl text-white  text-center p-0">
 
 
-        <div class="mt-4 max-w-[1000px] mx-auto px-2">
+        <div class="mt-4 max-w-[1000px] mx-auto px-0">
             <div class="md:flex gap-4 justify-between mx-auto w-full">
-                <div class="md:w-[40%]">
+                <div class="w-xl2 md:w-[40%]">
                     <img 
                         v-if="currentImage"
                         class="rounded-lg object-fit"
@@ -43,8 +43,8 @@
                         <div v-if="isInCart">Is Added</div>
                         <div v-else>Add to Cart</div>
                     </button>
-                    <div v-if="images[0] !== ''" class="flex items-center justify-center mt-0 p-5">
-                        <div v-for="(image, index) in images" :key="index">
+                    <div  class="flex items-center justify-center mt-0 p-5">
+                        <div v-for="(image, index) in volumeParams.preview" :key="index">
                             <img 
                                 @mouseover="currentImage = image"
                                 @click="currentImage = image"
@@ -55,7 +55,6 @@
                             >
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -82,6 +81,8 @@ const userStore = useUserStore()
 const sessionStore = useSessionStore()
 
 
+
+
 import { storeToRefs } from 'pinia';
 
 const goBack = () => {
@@ -96,7 +97,7 @@ let currentImage = ref(null)
 
 currentImage.value = volumeParams.cover
 
-
+volumeParams.preview.unshift(volumeParams.cover)
 
  onBeforeMount(async () => {
    // product.value = await useFetch(`/api/prisma/get-product-by-id/${route.params.id}`)
@@ -137,19 +138,5 @@ const addToCart = () => {
     console.log(userStore.cart);
 }
 
-
-
-const images = ref([
-    '',
-    'https://picsum.photos/id/212/800/800',
-    'https://picsum.photos/id/233/800/800',
-    'https://picsum.photos/id/165/800/800',
-    'https://picsum.photos/id/99/800/800',
-    'https://picsum.photos/id/144/800/800',
-])
-
-images.value[0] = volumeParams.cover;
-
-// console.log(userStore);
 
 </script>

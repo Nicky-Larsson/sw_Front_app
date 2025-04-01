@@ -8,11 +8,17 @@
           <div @click.stop class="bg-gray-800 text-gray-300 pl-3 pt-4 w-65 h-190 rounded shadow-lg relative">
             <!-- <button @click="toggleMenu" class="absolute top-0 right-0 mt-4 mr-4">X</button> -->
             <ul>
+
+                 
                 <li class="text-4xl pr-4 py-3 w-full flex justify-center items-center ">
                   <nuxt-link class="flex items-center p-2 w-50 bg-blue-500 hover:bg-blue-400 text-white rounded "
                           to="/authentication/signin" tag="button"  @click="toggleMenu">
                       <Icon name="material-symbols:person" class="scale-100 pl-10"  />
-                      <span class="pl-5 pb-2"> Login</span> 
+                      <span v-if="storeAuth.user.email" class="pl-5 pb-2 text-2xl "> {{ storeAuth.user.email }}  </span>
+                      <span v-else class="pl-5 pb-2"> Login </span>
+
+
+
                   </nuxt-link>
                 </li>
 
@@ -87,8 +93,9 @@
                 </li>
 
 
-                <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
-                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/authentication/disconnected">
+                <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="logout" >
+                  <nuxt-link class="flex items-center gap-2 p-0" v-if="storeAuth.user.email"  
+                              tag="button"  to="/authentication/disconnected">
                     <div class="flex justify-center items-center">
                     <Icon name="codicon:sign-out"  size="150%" />
                     </div>
@@ -112,6 +119,11 @@
 <script setup>
 import { ref} from 'vue'
 
+import { useStoreAuth } from '@/stores/storeAuth'
+
+const storeAuth = useStoreAuth()
+
+
 const props = defineProps({
   rightStarted: Boolean
 })
@@ -121,6 +133,19 @@ const emit = defineEmits(['update:rightStarted']);
 const toggleMenu = () => {
   emit('update:rightStarted', !props.rightStarted);
 }
+
+
+  const logout = () => {
+    storeAuth.logoutUser()
+    console.log("logout")
+    // storeAuth.user.email = null
+
+    // toggleMenu()
+    // showMobileNav.value = false
+  }
+
+
+
 </script>
 
 <style scoped>

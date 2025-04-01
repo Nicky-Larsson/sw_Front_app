@@ -19,60 +19,67 @@
             
             
 
-            <form class="mt-4">
+            <form class="mt-4" @submit.prevent="onSubmit">
 
-            <div class="space-y-5 mt-6">
+                  <div class="space-y-5 mt-6">
 
-                <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
-                <input type="email" id="email" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none  focus:border-green-700 sm:text-sm">
-                </div>
+                      <div>
+                      <label for="email"  class="block text-sm font-medium text-gray-700">Email address</label>
+                      <input type="email" placeholder="e.g. alexsmith@gmail.com" id="email" v-model="credentials.email" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none  focus:border-green-700 sm:text-sm">
+                      </div>
 
-                
-                <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                <input type="password" id="password" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none  focus:border-green-700 sm:text-sm">
-                </div>
+                      
+                      <div>
+                      <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                      <input  v-model="credentials.password" type="password" id="password" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none  focus:border-green-700 sm:text-sm">
+                      </div>
 
-                
-                <div>
-                <label for="repeatPsw" class="block text-sm font-medium text-gray-700">Repeat Password</label>
-                <input type="password" id="repeatPsw" required class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none  focus:border-green-700 sm:text-sm">
-                </div>
-            </div>
+                      
+                      <div>
+                      <label for="repeatPsw" class="block text-sm font-medium text-gray-700">Repeat Password</label>
+                      <input v-model="credentials.password" type="password" id="repeatPsw" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none  focus:border-green-700 sm:text-sm">
+                      </div>
+                  </div>
 
-            <div class="flex items-center justify-between mt-8">
+                  <div class="flex items-center justify-between mt-8">
 
-                <div class="flex items-center">
-                <input type="checkbox" id="remember-me" class="w-4 h-4 rounded">
-                <label for="remember-me" class="ml-2 block text-sm text-gray-900">Remember me</label>
-                </div>
+                      <div class="flex items-center">
+                      <input type="checkbox" id="remember-me" class="w-4 h-4 rounded">
+                      <label for="remember-me" class="ml-2 block text-sm text-gray-900">Remember me</label>
+                      </div>
 
-            </div>
+                  </div>
 
-            <button class="w-full py-3 px-4 mt-4 rounded-md shadow-sm text-sm font-medium text-white bg-green-800">Sign up</button>
+                  <div class="w-full py-3 px-4 mt-4 rounded-md shadow-sm text-sm font-medium text-white bg-green-800">
+                    <p class="text-center">
+                      <button class="button is-primary">
+                        Sign Up
+                      </button>
+                    </p>
+                  </div>
+
             </form>
 
-            <div class="mt-2">
+            <div class="mt-2 pb-40">
             <p class="px-2 mb-2 mt-4 text-center text-gray-500">Or sign up with</p>
             </div>
 
-            <div class="mt-1 flex justify-center">
+<!--             <div class="mt-1 flex justify-center">
 
-            <a href="#" class="mx-2 p-4 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50">
-                <span class="sr-only">Sign up with Instagram</span>
-                <img src="/ig.svg" alt="instagram logo" class="w-6">
-            </a>
-            <a href="#" class="mx-2 p-4 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50">
-                <span class="sr-only">Sign up with Pinterest</span>
-                <img src="/pinterest.svg" alt="pinterest logo" class="w-6">
-            </a>
-            <a href="#" class="mx-2 p-4 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50">
-                <span class="sr-only">Sign up with Instagram</span>
-                <img src="/tumblr.svg" alt="tumblr logo" class="w-6">
-            </a>
+                <a href="#" class="mx-2 p-4 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50">
+                    <span class="sr-only">Sign up with Instagram</span>
+                    <img src="/ig.svg" alt="instagram logo" class="w-6">
+                </a>
+                <a href="#" class="mx-2 p-4 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50">
+                    <span class="sr-only">Sign up with Pinterest</span>
+                    <img src="/pinterest.svg" alt="pinterest logo" class="w-6">
+                </a>
+                <a href="#" class="mx-2 p-4 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50">
+                    <span class="sr-only">Sign up with Instagram</span>
+                    <img src="/tumblr.svg" alt="tumblr logo" class="w-6">
+                </a>
 
-            </div>
+            </div> -->
 
         </div>
 
@@ -88,16 +95,66 @@
 
 
 <script  setup>
-import { ref } from 'vue'
 
-const email = ref('')
-const password = ref('')
+  import { ref, computed, reactive } from 'vue'
+  import { useStoreAuth } from '@/stores/storeAuth'
+
+/*
+  store
+*/
+
+const storeAuth = useStoreAuth()
+
+/*
+  register / login
+*/
+
+const register = ref('register')
+
+/*
+  form title
+*/
+
+
+
+/* const formTitle = computed(() => {
+    return register.value ? 'Register' : 'Login'
+  }) 
+ */
+/*
+  credentials
+*/
+
+const credentials = reactive({
+    email: '',
+    password: ''
+  })
+
+/*
+  submit
+*/
+
+  const onSubmit = () => {
+    console.log("submit -----------<<<<<<<<<<<<<<<<<<<<<<")
+    if (!credentials.email || !credentials.password) {
+      alert('Please enter an email and password gosh darnit!')
+    }
+    else {
+      if (register.value) {
+        console.log('register User')
+        storeAuth.registerUser(credentials)
+      }
+      else {
+        storeAuth.loginUser(credentials)
+      }
+    }
+  }  
 
 </script>
 
 
 <style scoped>
-    form {
+/*     form {
         display: flex;
         flex-direction: column;
         width: 50%;
@@ -123,5 +180,5 @@ const password = ref('')
 
     button:hover {
         background-color: #45a049;
-    }
+    } */
 </style>

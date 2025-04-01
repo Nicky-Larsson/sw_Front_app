@@ -1,6 +1,6 @@
 <template>
 
-  <div class="container mx-auto pt-3 md:w-[60%] ">
+  <div class="container mx-auto pt-15 md:w-[60%] ">
     <section class="bg-green-700  container relative w-full h-110 overflow-hidden">
         <HeadlineSwip/>
     </section>
