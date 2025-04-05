@@ -11,9 +11,9 @@
     >
 
         <NuxtLink :to="{
-        path: `/Fanoorassm/${volume.name}/volume/${volume.volume_num}`,
-        query: volume
-        }">   
+                        path: `/Fanoorassm/${volume.name}/volume/${volume.volume_num}`,
+                        query: volume
+                        }">   
 
          <img 
                 class="rounded-t h-60 w-50 object-cover"

@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/js/firebase'
+import { useStoreUser } from '@/stores/storeUser'
 //import { useStoreNotes } from '@/stores/storeNotes'
 
 export const useStoreAuth = defineStore('storeAuth', {
   state: () => {
     return { 
-      user: {}
+      authInfo: {}
     }
   },
   persist: {
@@ -14,17 +15,19 @@ export const useStoreAuth = defineStore('storeAuth', {
   },
   actions: {
     init() {
+      const storeUser = useStoreUser()
+     // const storeNotes = useStoreNotes()
       
-     const storeNotes = useStoreNotes()
-      
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          // this.user.id = user.uid
-          this.user.email = user.email
+      onAuthStateChanged(auth, (authInfo) => {
+        if (authInfo) {
+          this.authInfo.id = authInfo.uid
+          this.authInfo.email = authInfo.email
+          console.log(this.authInfo)
+          console.log(authInfo)
           //this.router.push('/')
-          //storeNotes.init()
+          storeUser.init()
         } else {
-          this.user = {}
+          this.authInfo = {}
           //this.router.replace('/auth')
 
           //  Clear cart   
@@ -35,28 +38,48 @@ export const useStoreAuth = defineStore('storeAuth', {
     },
     registerUser(credentials) {
       createUserWithEmailAndPassword(auth, credentials.email, credentials.password).then((userCredential) => {
-        const user = userCredential.user
-        console.log('user: ', user)
+        const authInfo = userCredential.user
+        console.log('authInfo : ', authInfo)
       }).catch((error) => {
         console.log('error.message: ', error.message)
       })
     },
     loginUser(credentials) {
       signInWithEmailAndPassword(auth, credentials.email, credentials.password).then((userCredential) => {
-        const user = userCredential.user
-        this.user.email = user.email
-        console.log('user: ', user)
+        const authInfo = userCredential.user
+        this.authInfo.email = authInfo.email
+        this.authInfo.id = authInfo.uid
+        console.log('authInfo: ', authInfo)
+        console.log(this.authInfo.id)
+        const storeUser = useStoreUser()
+        storeUser.init()
+        storeUser.getUserInfo()
       }).catch((error) => {
         console.log('error.message: ', error.message)
       })
     },
     logoutUser() {
-      signOut(auth).then(() => {
-        console.log('User signed out')
-        this.user = {}
+      /* signOut(auth).then(() => {
+        console.log('UserauthInfo signed out')
+        this.authInfo = {}
+      }).catch((error) => {
+        console.log(error.message)
+      }) */
+      
+      const storeUser = useStoreUser()
+      
+      storeUser.setUserInfo().then(() => {
+        return signOut(auth)
+      }).then(() => {
+        console.log('UserauthInfo signed out')
+        this.authInfo = {}
+
+        storeUser.clearSession()
+
       }).catch((error) => {
         console.log(error.message)
       })
+
     }
   }
 })

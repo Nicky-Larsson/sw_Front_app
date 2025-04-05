@@ -61,8 +61,8 @@
 </template>
 
 <script setup>
-import { useSessionStore } from '@/stores/storeSession';
-const sessionStore = reactive(useSessionStore())
+import { useStoreUser } from '@/stores/storeUser';
+const userStore = reactive(useStoreUser())
 
 const props = defineProps(['product', 'selectedArray'])
 const { product, selectedArray } = toRefs(props)
@@ -73,9 +73,9 @@ let isHover = ref(false)
 let isSelected = ref(false)
 
 const removeFromCart = () => {
-    sessionStore.cart.forEach((prod, index) => {
+    userStore.userSession.cart.forEach((prod, index) => {
         if (prod.id === product.value.id) {
-            sessionStore.cart.splice(index, 1);
+            userStore.userSession.cart.splice(index, 1);
         }
     })
 }

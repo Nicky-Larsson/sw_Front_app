@@ -31,7 +31,8 @@ export const useStoreProducts = defineStore('storeProducts', {
   actions: {
 
     async getProducts() {
-      if (this.products.length > 0) return;
+      // if (this.products.length > 0) return;
+      this.products=[]
       const querySnapshot = await getDocs(collection(db, 'volumes'))
       querySnapshot.forEach((doc) => {
         // console.log(doc.id, ' => ', doc.data())
@@ -55,9 +56,10 @@ export const useStoreProducts = defineStore('storeProducts', {
     init() {
       this.getProducts()
       console.log('init: Called in StoreProduct  <--------')
+      
 
       /* const storeAuth = useStoreAuth()
-      notesCollectionRef = collection(db, 'users', storeAuth.user.id, 'notes')
+      notesCollectionRef = collection(db, 'users', storeAuth.authInfo.id, 'notes')
       notesCollectionQuery = query(notesCollectionRef, orderBy('date', 'desc'))
       this.getNotes() */
     },

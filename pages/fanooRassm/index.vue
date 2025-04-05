@@ -54,15 +54,15 @@ import { ref } from 'vue'
 import { onMounted } from 'vue'
 import { useStoreProducts } from '@/stores/storeProducts'
 
-import { useSessionStore } from '@/stores/storeSession';
+import { useStoreUser } from '@/stores/storeUser';
 
-const sessionStore = useSessionStore()
-console.log("sessionStore Cart   from menu<<<---"  , sessionStore.cart);
+const userStore = useStoreUser()
+console.log("userStore Cart from < List Book >" , userStore.userSession.cart);
 
 // onBeforeMount(async () => {
 
 const storeProducts = useStoreProducts()
-storeProducts.getProducts()
+// storeProducts.getProducts()
 
 onMounted(() => {
     storeProducts.getProducts()

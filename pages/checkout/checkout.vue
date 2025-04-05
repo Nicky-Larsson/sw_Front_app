@@ -130,8 +130,8 @@
 
 
 <script setup>
-import { useUserStore } from '~/stores/user';
-const userStore = useUserStore()
+import { useStoreUser } from '~/stores/storeUser';
+const userStore = useStoreUser()
 // const user = useSupabaseUser()
 const route = useRoute()
 
@@ -235,7 +235,7 @@ onMounted(async () => {
         isProcessing.value = false
     } else {
         await createOrder(result.paymentIntent.id)
-        userStore.cart = []
+        userStore.userSession.cart = []
         userStore.checkout = []
         setTimeout(() => {
             return navigateTo('/purchaseSuccess')

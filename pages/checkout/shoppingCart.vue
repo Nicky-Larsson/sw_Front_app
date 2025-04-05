@@ -2,7 +2,7 @@
     <client-only>
 
         <div id="ShoppingCartPage" class="mt-4 max-w-[1200px] mx-auto px-2">
-            <div v-if="!sessionStore.cart.length" class="h-[500px] flex items-center justify-center">
+            <div v-if="!userStore.userSession.cart.length" class="h-[500px] flex items-center justify-center">
                 <div class="pt-20">
                     <img 
                         class="mx-auto"
@@ -37,13 +37,13 @@
                     <div class="bg-white rounded-lg p-4">
 
                         <div class="text-2xl font-bold mb-2">
-                            Shopping Cart ({{ sessionStore.cart.length }})
+                            Shopping Cart ({{ userStore.userSession.cart.length }})
                         </div>
 
                     </div>
 
                     <div id="Items" class="bg-white rounded-lg p-4 mt-4">
-                        <div v-for="product in sessionStore.cart" :key="product.id">
+                        <div v-for="product in userStore.userSession.cart" :key="product.id">
                             <CartItem 
                                 :product="product" 
                                 :selectedArray="selectedArray"
@@ -96,7 +96,7 @@
 
                         <div class="text-lg font-semibold mb-2 mt-2">Buyer Protection</div>
                         <p class="my-2">
-                            Get full refund if the item is not as described or if is not delivered
+                            Get full refund if  the item is not as described or if is not delivered
                         </p>
 
                     </div>
@@ -110,20 +110,21 @@
 <script setup>
 
 
-import { useSessionStore } from '@/stores/storeSession';
+import { useStoreUser } from '@/stores/storeUser';
 
-const sessionStore = useSessionStore();
+const userStore = useStoreUser();
 
 
 // const user = useSupabaseUser()
-console.log(sessionStore.cart);
+
+console.log(userStore.userSession);
 
 let selectedArray = ref([]);
 
-
+userStore.init()
 
 onMounted(() => {
-    // setTimeout(() => sessionStore.isLoading = false, 200)
+    // setTimeout(() => userStore.isLoading = false, 200)
 });
 
 const cards = ref([
@@ -135,9 +136,9 @@ const cards = ref([
 
 const totalPriceComputed = computed(() => {
     let price = 0
-    sessionStore.cart.forEach(prod => {
+    userStore.userSession.cart.forEach(prod => {
         price +=  parseInt(prod.price)
-        console.log(price);
+        // console.log(price);
     })
     return price / 100
 })
@@ -160,16 +161,16 @@ const selectedRadioFunc = (e) => {
 
 const goToCheckout = () => {
     let ids = []
-    sessionStore.checkout = []
+    userStore.checkout = []
 
 
     selectedArray.value.forEach(item => ids.push(item.id))
 
-    let res = sessionStore.cart.filter((item) => {
+    let res = userStore.userSession.cart.filter((item) => {
         return ids.indexOf(item.id) != -1
     })
 
-    res.forEach(item => sessionStore.checkout.push(toRaw(item)))
+    res.forEach(item => userStore.checkout.push(toRaw(item)))
 
 
     return navigateTo('/checkout/checkout')
