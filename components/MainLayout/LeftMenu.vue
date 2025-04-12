@@ -109,6 +109,10 @@
 
 <script setup>
 import { ref, defineProps, onMounted  } from 'vue'
+import { useStoreUser } from '@/stores/storeUser';
+
+const userStore = useStoreUser();
+
 
 /////////////// @click="toggleMenu"
 const list = ref(null);
@@ -116,18 +120,30 @@ const list = ref(null);
 const isHidden = ref(true);
 
 const items = ref([
-  { id: 2, image: '/flags/ar_flag.jpg', alt: 'Arabic', text: 'Arabic' },
-  { id: 1, image: '/flags/ma_flag.jpg', alt: 'Morrocan', text: 'Darija' },
-  { id: 4, image: '/flags/en_flag.jpg', alt: 'English', text: 'English'},
-  { id: 3, image: '/flags/fr_flag.jpg', alt: 'French', text: 'French' },
+  { id: 'ar', image: '/flags/ar_flag.jpg', alt: 'Arabic',   text: 'Arabic' },
+  { id: 'ma', image: '/flags/ma_flag.jpg', alt: 'Morrocan', text: 'Darija' },
+  { id: 'en', image: '/flags/en_flag.jpg', alt: 'English',  text: 'English'},
+  { id: 'fr', image: '/flags/fr_flag.jpg', alt: 'French',   text: 'French' },
 ])
 
 
-const selectedItem = ref({ image:items.value[3].image, text:items.value[3].text});
+const selectedItem = ref({ image:'', text:''});
 
 const filteredItems = computed(() => {
   return items.value.filter(item => item.text !== selectedItem.value.text);
 });
+
+
+const selectItemById = (id) => {
+  const item = items.value.find(item => item.id === id);
+  if (item) {
+    selectedItem.value.image = item.image;
+    selectedItem.value.text = item.text;
+    isHidden.value = true;
+  }
+};
+
+selectItemById(userStore.userSession.defaultLanguage)
 
 
 const hideSelected = () => {
@@ -135,11 +151,14 @@ const hideSelected = () => {
   console.log(selectedItem.value)
 }
 
-function handleClick(item) {
+const handleClick = (item) => {
   // console.log('Clicked item:', item);
+  console.log(userStore.userSession.defaultLanguage)
   selectedItem.value.image = item.image;
   selectedItem.value.text = item.text;
+  userStore.userSession.defaultLanguage = item.id
   hideSelected()
+  console.log(userStore.userSession.defaultLanguage)
   // isHidden.value = !isHidden.value;
 }
 

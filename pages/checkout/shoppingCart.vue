@@ -41,14 +41,15 @@
                         </div>
 
                     </div>
-
+                      
                     <div id="Items" class="bg-white rounded-lg p-4 mt-4">
                         <div v-for="product in userStore.userSession.cart" :key="product.id">
-                            <CartItem 
-                                :product="product" 
-                                :selectedArray="selectedArray"
-                                @selectedRadio="selectedRadioFunc"
-                            />
+                                <CartItem
+                                    v-if="product"
+                                    :product="product" 
+                                    :selectedArray="selectedArray"
+                                    @selectedRadio="selectedRadioFunc"
+                                />
                         </div>
                     </div>
                 </div>
@@ -117,7 +118,9 @@ const userStore = useStoreUser();
 
 // const user = useSupabaseUser()
 
-console.log(userStore.userSession);
+console.log(userStore.userSession)
+
+// userStore.clearCart()
 
 let selectedArray = ref([]);
 
@@ -175,4 +178,9 @@ const goToCheckout = () => {
 
     return navigateTo('/checkout/checkout')
 }
+
+const validCartItems = computed(() => {
+  return userStore.userSession.cart.filter(product => product && product.id);
+});
+
 </script>

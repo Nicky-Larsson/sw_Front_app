@@ -70,7 +70,6 @@ export const useStoreUser = defineStore('storeUser', {
       const storeAuth = useStoreAuth()
       const batch = writeBatch(db)
 
-
       const userDocRef = doc(db, 'user', storeAuth.authInfo.id)
       // await setDoc(userDocRef, data, { merge: true })
       batch.set(userDocRef, this.userSession, { merge: true });
@@ -98,6 +97,11 @@ export const useStoreUser = defineStore('storeUser', {
 
     clearSession() {
       this.userSession = initDefaultSession()
+    },
+
+
+    clearCart() {
+      this.userSession.cart = []
     },
 
 
@@ -136,8 +140,10 @@ function initDefaultSession() {
     last_login: '',
     last_order: '',
     unsubscribe_demands: [],
-    unsubscribe_status: 'inactive'
-  };
+    unsubscribe_status: 'inactive',
+    defaultLanguage: 'en',
+    choosedLanguage:  'fr'
+  }
 }
 
 function testUserSession() {

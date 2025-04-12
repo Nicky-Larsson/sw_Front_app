@@ -26,11 +26,11 @@
 
         <div class="overflow-hidden pl-2 w-full">
             <div class="flex items-center justify-between w-full">
-                <div class="flex items-center justify-between truncate">
+                <!-- <div class="flex items-center justify-between truncate">
                     <span class="sm:block hidden bg-[#FD374F] text-white text-[9px] font-semibold px-1.5 rounded-sm min-w-[80px]">Welcome Deal</span>
-                    <div class="truncate sm:pl-2">{{ product.name }}</div>
-                    <div class="truncate sm:pl-2">{{ product.title }}</div>
-                </div>
+                    <br>
+                </div> -->
+                   <div class="truncate sm:pl-5 font-bold text-2xl">{{ product.graphic_novel_name}}</div>
                 <button 
                     @click="removeFromCart()"
                     class="mx-3 sm:block hidden -mt-0.5 hover:text-red-500"
@@ -39,12 +39,18 @@
                 </button>
             </div>
 
-            <div class="text-xl font-semibold">
-                <span class="font-bold">{{ product.price / 100 }}  €</span>
-            </div>
+                   <span class="truncate sm:pl-5 text-2xl">{{ product.volume_name }}
 
+                   </span>
+                   <br>
+                    <span class="truncate sm:pl-5 text-xl ">{{ product.volume_title }}</span>
+            <br>
+            <br>
+            <br>
+            <div class="text-xl font-semibold">
+                <span class="font-bold pl-5">{{ product.price / 100 }}  €</span>
+            </div>
             <p class="text-[#009A66] text-xs font-semibold pt-1">
-                Free 11-day delivery over ￡8.28
             </p>
 
 

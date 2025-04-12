@@ -11,8 +11,8 @@
     >
 
         <NuxtLink :to="{
-                        path: `/Fanoorassm/${volume.name}/volume/${volume.volume_num}`,
-                        query: volume
+                        path: `/Fanoorassm/${volume.graphic_novel_uid}/volume/${volume.volume_uid}`
+                        // query: volume
                         }">   
 
          <img 
@@ -23,7 +23,7 @@
             <div id="ProductDetails">
             
                 <p class="px-1 pt-0.5 text-xl text- text-[#252525]">
-                    {{ volume.title.substring(0,60) }}
+                    {{ volume.volume_name.substring(0,60) }}
                 </p>
 
 

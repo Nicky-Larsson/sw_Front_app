@@ -6,6 +6,7 @@ export default defineNuxtConfig({
 
   build: {
     // transpile: ['@vue-hero-icons/outline'],
+    
   },
 
   components:[

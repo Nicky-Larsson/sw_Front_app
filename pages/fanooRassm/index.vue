@@ -2,16 +2,34 @@
    <client-only>
     <div class="bg-amber-600 container mx-auto pt-2 md:w-[85%]">
       <div class="flex flex-col text-amber-50 p-0 text-4xl block">
+         <!-- {{storeProducts.products[0].name}} -->
 
-        <h1 v-if="storeProducts.products.length > 0" class="text-8xl "> {{storeProducts.products[0].name}}</h1>
+         <h1 v-if="storeProducts.products.length > 0" class="text-8xl "> </h1>
         <div  class="mt-4 max-w-[1200px] mx-auto px-2">
-            <div v-if="storeProducts.products" class="grid xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-2 grid-cols-1 gap-23">
-                <div v-for="volume in storeProducts.products" :key="volume">
-                    <productList :volume="volume"  />
+            <div v-if="storeProducts.products.sunset_land" class="grid xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-2 grid-cols-1 gap-23">
+                <div v-for="volume in storeProducts.products.sunset_land" :key="volume">
+                    <productList :volume="volume.fr"/>
                 </div>
             </div>
         </div>
 
+        
+        <br>
+        <button class="flex items-center gap-2 p-0" @click="storeAdminProducts.addProducts()">
+          <div class="flex justify-center items-center">
+            <Icon name="ri:poker-hearts-line" size="150%" />
+          </div>
+          <span class="pl-2">add Products</span>
+        </button>    
+
+        <button class="flex items-center gap-2 p-0" @click="storeProducts.getProducts()">
+        <div class="flex justify-center items-center">
+            <Icon name="ri:account-box-2-fill" size="150%" />
+        </div>
+        <span class="pl-2">gets Products to add</span>
+        </button>
+       
+        <!-- {{storeProducts.products.sunset_land}} -->
 
        <div> 
             <h2 class="text-4xl">  Simo Warch App  </h2>
@@ -53,23 +71,30 @@
 import { ref } from 'vue'
 import { onMounted } from 'vue'
 import { useStoreProducts } from '@/stores/storeProducts'
-
+import {useStoreAdminProducts} from '@/stores/storeAdminProducts'
 import { useStoreUser } from '@/stores/storeUser';
 
 const userStore = useStoreUser()
-console.log("userStore Cart from < List Book >" , userStore.userSession.cart);
+// console.log("userStore Cart from < List Book >" , userStore.userSession.cart);
+
 
 // onBeforeMount(async () => {
 
 const storeProducts = useStoreProducts()
+
+const storeAdminProducts = useStoreAdminProducts()
+
+// console.log('storeProducts.products : ')
+// console.log(storeProducts.products)
+
 // storeProducts.getProducts()
 
-onMounted(() => {
-    storeProducts.getProducts()
-})
+/* onMounted(async () => {
+  await storeProducts.getProducts();
+}) */
 
 
-console.log("storeProducts", storeProducts.products);
+// console.log("storeProducts", storeProducts.products.sunset_land);
 
 const librarySet_1 = reactive({
                                     grapicNovel: "sunsetLand",
