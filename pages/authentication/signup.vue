@@ -10,9 +10,8 @@
         <div class="flex-1 flex flex-col justify-center py-1 px-4 sm:px-6 lg:px-20 lg:flex-none xl:px-24">
 
             <div class="mx-auto" >
-                <h2 class="mt-6 text-2xl font-extrabold text-gray-900 md:text-3xl">Take a breath, sign up</h2>
+                <h2 class="mt-6 text-2xl font-extrabold text-gray-900 md:text-3xl">Take a breath, subscribe</h2>
 
-                <nuxt-link to="/authentication/signin" class="mt-2 text-sm font-medium text-green-600 hover:text-gren-500">Already have an account ? Sign in </nuxt-link>
 
             </div>
         <div class="mx-auto w-full max-w-sm lg:w-96 ">
@@ -28,6 +27,10 @@
                       <input type="email" placeholder="e.g. alexsmith@gmail.com" id="email" v-model="credentials.email" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none  focus:border-green-700 sm:text-sm">
                       </div>
 
+                      <div>
+                      <label for="alias"  class="block text-sm font-medium text-gray-700">Pseudo</label>
+                      <input type="text" placeholder="alias" id="alias" v-model="additionalInfo.alias" class="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none  focus:border-green-700 sm:text-sm">
+                      </div>
                       
                       <div>
                       <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
@@ -50,7 +53,7 @@
 
                   </div>
 
-                  <div class="w-full py-3 px-4 mt-4 rounded-md shadow-sm text-sm font-medium text-white bg-green-800">
+                  <div class="w-full py-3 px-4 mt-4 rounded-md shadow-sm text-sm font-medium text-white bg-blue-800">
                     <p class="text-center">
                       <button class="button is-primary">
                         Sign Up
@@ -61,8 +64,10 @@
             </form>
 
             <div class="mt-2 pb-40">
-            <p class="px-2 mb-2 mt-4 text-center text-gray-500">Or sign up with</p>
+            <nuxt-link to="/authentication/signin" class="mt-2 text-xl font-medium text-blue-600 hover:text-gren-500">Already have an account ? Sign in </nuxt-link>
             </div>
+
+
 
 <!--             <div class="mt-1 flex justify-center">
 
@@ -98,12 +103,16 @@
 
   import { ref, computed, reactive } from 'vue'
   import { useStoreAuth } from '@/stores/storeAuth'
+  import { useRouter } from 'vue-router'; // Import the router composable
+
+
+const router = useRouter();
 
 /*
   store
 */
 
-const storeAuth = useStoreAuth()
+const authStore = useStoreAuth()
 
 /*
   register / login
@@ -127,27 +136,54 @@ const register = ref('register')
 
 const credentials = reactive({
     email: '',
+    
     password: ''
   })
+
+
+const additionalInfo =  reactive({
+           alias: ''
+})
 
 /*
   submit
 */
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     console.log("submit -----------<<<<<<<<<<<<<<<<<<<<<<")
-    if (!credentials.email || !credentials.password) {
-      alert('Please enter an email and password gosh darnit!')
+
+    // Check if email, alias, and password are provided
+    if (!credentials.email || !credentials.password || !additionalInfo.alias) {
+      alert('Please fill in all fields (email, alias, and password)!');
+      return;
     }
-    else {
-      if (register.value) {
-        console.log('register User')
-        storeAuth.registerUser(credentials)
-      }
-      else {
-        storeAuth.loginUser(credentials)
-      }
+
+    // Alias validation rules
+    const aliasRegex = /^(?!.*[-_].*[-_])[a-zA-Z0-9_-]{3,12}$/; // Allow only one _ or -, but not both
+    if (!aliasRegex.test(additionalInfo.alias)) {
+      alert(
+        'Alias must be between 3 and 15 characters, and can only contain letters, numbers, and either one underscore (_) or one hyphen (-), but not both!'
+      );
+      return;
     }
+
+    // Proceed with registration
+    console.log('Register User');
+    try {
+      await authStore.registerUser(credentials, additionalInfo); // Ensure this is an async function
+      console.log('Registration successful, redirecting...');
+      router.push('/'); // Redirect to the main page after successful registration
+    } catch (error) {
+      console.error('Registration failed:', error);
+      alert('Registration failed. Please try again.');
+    }
+
+
+    // else {
+      // authStore.loginUser(credentials,additionalInfo);
+    // }
+
+
   }  
 
 </script>

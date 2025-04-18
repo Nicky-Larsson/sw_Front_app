@@ -14,10 +14,8 @@
                   <nuxt-link class="flex items-center p-2 w-50 bg-blue-500 hover:bg-blue-400 text-white rounded "
                           to="/authentication/signin" tag="button"  @click="toggleMenu">
                       <Icon name="material-symbols:person" class="scale-100 pl-10"  />
-                      <span v-if="storeAuth.authInfo.email" class="pl-5 pb-2 text-2xl "> {{ storeAuth.authInfo.email }}  </span>
+                      <span v-if="authStore.authInfo.email" class="pl-3 pb-0 text-2xl "> {{ userStore.userSession.alias }}  </span>
                       <span v-else class="pl-5 pb-2"> Login </span>
-
-
 
                   </nuxt-link>
                 </li>
@@ -94,7 +92,7 @@
 
 
                 <li class="text-xl pl-4 py-4 w-full hover:bg-gray-800 hover:text-blue-500"  @click="logout" >
-                  <nuxt-link class="flex items-center gap-2 p-0" v-if="storeAuth.authInfo.email"  
+                  <nuxt-link class="flex items-center gap-2 p-0" v-if="authStore.authInfo.email"  
                               tag="button"  to="/authentication/disconnected">
                     <div class="flex justify-center items-center">
                     <Icon name="codicon:sign-out"  size="150%" />
@@ -120,13 +118,34 @@
 import { ref} from 'vue'
 
 import { useStoreAuth } from '@/stores/storeAuth'
+import { useStoreUser } from '@/stores/storeUser';
 
-const storeAuth = useStoreAuth()
+const authStore = useStoreAuth()
 
+
+const userStore = useStoreUser();
+
+// userStore.clearSession()
+// const user = useSupabaseUser()
+
+console.log(userStore.userSession)
+// authStore.authInfo.email
 
 const props = defineProps({
   rightStarted: Boolean
 })
+
+
+
+// Watch for changes in userSession
+watch(
+  () => userStore.userSession,
+  (newSession) => {
+    console.log('userSession updated:', newSession);
+  },
+  { deep: true }
+);
+
 
 const emit = defineEmits(['update:rightStarted']);
 
@@ -135,14 +154,16 @@ const toggleMenu = () => {
 }
 
 
-  const logout = () => {
-    storeAuth.logoutUser()
-    console.log("logout")
-    // storeAuth.authInfo.email = null
-
-    // toggleMenu()
-    // showMobileNav.value = false
+const logout = async () => {
+  try {
+    await authStore.logoutUser(); // Wait for logout to complete
+    userStore.clearSession(); // Clear session only after successful logout
+    console.log("Logout successful, session cleared");
+    toggleMenu(); // Close the menu
+  } catch (error) {
+    console.error("Logout failed:", error.message);
   }
+};
 
 
 

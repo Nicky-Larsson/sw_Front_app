@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { collection, doc, getDoc,  getDocs } from 'firebase/firestore';
 import { db } from '@/js/firebase'
 
-// import { useStoreAuth } from '@/stores/storeAuth'
 
 let notesCollectionRef
 let notesCollectionQuery
@@ -13,7 +12,8 @@ export const useStoreProducts = defineStore('storeProducts', {
   state: () => {
     return { 
       products: {},
-      productsLoaded: false
+      productsLoaded: false,
+      lastUpdated: null
     }
   },
   persist: {
@@ -25,7 +25,21 @@ export const useStoreProducts = defineStore('storeProducts', {
     // graphic_nov/sunset_land/volumes/volume_01/product/ar_version
     // graphic_nov/sunset_land/volumes/volume_01/promo/volume_01_promo
 
-    async getProducts() {
+    async getProducts(forceUpdate = false) {
+                                    
+      const oneHourInMilliseconds = 1 * 60 * 60 * 1000; // every 1h
+      const now = Date.now();
+
+      // Check if data is already loaded and fresh
+      if (!forceUpdate && this.productsLoaded && this.lastUpdated) {
+        const timeSinceLastUpdate = now - this.lastUpdated;
+        if (timeSinceLastUpdate < oneHourInMilliseconds) {
+          console.log('Using cached products data');
+          console.log(oneHourInMilliseconds);
+          return;
+        }
+      }
+
       this.products={}
       console.log('getProducts called');
       // if (this.products.length > 0) return;
@@ -106,7 +120,7 @@ export const useStoreProducts = defineStore('storeProducts', {
                     price: promoDoc.data()[lang].price,                   // Language-specific price
                     currency: promoDoc.data()[lang].currency,             // Language-specific currency
                     free_access: promoDoc.data()[lang].free_access,       // Language-specific free access
-                    uid_product: promoDoc.data()[lang].uid_product,       // Language-specific product UID
+                    product_uid: promoDoc.data()[lang].uid_product,       // Language-specific product UID
                   };
                 }
               });
@@ -122,8 +136,10 @@ export const useStoreProducts = defineStore('storeProducts', {
         } 
        }
 
-       console.log('this.products: ', this.products)
-
+      // Update the last updated timestamp
+      this.lastUpdated = now;
+      this.productsLoaded = true;
+      console.log('this.products: ', this.products)
     },
 
     init() {
@@ -131,8 +147,8 @@ export const useStoreProducts = defineStore('storeProducts', {
       console.log('init: Called in StoreProduct  <--------')
       
 
-      /* const storeAuth = useStoreAuth()
-      notesCollectionRef = collection(db, 'users', storeAuth.authInfo.id, 'notes')
+      /* const authStore = useStoreAuth()
+      notesCollectionRef = collection(db, 'users', authStore.authInfo.id, 'notes')
       notesCollectionQuery = query(notesCollectionRef, orderBy('date', 'desc'))
       this.getNotes() */
     },
@@ -198,8 +214,6 @@ export const useStoreProducts = defineStore('storeProducts', {
     } */
   }
 })
-
-
 
           // Assuming there's only one promo document per volume
           /* let productDoc = {

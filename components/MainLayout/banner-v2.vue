@@ -15,10 +15,10 @@
         </div>
 
         <ul class="text-white md:flex md:space-x-25 md:pt-3 ">
-          <li>
+          <li  >
             <div class="flex items-center   text-white shadow-md rounded-md  
                            hover:text-yellow-400">
-              <nuxt-link tag="button" to="/" class="font-medium text-lg text-black-500 hover:text-orange-300">
+              <nuxt-link tag="button" @click="clickLeftMenu" class="font-medium text-lg text-black-500 hover:text-orange-300">
                   Menu
               </nuxt-link>
             </div>
@@ -43,17 +43,17 @@
 
           <li>
             <a
-              href="/"
+              href="/ArtGallery"
               class="font-medium text-lg text-black-500 hover:text-orange-300"
               >Gallery 3D</a
             >
           </li>
 
-          <li>
+          <li @click="clickRightMenu">
             <div class="flex items-center   text-white shadow-md rounded-md  
                            hover:text-yellow-400">
-              <nuxt-link tag="button" to="/" class="font-medium text-lg text-black-500 hover:text-orange-300">
-                  Compte
+              <nuxt-link tag="button"  class="font-medium text-lg text-black-500 hover:text-orange-300">
+                  identifiez vous
               </nuxt-link>
             </div>
           </li>
@@ -102,9 +102,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
 
-const menuResponsive = ref(null);
+import { ref } from 'vue'
+import { defineEmits } from 'vue'
 
+const emit = defineEmits(['orderLeftMenu','orderRightMenu','orderCloseMenu'])
+
+const clickLeftMenu = () => {
+  emit('orderLeftMenu')
+}
+
+const clickCloseMenu = () => {
+  emit('orderCloseMenu')
+}
+
+const clickRightMenu = () => {
+  emit('orderRightMenu')
+}
 
 </script>

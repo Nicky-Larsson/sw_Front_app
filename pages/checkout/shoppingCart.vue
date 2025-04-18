@@ -124,7 +124,7 @@ console.log(userStore.userSession)
 
 let selectedArray = ref([]);
 
-userStore.init()
+// userStore.init()
 
 onMounted(() => {
     // setTimeout(() => userStore.isLoading = false, 200)

@@ -1,47 +1,48 @@
-
 <template>
+  <div class="text-amber-50 pt-10 text-2xl">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    
- <div class="text-amber-50 pt-10 text-2xl">
-        
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-        <div class="flex-1 flex flex-col justify-center py-1 px-4 sm:px-6 lg:px-20 lg:flex-none xl:px-24">
-
-            <div class="mx-auto" >
-                <h2 class="mt-6 text-2xl font-extrabold text-gray-300 md:text-3xl">Thank you ! </h2>
-
-                <nuxt-link to="/authentication/signin" class="mt-2 text-sm font-medium text-green-600 hover:text-gren-500">Already have an account ? Sign in </nuxt-link>
-
-            </div>
-        <div class="mx-auto w-full max-w-sm lg:w-96 ">
-            
-        
+    <div class="flex-1 flex flex-col justify-center py-1 px-4 sm:px-6 lg:px-20 lg:flex-none xl:px-24">
+      <div class="mx-auto">
+        <h2 class="mt-6 text-2xl font-extrabold text-gray-300 md:text-3xl">Thank you!</h2>
+        <nuxt-link to="/authentication/signin" class="mt-2 text-sm font-medium text-green-600 hover:text-gren-500">
+          Already have an account? Sign in
+        </nuxt-link>
+      </div>
+      <div class="mx-auto w-full max-w-sm lg:w-96">
         <div class="mt-2">
-        <p class="px-2 mb-2 mt-4 text-center text-gray-100">you are Disconected</p>
+          <p class="px-2 mb-2 mt-4 text-center text-gray-100">You are disconnected</p>
         </div>
-
-
-        </div>
-
-        </div>
-
-        <div class="hidden relative flex-1 sm:block">
-        <img src="/dragon_quest_1.jpg" alt="nature" class="h-full w-full object-cover">
-        </div>
-
+      </div>
     </div>
 
+    <div class="hidden relative flex-1 sm:block">
+      <img src="/dragon_quest_1.jpg" alt="nature" class="h-full w-full object-cover">
+    </div>
+  </div>
 </template>
 
+<script setup>
+import { onMounted, onUnmounted } from 'vue';
+import { navigateTo } from '#app'; // Use navigateTo for redirection
 
-<script  setup>
-import { ref } from 'vue'
+let timeoutId; // Declare a variable to store the timeout ID
 
-const email = ref('')
-const password = ref('')
+onMounted(() => {
+  // Redirect to the main menu after 4 seconds
+  timeoutId = setTimeout(() => {
+    navigateTo('/'); // Replace '/' with your main menu route
+  }, 4000);
+});
 
+onUnmounted(() => {
+  // Clear the timeout if the component is destroyed
+  if (timeoutId) {
+    clearTimeout(timeoutId);
+    console.log('Timeout cleared');
+  }
+});
 </script>
 
 

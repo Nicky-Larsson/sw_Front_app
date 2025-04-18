@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import {db} from '@/js/firebase.js'
-import { ref } from 'vue'
 import { useStoreAuth } from '@/stores/storeAuth'
 import { 
   collection,
@@ -24,7 +23,7 @@ export const useStoreUser = defineStore('storeUser', {
     consents: [],
     orders: [],
     alias: '',
-    email: storeAuth.authInfo.id,
+    email: authStore.authInfo.uid,
     cart: [],
     cart_date: '',
   */
@@ -32,61 +31,138 @@ export const useStoreUser = defineStore('storeUser', {
   state: () => {
     // const cart = []
     // const checkout = ref([])
-    // const storeAuth = useStoreAuth()
+    // const authStore = useStoreAuth()
     return { 
-      userSession: initDefaultSession()
-    } 
+      userSession: {
+                        email: '',
+                        alias: '',
+                        avatar: '',
+                        createdAt: '',
+                        access_rights: {
+                          graphic_novels: []
+                        },
+                        cart: [],
+                        cart_added: '',
+                        favorite_arts: [],
+                        favorite_products: [],
+                        last_login: '',
+                        orders_history: [],
+                        unsubscribe_demands: [],
+                        unsubscribe_status: 'inactive',
+                        defaultLanguage: 'en',
+                        choosedLanguage:  'fr'
+                  }
+       } 
   },
   persist: {
     storage: piniaPluginPersistedstate.localStorage()  
   },
   actions: {
     async init() {
-      const storeAuth = useStoreAuth()
-      // console.log(storeAuth.authInfo.id)
-      // userCollectionRef = collection(doc(db, 'user', storeAuth.authInfo.id), 'cart')
-      // userCollectionRef = doc(db, 'user', storeAuth.authInfo.id)
+      // this.initDefaultSession();
+      
+      // const authStore = useStoreAuth()
+      //  peut etre exploiter pour récupérer les carts  
+
+
+      // console.log(authStore.authInfo.uid)
+      // userCollectionRef = collection(doc(db, 'users', authStore.authInfo.uid), 'cart')
+      // userCollectionRef = doc(db, 'users', authStore.authInfo.uid)
       // const cartRef = collection(userCollectionRef, 'cart')
       // await addDoc(cartRef, { book: 'book1', date: '2023-10-01' })
-      // const userDocRef = doc(db, 'user', storeAuth.authInfo.id, 'cart', 'pina')
+      // const userDocRef = doc(db, 'users', authStore.authInfo.uid, 'cart', 'pina')
     },
     async getUserInfo() {
-      const storeAuth = useStoreAuth()
-      const userDocRef = doc(db, 'user', storeAuth.authInfo.id)
-      console.log('userDocRef : ', userDocRef)
+      
+      const authStore = useStoreAuth()
+      const userDocRef = doc(db, 'users', authStore.authInfo.uid)  
+
       const userDoc = await getDoc(userDocRef)
-      if (userDoc.exists()) {
-        this.userSession = userDoc.data()
-        this.setUserInfo()
+
+      
+      const defaultCart = this.userSession.cart || []
+      console.log('defaultCart : ', defaultCart)
+
+      if (userDoc.exists()) {   
+        console.log('Starting cart merge process...');
+
+        console.log('Logged-in users cart:', userDoc.data().cart)
+        
+        // Get the logged-in users's cart
+        const loggedInCart = userDoc.data().cart || []
+
+        console.log('defaultCart:', defaultCart);
+        console.log('loggedInCart:', loggedInCart);
+
+        const mergedCart = [...loggedInCart]
+        console.log('Initial mergedCart (copy of loggedInCart):', mergedCart);
+
+
+        defaultCart.forEach((product) => {
+          console.log('Processing product from defaultCart:', product);
+          // Check if the product already exists in mergedCart item.id === product.id
+          const existsInMergedCart = mergedCart.some((item) => 
+             item.graphic_novel_uid  === product.graphic_novel_uid &&
+             item.volume_uid   === product.volume_uid &&
+             item.volume_name  === product.volume_name &&
+             item.product_uid  === product.product_uid
+            );
+
+          console.log(`Does product with id ${product.id} exist in mergedCart?`, existsInMergedCart);
+
+          if (!existsInMergedCart) {
+            console.log('Adding product to mergedCart:', product);
+            mergedCart.push(product);
+          } else {
+            console.log('Skipping product as it already exists in mergedCart:', product);
+          }
+        });
+
+        // this.userSession = userDoc.data()
+        // Update the users session with the merged cart
+        this.userSession = {
+          ...userDoc.data(),
+          cart: mergedCart,
+        }
+        
+        console.log('Updated userSession:', this.userSession);
+
+        // Save the merged cart back to the database
+        await this.setUserInfo()
+
+        // optionnal, clear the default cart after merging
+        // this.userSession.cart = []
+
+        //this.setUserInfo()
         console.log('userSession : ', this.userSession)
       } else {
         console.log('No such document!')
-        this.userSession = this.initDefaultSession();
-        this.setUserInfo();
+        this.userSession = this.initDefaultSession()
+        this.setUserInfo()
       }
     },
 
     async setUserInfo() {
-      const storeAuth = useStoreAuth()
+      const authStore = useStoreAuth()
       const batch = writeBatch(db)
 
-      const userDocRef = doc(db, 'user', storeAuth.authInfo.id)
+      const userDocRef = doc(db, 'users', authStore.authInfo.uid)
       // await setDoc(userDocRef, data, { merge: true })
       batch.set(userDocRef, this.userSession, { merge: true });
       
 
-      const userDocRefConsents = doc(db, 'user', storeAuth.authInfo.id,
+      const userDocRefConsents = doc(db, 'users', authStore.authInfo.uid,
                                                'consents', 'date_consent')
-      const data2 = { date_infos: '2023-10-01' }
+      const dataConsents = { date_infos: '2023-10-01' }
       // await setDoc(userDocRefConsents,data2 , { merge: true })
-      batch.set(userDocRefConsents, data2, { merge: true });
+      batch.set(userDocRefConsents, dataConsents, { merge: true });
 
 
-      const userDocRefOrders = doc(db, 'user', storeAuth.authInfo.id,
+      const userDocRefOrders = doc(db, 'users', authStore.authInfo.uid,
         'orders', 'date_order')
-      const data3 = { date_infos: '2023-10-01' }
+      const dataOrders = { date_infos: '2023-10-01' }
       // await setDoc(userDocRefConsents,data2 , { merge: true })
-      batch.set(userDocRefOrders, data3, { merge: true });      
+      batch.set(userDocRefOrders, dataOrders, { merge: true });      
 
       // Commit the batch
       await batch.commit();
@@ -117,70 +193,73 @@ export const useStoreUser = defineStore('storeUser', {
       this.userSession.cart = [];
     } */
 
-
+    
 
 
   }
 })
 
 
-
 function initDefaultSession() {
-  return {
-    access_rights: {
-      graphic_novels: []
-    },
-    alias: '',
-    cart: [], // Initialize cart as an empty array
-    avatar: '',
-    cart_added: '',
-    email: '',
-    favorite_arts: [],
-    favorite_products: [],
-    last_login: '',
-    last_order: '',
-    unsubscribe_demands: [],
-    unsubscribe_status: 'inactive',
-    defaultLanguage: 'en',
-    choosedLanguage:  'fr'
-  }
+        return {
+          email: '',
+          alias: '',
+          avatar: '',
+          createdAt: '',
+          access_rights: {
+            graphic_novels: [],
+          },
+          cart: [],
+          cart_added: '',
+          favorite_arts: [],
+          favorite_products: [],
+          last_login: '',
+          orders_history: [],
+          unsubscribe_demands: [],
+          unsubscribe_status: 'inactive',
+          defaultLanguage: 'en',
+          choosedLanguage: 'fr',
+        }
 }
 
-function testUserSession() {
+
+
+
+/* function testUserSession() {
   return {
-      access_rights: { 
-                      graphic_novels : [
-                                          {
-                                            name: 'Sunset Land',
-                                            type: 'graphic novel',
-                                            title: 'volume_01',
-                                            all_languages: true,
-                                            purchased_languages: ['en', 'all']
-                                          },
-                                          {
-                                            name: 'Sunset Land',
-                                            type: 'graphic novel',
-                                            title: 'volume_02',
-                                            all_languages: false,
-                                            purchased_languages: ['fr']
-                                          }
-                                      ]
-                      },
-      alias: 'Eljid',
-      cart: [],
-      avatar: '',
-      cart_added: '2023-10-01',
-      email: storeAuth.authInfo.email,
-      favorite_arts: ['art1', 'art2'],
-      favorite_products: [],
-      last_login: '2023-10-01 00:00:00',
-      last_order: '2023-10-01',
-      unsubscribe_demands: [
-        { date: '2025-09-01', reason: 'no reason', dayleft: 30 , status: 'pending', canceldate: '' },
-        { date: '2027-01-11', reason: 'stop email', dayleft: 30 , status: 'pending', canceldate: '' }
-      ],
-      unsubscribe_status: 'inactive'
+            access_rights: { 
+                            graphic_novels : [
+                                                {
+                                                  name: 'Sunset Land',
+                                                  type: 'graphic novel',
+                                                  title: 'volume_01',
+                                                  all_languages: true,
+                                                  purchased_languages: ['en', 'all']
+                                                },
+                                                {
+                                                  name: 'Sunset Land',
+                                                  type: 'graphic novel',
+                                                  title: 'volume_02',
+                                                  all_languages: false,
+                                                  purchased_languages: ['fr']
+                                                }
+                                            ]
+                            },
+            alias: 'Eljid',
+            cart: [],
+            avatar: '',
+            cart_added: '2023-10-01',
+            email: authStore.authInfo.email,
+            favorite_arts: ['art1', 'art2'],
+            favorite_products: [],
+            last_login: '2023-10-01 00:00:00',
+            last_order: '2023-10-01',
+            unsubscribe_demands: [
+              { date: '2025-09-01', reason: 'no reason', dayleft: 30 , status: 'pending', canceldate: '' },
+              { date: '2027-01-11', reason: 'stop email', dayleft: 30 , status: 'pending', canceldate: '' }
+            ],
+            unsubscribe_status: 'inactive'
 
          }
 
-}
+} */

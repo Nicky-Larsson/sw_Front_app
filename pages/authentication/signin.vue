@@ -1,4 +1,5 @@
 <template>
+  <client-only>
     <div class="flex bg-gray-50 text-2xl">
         
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -7,9 +8,7 @@
         <div class="flex-1 flex flex-col justify-center py-1 px-4 sm:px-6 lg:px-20 lg:flex-none xl:px-24">
 
             <div class="mx-auto" >
-                <h2 class="mt-6 text-2xl font-extrabold text-gray-900 md:text-3xl">Take a breath, sign up</h2>
-
-                <nuxt-link to="/authentication/signin" class="mt-2 text-sm font-medium text-green-600 hover:text-gren-500">Already have an account ? Sign in </nuxt-link>
+                <h2 class="mt-6 text-2xl font-extrabold text-gray-900 md:text-3xl">Take a breath, login in</h2>
 
             </div>
         <div class="mx-auto w-full max-w-sm lg:w-96 ">
@@ -54,8 +53,8 @@
 
             <div class="mt-2 pb-40">
 
-            <nuxt-link to="/authentication/signup" class="mt-2 text-sm font-medium text-green-600 hover:text-gren-500">
-            create an account ? </nuxt-link>
+            <nuxt-link to="/authentication/signup" class="mt-2 text-xl font-medium text-green-600 hover:text-gren-500">
+            Create new account ? </nuxt-link>
 
             </div>
 
@@ -83,19 +82,37 @@
 
 
     </div>
+  </client-only>
 </template>
 
 <script setup>
 
   import { ref, computed, reactive } from 'vue'
   import { useStoreAuth } from '@/stores/storeAuth'
+  import { useRouter } from 'vue-router'; // Import the router composable
+  import { useStoreUser } from '@/stores/storeUser';
 
 /*
   store
 */
 const formTitle = ref("sign in form");
 
-const storeAuth = useStoreAuth()
+const authStore = useStoreAuth()
+const router = useRouter();
+
+
+
+const userStore = useStoreUser();
+
+// const user = useSupabaseUser()
+console.log(userStore.userSession)
+console.log(userStore.userSession.email)
+
+
+definePageMeta({
+  middleware: 'auth-redirect', // Use the middleware
+})
+
 
 /*
   register / login
@@ -107,6 +124,7 @@ const register = ref(false)
   form title
 */
 
+console.log('')
 
 
 /* const formTitle = computed(() => {
@@ -126,21 +144,23 @@ const credentials = reactive({
   submit
 */
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     console.log("submit -----------<<<<<<<<<<<<<<<<<<<<<<")
     if (!credentials.email || !credentials.password) {
-      alert('Please enter an email and password gosh darnit!')
+      alert('Please enter an email and password')
     }
     else {
       if (register.value) {
         console.log('register User')
-        storeAuth.registerUser(credentials)
+        authStore.registerUser(credentials)
       }
       else {
-        storeAuth.loginUser(credentials)
+        await authStore.loginUser(credentials);
+      return navigateTo('/Fanoorassm/3d-library'); // Use navigateTo for navigation
       }
     }
-  }  
+  }
+
 </script>
 
 <style scoped>

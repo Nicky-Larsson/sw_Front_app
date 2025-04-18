@@ -2,7 +2,9 @@
 
   <div class="bg-orange-950">
     
-    <banner-v2/>
+    <banner-v2 @orderLeftMenu="triggerLeftMenu" 
+               @orderRightMenu="triggerRightMenu"
+               @orderCloseMenu="triggerCloseMenu"/>
 
 
 

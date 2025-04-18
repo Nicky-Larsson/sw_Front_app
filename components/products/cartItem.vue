@@ -64,6 +64,7 @@
             </div>
         </div>
     </div>
+    <!-- {{product}} -->
 </template>
 
 <script setup>
@@ -79,8 +80,19 @@ let isHover = ref(false)
 let isSelected = ref(false)
 
 const removeFromCart = () => {
+    // graphic_novel_uid
+    // volume_uid
+    // volume_name
+    // product_uid
+
     userStore.userSession.cart.forEach((prod, index) => {
-        if (prod.id === product.value.id) {
+        // if (prod.id === product.value.id) 
+        if (
+            product.value.graphic_novel_uid === prod.graphic_novel_uid &&
+            product.value.volume_uid === prod.volume_uid &&
+            product.value.volume_name === prod.volume_name &&
+            product.value.product_uid === prod.product_uid 
+           ) {
             userStore.userSession.cart.splice(index, 1);
         }
     })
@@ -89,4 +101,18 @@ const removeFromCart = () => {
 watch(() => isSelected.value, (val) => {
     emit('selectedRadio', { id: product.value.id, val: val })
 })
+
+
+/*   for (const prod of userStore.userSession.cart) {
+    if (
+      productInfosForCart.value.graphic_novel_uid === prod.graphic_novel_uid &&
+      productInfosForCart.value.volume_uid === prod.volume_uid &&
+      productInfosForCart.value.product_uid === prod.product_uid
+    ) {
+      return true; // Product is in the cart
+    }
+  } */
+
 </script>
+
+
