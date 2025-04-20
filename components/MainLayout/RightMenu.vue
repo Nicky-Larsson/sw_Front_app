@@ -141,7 +141,7 @@ const props = defineProps({
 watch(
   () => userStore.userSession,
   (newSession) => {
-    console.log('userSession updated:', newSession);
+    // console.log('userSession updated:', newSession);
   },
   { deep: true }
 );

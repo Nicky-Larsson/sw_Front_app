@@ -37,7 +37,7 @@
                         </p>                        
                         <!-- Description Text -->
                         <p 
-                          class="font-light text-[22px] mb-2 max-h-32 overflow-y-auto pr-2 pb-10 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 peer"
+                          class="font-light text-[22px] mb-2 max-h-45 overflow-y-auto pr-2 pb-10 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 peer"
                         >
                           {{ volumePromoData.description }}
                         </p>
@@ -89,14 +89,14 @@
   <span class="block items-center text-2xl mb-4">Choose your language</span>
   <ul class="flex flex-wrap justify-center items-center gap-4">
     <li 
-      v-for="item in items" 
-      :key="item.id" 
-      @click="chooseLanguage(item)" 
-      class="hover:bg-gray-800 cursor-pointer px-3 py-2 flex items-center"
-      :class="{ 'border-2 border-blue-500 rounded-md': selectedLanguage === item.id }"
+      v-for="lang in languages" 
+      :key="lang.id" 
+      @click="chooseLanguage(lang)" 
+      class="hover:bg-blue-200 cursor-pointer px-3 py-2 flex items-center"
+      :class="{ 'border-2 border-blue-500 rounded-md': selectedLanguage === lang.id }"
     >
-      <img :src="item.image" :alt="item.alt" class="w-6 h-5 inline-block">
-      <span class="pl-2 text-xl">{{ item.text }}</span>
+      <img :src="lang.image" :alt="lang.alt" class="w-6 h-5 inline-block">
+      <span class="pl-2 text-xl">{{ lang.text }}</span>
     </li>
   </ul>
 </div>
@@ -134,8 +134,8 @@
                     </div>
                       
                     <div class="pt-5" >
-                      <button @click="goBack" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                          Go Back
+                      <button @click="goBack" class="bg-blue-500 hover:bg-blue-700 text-white text-2xl font-bold py-2 px-4 rounded">
+                          Back to list
                       </button>
                     </div>
                 </div>
@@ -209,7 +209,7 @@ let productInfosForCart = ref({
 });
 
 
-const items = ref([
+const languages = ref([
   { id: 'ar', image: '/flags/ar_flag.jpg', alt: 'Arabic',   text: 'Arabic' },
   { id: 'ma', image: '/flags/ma_flag.jpg', alt: 'Morrocan', text: 'Darija' },
   { id: 'en', image: '/flags/en_flag.jpg', alt: 'English',  text: 'English'},
@@ -220,16 +220,16 @@ const selectedLanguage = ref(userStore.userSession.defaultLanguage);
 
 language.value = userStore.userSession.defaultLanguage
 
-const chooseLanguage = (item) => {
+const chooseLanguage = (lang) => {
    // storeProducts
-   selectedLanguage.value = item.id; // Update the selected language
+   selectedLanguage.value = lang.id; // Update the selected language
    // console.log(currentImage)
    // console.log(userStore.userSession.defaultLanguage)
-   language.value = item.id  // Update the language in the store
+   language.value = lang.id  // Update the language in the store
    console.log('Selected language:', selectedLanguage.value);
 
    // volumePromoData.value =
-   //   storeProducts.products[urlParams.graphicNovel][urlParams.volumeNum][item.id]
+   //   storeProducts.products[urlParams.graphicNovel][urlParams.volumeNum][lang.id]
       // console.log(storeProducts.products[urlParams.graphicNovel][urlParams.volumeNum])
       // console.log(volumePromoData.value)
 

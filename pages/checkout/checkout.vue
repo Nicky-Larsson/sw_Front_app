@@ -53,12 +53,24 @@
                         </NuxtLink>
                     </div>
 
+
+                    <!-- <div class="text-white">userStore.userSession.selectedArray :  {{userStore.userSession.selectedArray}} </div> -->
+
                     <div id="Items" class="bg-white rounded-lg p-4 mt-4">
-                        <div v-for="product in userStore.checkout">
+                        <div v-for="product in userStore.userSession.checkout" :key="product.id">
                             <CheckoutItem :product="product" />
                         </div>
                     </div>
+
+                    <div class="text-white"> userStore.userSession.checkout  {{userStore.userSession.checkout}} </div>
+
+                    <br><br>
+                     <div class="text-white">selectedArray :  {{selectedArray}} </div>
+                    <br><br>
+                    
+                    <div class="text-white">userStore.userSession.selectedArray : {{userStore.userSession.selectedArray}} </div>  
                 </div>
+
 
                 <div class="md:hidden block my-4"/>
                 <div class="md:w-[35%]">
@@ -168,7 +180,7 @@ onBeforeMount(async () => {
 
 onMounted(async () => {
     // isProcessing.value = true
-    userStore.checkout.forEach(item => {
+    userStore.userSession.checkout.forEach(item => {
         total.value += parseInt(item.price, 10)
     })
 })

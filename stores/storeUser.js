@@ -43,10 +43,14 @@ export const useStoreUser = defineStore('storeUser', {
                         },
                         cart: [],
                         cart_added: '',
+                        checkout: [],
+                        selectedArray: [],
+                        consents: [],
+                        orders: [],
+                        last_order: '',
                         favorite_arts: [],
                         favorite_products: [],
                         last_login: '',
-                        orders_history: [],
                         unsubscribe_demands: [],
                         unsubscribe_status: 'inactive',
                         defaultLanguage: 'en',
@@ -134,7 +138,7 @@ export const useStoreUser = defineStore('storeUser', {
         // this.userSession.cart = []
 
         //this.setUserInfo()
-        console.log('userSession : ', this.userSession)
+        // console.log('userSession : ', this.userSession)
       } else {
         console.log('No such document!')
         this.userSession = this.initDefaultSession()
@@ -207,18 +211,22 @@ function initDefaultSession() {
           avatar: '',
           createdAt: '',
           access_rights: {
-            graphic_novels: [],
+            graphic_novels: []
           },
           cart: [],
+          selectedArray: [],
           cart_added: '',
+          checkout: [],
+          consents: [],
+          orders: [],
+          last_order: '',
           favorite_arts: [],
           favorite_products: [],
           last_login: '',
-          orders_history: [],
           unsubscribe_demands: [],
           unsubscribe_status: 'inactive',
           defaultLanguage: 'en',
-          choosedLanguage: 'fr',
+          choosedLanguage:  'fr'
         }
 }
 
