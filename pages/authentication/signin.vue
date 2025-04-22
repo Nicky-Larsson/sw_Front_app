@@ -144,22 +144,22 @@ const credentials = reactive({
   submit
 */
 
-  const onSubmit = async () => {
-    console.log("submit -----------<<<<<<<<<<<<<<<<<<<<<<")
-    if (!credentials.email || !credentials.password) {
-      alert('Please enter an email and password')
-    }
-    else {
-      if (register.value) {
-        console.log('register User')
-        authStore.registerUser(credentials)
-      }
-      else {
-        await authStore.loginUser(credentials);
-      return navigateTo('/Fanoorassm/3d-library'); // Use navigateTo for navigation
-      }
+const onSubmit = async () => {
+  console.log("submit -----------<<<<<<<<<<<<<<<<<<<<<<");
+  if (!credentials.email || !credentials.password) {
+    alert("Please enter an email and password");
+  } else {
+    const isAuthenticated = await authStore.loginUser(credentials); // Wait for the response
+    console.log("isAuthenticated", isAuthenticated);
+
+    // Redirect only if the user is authenticated
+    if (isAuthenticated) {
+      return navigateTo("/Fanoorassm/3d-library"); // Use navigateTo for navigation
+    } else {
+      alert("Authentication failed. Please check your credentials.");
     }
   }
+};
 
 </script>
 

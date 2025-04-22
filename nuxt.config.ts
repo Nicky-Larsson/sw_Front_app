@@ -16,6 +16,16 @@ export default defineNuxtConfig({
     }
   ],
   
+  app: {
+    head: {
+      script: [
+        {
+          src: `https://www.paypal.com/sdk/js?client-id=${process.env.PAYPAL_CLIENT_ID}&currency=EUR`, // Use the environment variable
+          async: true,
+        },
+      ],
+    },
+  },
 
   css: ['~/assets/css/input.css'],
 

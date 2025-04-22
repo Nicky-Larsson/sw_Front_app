@@ -9,7 +9,11 @@ import { db } from '@/js/firebase';
 export const useStoreAuth = defineStore('storeAuth', {
   state: () => {
     return { 
-      authInfo: {}
+      authInfo: {
+        email: null,
+        uid: null,
+        token: null,
+      },
     }
   },
   persist: {
@@ -18,24 +22,24 @@ export const useStoreAuth = defineStore('storeAuth', {
   actions: {
     init() {
       const userStore = useStoreUser()
-     // const storeNotes = useStoreNotes()
+      // const storeNotes = useStoreNotes()
       
       onAuthStateChanged(auth, (authInfo) => {
         if (authInfo) {
-          this.authInfo.uid = authInfo.uid
-          this.authInfo.email = authInfo.email
-          console.log(this.authInfo)
-          console.log(authInfo)
-          //this.router.push('/')
-          userStore.init()
+          if (this.authInfo.uid !== authInfo.uid) {
+            this.authInfo.uid = authInfo.uid;
+            this.authInfo.email = authInfo.email;
+            console.log('User logged in:', this.authInfo);
+            userStore.init();
+          }
         } else {
-          this.authInfo = {}
-          //this.router.replace('/auth')
-
-          //  Clear cart   
-          //storeNotes.clearNotes()
+          if (this.authInfo.uid) {
+            this.clearSession();
+            userStore.clearSession();
+            console.log('User logged out, sessions cleared');
+          }
         }
-      })
+      });
 
     },
     /* registerUser(credentials) {
@@ -47,7 +51,7 @@ export const useStoreAuth = defineStore('storeAuth', {
       })
     }, */
 
-    registerUser(credentials, additionalInfo) {
+    async registerUser(credentials, additionalInfo) {
       createUserWithEmailAndPassword(auth, credentials.email, credentials.password)
         .then(async (userCredential) => {
           const authInfo = userCredential.user;
@@ -90,41 +94,48 @@ export const useStoreAuth = defineStore('storeAuth', {
         });
     },
 
-    loginUser(credentials) {
-      signInWithEmailAndPassword(auth, credentials.email, credentials.password).then((userCredential) => {
-        const authInfo = userCredential.user
-        this.authInfo.email = authInfo.email
-        this.authInfo.uid = authInfo.uid
-        console.log('authInfo: ', authInfo)
-        console.log(this.authInfo.uid)
-        const userStore = useStoreUser()
-        //storeUser.init()
-        userStore.getUserInfo()
-      }).catch((error) => {
-        console.log('error.message: ', error.message)
-      })
+    async loginUser(credentials) {
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+        this.authInfo.email = userCredential.user.email;
+        this.authInfo.uid = userCredential.user.uid;
+        console.log("Login successful:", this.authInfo);
+        // Fetch and update user session data
+        const userStore = useStoreUser();
+        await userStore.getUserInfo();
+
+        return true; // Return true for successful login
+      } catch (error) {
+        console.error("Login failed:", error.message);
+        return false; // Return false for failed login
+      }
     },
-    logoutUser() {
-      /* signOut(auth).then(() => {
-        console.log('UserauthInfo signed out')
-        this.authInfo = {}
-      }).catch((error) => {
-        console.log(error.message)
-      }) */
-      
-      const userStore = useStoreUser()
-      
-      userStore.setUserInfo().then(() => {
-        return signOut(auth)
-      }).then(() => {
-        console.log('UserauthInfo signed out')
-        this.authInfo = {}
-        userStore.clearSession()
+    async logoutUser() {
+      try {
+        const userStore = useStoreUser();
 
-      }).catch((error) => {
-        console.log(error.message)
-      })
+        // Save user data before logging out
+        await userStore.setUserInfo();
 
+        // Perform Firebase sign-out
+        await signOut(auth);
+
+        // Clear both auth and user sessions
+        this.clearSession();
+        userStore.clearSession();
+
+        console.log('Logout successful, session and authInfo cleared');
+      } catch (error) {
+        console.error('Logout failed:', error.message);
+      }
+    },
+    clearSession() {
+      this.authInfo = {
+        email: null,
+        uid: null,
+        token: null,
+      };
+      console.log('Auth session cleared:', this.authInfo);
     }
   }
 })

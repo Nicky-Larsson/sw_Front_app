@@ -8,13 +8,13 @@
             >
                 <div 
                     @click="toggleSelection"
-                    class=" flex items-center justify-center h-[20px] w-[20px] rounded-full border mr-5 ml-2"
+                    class=" flex items-center justify-center h-[25px] w-[25px] rounded-full border mr-5 ml-2"
                     :class="[
                         isHover ? 'border-[#FD374F]' : 'border-gray-900',
                         isSelected ? 'bg-[#FD374F]' : ''
                     ]"
                 >
-                <p>Is Selected: {{ isSelected }}</p>
+                <!-- <p>Is Selected: {{ isSelected }}</p> -->
                     <div class="h-[8px] w-[8px] rounded-full bg-white" />
                 </div>
             </div>

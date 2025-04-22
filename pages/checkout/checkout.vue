@@ -62,78 +62,82 @@
                         </div>
                     </div>
 
-                    <div class="text-white"> userStore.userSession.checkout  {{userStore.userSession.checkout}} </div>
+                    <!-- <div class="text-white"> userStore.userSession.checkout  {{userStore.userSession.checkout}} </div>
 
                     <br><br>
                      <div class="text-white">selectedArray :  {{selectedArray}} </div>
                     <br><br>
                     
-                    <div class="text-white">userStore.userSession.selectedArray : {{userStore.userSession.selectedArray}} </div>  
+                    <div class="text-white">userStore.userSession.selectedArray : {{userStore.userSession.selectedArray}} </div>  --> 
                 </div>
 
 
                 <div class="md:hidden block my-4"/>
                 <div class="md:w-[35%]">
-                    <div id="PlaceOrder" class="bg-white rounded-lg p-4">
+                    <div class="sticky top-4">
+                        <div id="PlaceOrder" class="bg-white rounded-lg p-4">
 
-                        <div class="text-2xl font-extrabold mb-2">Summary</div>
+                            <div class="text-2xl font-extrabold mb-2">Summary</div>
 
-                        <div class="flex items-center justify-between my-4">
-                            <div class="">Total Shipping</div>
-                            <div class="">Free</div>
-                        </div>
-
-                        <div class="border-t" />
-
-                        <div class="flex items-center justify-between my-4">
-                            <div class="font-semibold">Total</div>
-                            <div class="text-2xl font-semibold">
-                               <span class="font-extrabold">{{ total / 100 }}</span>  €
+                            <div class="flex items-center justify-between my-4">
+                                <div class="">Total Shipping</div>
+                                <div class="">Free</div>
                             </div>
+
+                            <div class="border-t" />
+
+                            <div class="flex items-center justify-between my-4">
+                                <div class="font-semibold">Total</div>
+                                <div class="text-2xl font-semibold">
+                                <span class="font-extrabold">{{ total / 100 }}</span>  €
+                                </div>
+                            </div>
+
+                           <div id="paypal-button-container" class="mt-4"></div>
+                            
+                            <form @submit.prevent="pay()">
+                               <!--  <div 
+                                    class="border border-gray-500 p-2 rounded-sm" 
+                                    id="card-element" 
+                                /> -->
+
+                                <p 
+                                    id="card-error" 
+                                    role="alert" 
+                                    class="text-red-700 text-center font-semibold" 
+                                />
+
+                                <button 
+                                    :disabled="isProcessing"
+                                    type="submit"
+                                    class="
+                                    mt-4
+                                        bg-gradient-to-r 
+                                    from-[#FE630C] 
+                                    to-[#FF3200]
+                                        w-full 
+                                        text-white 
+                                        text-[21px] 
+                                        font-semibold 
+                                        p-1.5 
+                                        rounded-full
+                                    "
+                                    :class="isProcessing ? 'opacity-70' : 'opacity-100'"
+                                >
+                                    <Icon v-if="isProcessing" name="eos-icons:loading" />
+                                    <div v-else>Place order</div>
+                                </button>
+                            </form>
+
                         </div>
 
-                        <form @submit.prevent="pay()">
-                            <div 
-                                class="border border-gray-500 p-2 rounded-sm" 
-                                id="card-element" 
-                            />
+                        <div class="bg-white rounded-lg p-4 mt-4">
+                            <div class="text-lg font-semibold mb-2 mt-2">AliExpress</div>
+                            <p class="my-2">
+                                AliExpress keeps your information and payment safe
+                            </p>
 
-                            <p 
-                                id="card-error" 
-                                role="alert" 
-                                class="text-red-700 text-center font-semibold" 
-                            />
-
-                            <button 
-                                :disabled="isProcessing"
-                                type="submit"
-                                class="
-                                mt-4
-                                    bg-gradient-to-r 
-                                  from-[#FE630C] 
-                                  to-[#FF3200]
-                                    w-full 
-                                    text-white 
-                                    text-[21px] 
-                                    font-semibold 
-                                    p-1.5 
-                                    rounded-full
-                                "
-                                :class="isProcessing ? 'opacity-70' : 'opacity-100'"
-                            >
-                                <Icon v-if="isProcessing" name="eos-icons:loading" />
-                                <div v-else>Place order</div>
-                            </button>
-                        </form>
-
-                    </div>
-
-                    <div class="bg-white rounded-lg p-4 mt-4">
-                        <div class="text-lg font-semibold mb-2 mt-2">AliExpress</div>
-                        <p class="my-2">
-                            AliExpress keeps your information and payment safe
-                        </p>
-
+                        </div>
                     </div>
                 </div>
             </div>
@@ -183,6 +187,41 @@ onMounted(async () => {
     userStore.userSession.checkout.forEach(item => {
         total.value += parseInt(item.price, 10)
     })
+
+    // Initialize PayPal Buttons
+    if (window.paypal) {
+        window.paypal.Buttons({
+        createOrder: (data, actions) => {
+            return actions.order.create({
+            purchase_units: [
+                {
+                amount: {
+                    value: (total.value / 100).toFixed(2), // Convert total to PayPal format
+                },
+                },
+            ],
+            });
+        },
+        onApprove: async (data, actions) => {
+            const order = await actions.order.capture();
+            console.log("Order successfully captured:", order);
+
+            // Handle successful payment
+            await userStore.createOrder(order.id, 'paypal'); // Save the order in your backend
+            
+            // Clear the cart and checkout session
+            userStore.userSession.cart = [];
+            userStore.userSession.checkout = [];
+            navigateTo("/checkout/purchaseSuccess");
+            console.log('Order completed');
+        },
+        onError: (err) => {
+            console.error("PayPal payment error:", err);
+            showError("An error occurred during the payment process.");
+        },
+        }).render("#paypal-button-container");
+    }
+
 })
 
 /* watch(() => total.value, () => {
@@ -255,7 +294,7 @@ onMounted(async () => {
     }
 } */
 
-
+/* 
 const createOrder = async (stripeId) => {
     await useFetch('/api/prisma/create-order', {
         method: "POST",
@@ -270,7 +309,7 @@ const createOrder = async (stripeId) => {
             products: userStore.checkout
         }
     })
-}
+} */
 
 const showError = (errorMsgText) => {
     let errorMsg = document.querySelector("#card-error");

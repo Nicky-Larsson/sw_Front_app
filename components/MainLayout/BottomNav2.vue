@@ -112,6 +112,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 
+import { useStoreAuth } from '@/stores/storeAuth'
+import { useStoreUser } from '@/stores/storeUser';
+
+const authStore = useStoreAuth()
+const userStore = useStoreUser();
+
+
+
 const emit = defineEmits(['orderLeftMenu', 'orderCloseMenu', 'orderRightMenu']);
 
 const router = useRouter();
@@ -170,6 +178,22 @@ const clickCloseMenu = () => {
 
 const clickRightMenu = () => {
   emit('orderRightMenu')
+
+  // Validate userSession only once
+  /* if (!userStore.userSession || !userStore.userSession.alias) {
+    if (!userStore.userSession._cleared) { // Check if the session has already been cleared
+      console.warn('Invalid user session detected. Clearing session and redirecting to login.');
+      userStore.clearSession(); // Clear the session
+      authStore.clearSession(); // Clear auth info if needed
+      userStore.userSession._cleared = true; // Mark the session as cleared
+    }
+      console.log('userStore', userStore.userSession.alias)
+      console.log('authStore', authStore.authInfo.email)
+    return;
+  } */
+
+  console.log('userStore', userStore.userSession.alias)
+  console.log('authStore', authStore.authInfo.email)
 }
 
 

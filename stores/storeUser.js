@@ -6,58 +6,15 @@ import {
   doc, deleteDoc, updateDoc, addDoc, 
   query, orderBy, setDoc, getDoc, writeBatch 
 } from 'firebase/firestore'
-
+import { toRaw } from 'vue';
 let userCollectionRef
 
 
 export const useStoreUser = defineStore('storeUser', {
-/*   state: () => ({
-    isMenuOverlay: false,
-    isLoading: false,
-    cart: [],
-    checkout: []
-  },
-  {
-    persist: true
-  }) 
-    consents: [],
-    orders: [],
-    alias: '',
-    email: authStore.authInfo.uid,
-    cart: [],
-    cart_date: '',
-  */
-  
-  state: () => {
-    // const cart = []
-    // const checkout = ref([])
-    // const authStore = useStoreAuth()
-    return { 
-      userSession: {
-                        email: '',
-                        alias: '',
-                        avatar: '',
-                        createdAt: '',
-                        access_rights: {
-                          graphic_novels: []
-                        },
-                        cart: [],
-                        cart_added: '',
-                        checkout: [],
-                        selectedArray: [],
-                        consents: [],
-                        orders: [],
-                        last_order: '',
-                        favorite_arts: [],
-                        favorite_products: [],
-                        last_login: '',
-                        unsubscribe_demands: [],
-                        unsubscribe_status: 'inactive',
-                        defaultLanguage: 'en',
-                        choosedLanguage:  'fr'
-                  }
-       } 
-  },
+
+  state: () => ({
+    userSession: initDefaultSession(), // Initialize userSession with the default structure
+  }),
   persist: {
     storage: piniaPluginPersistedstate.localStorage()  
   },
@@ -77,106 +34,118 @@ export const useStoreUser = defineStore('storeUser', {
       // const userDocRef = doc(db, 'users', authStore.authInfo.uid, 'cart', 'pina')
     },
     async getUserInfo() {
-      
       const authStore = useStoreAuth()
       const userDocRef = doc(db, 'users', authStore.authInfo.uid)  
+      try {
+        const userDoc = await getDoc(userDocRef)
 
-      const userDoc = await getDoc(userDocRef)
+        const defaultCart = this.userSession.cart || []
+        console.log('defaultCart : ', defaultCart)
 
-      
-      const defaultCart = this.userSession.cart || []
-      console.log('defaultCart : ', defaultCart)
+        if (userDoc.exists()) {   
+          console.log('Starting cart merge process...');
+          console.log('Logged-in users cart:', userDoc.data().cart)
+          
+          // Get the logged-in users's cart
+          const loggedInCart = userDoc.data().cart || []
 
-      if (userDoc.exists()) {   
-        console.log('Starting cart merge process...');
+          console.log('defaultCart:', defaultCart);
+          console.log('loggedInCart:', loggedInCart);
 
-        console.log('Logged-in users cart:', userDoc.data().cart)
-        
-        // Get the logged-in users's cart
-        const loggedInCart = userDoc.data().cart || []
-
-        console.log('defaultCart:', defaultCart);
-        console.log('loggedInCart:', loggedInCart);
-
-        const mergedCart = [...loggedInCart]
-        console.log('Initial mergedCart (copy of loggedInCart):', mergedCart);
+          const mergedCart = [...loggedInCart]
+          console.log('Initial mergedCart (copy of loggedInCart):', mergedCart);
 
 
-        defaultCart.forEach((product) => {
-          console.log('Processing product from defaultCart:', product);
-          // Check if the product already exists in mergedCart item.id === product.id
-          const existsInMergedCart = mergedCart.some((item) => 
-             item.graphic_novel_uid  === product.graphic_novel_uid &&
-             item.volume_uid   === product.volume_uid &&
-             item.volume_name  === product.volume_name &&
-             item.product_uid  === product.product_uid
-            );
+          defaultCart.forEach((product) => {
+            console.log('Processing product from defaultCart:', product);
+            // Check if the product already exists in mergedCart item.id === product.id
+            const existsInMergedCart = mergedCart.some((item) => 
+              item.graphic_novel_uid  === product.graphic_novel_uid &&
+              item.volume_uid   === product.volume_uid &&
+              item.volume_name  === product.volume_name &&
+              item.product_uid  === product.product_uid
+              );
 
-          console.log(`Does product with id ${product.id} exist in mergedCart?`, existsInMergedCart);
+            console.log(`Does product with id ${product.id} exist in mergedCart?`, existsInMergedCart);
 
-          if (!existsInMergedCart) {
-            console.log('Adding product to mergedCart:', product);
-            mergedCart.push(product);
-          } else {
-            console.log('Skipping product as it already exists in mergedCart:', product);
+            if (!existsInMergedCart) {
+              console.log('Adding product to mergedCart:', product);
+              mergedCart.push(product);
+            } 
+          });
+
+          // this.userSession = userDoc.data()
+          // Update the users session with the merged cart
+          this.userSession = {
+            ...this.userSession, // Preserve existing session data
+            ...userDoc.data(),
+            cart: mergedCart,
           }
-        });
+          
+          console.log('Updated userSession:', this.userSession);
 
-        // this.userSession = userDoc.data()
-        // Update the users session with the merged cart
-        this.userSession = {
-          ...userDoc.data(),
-          cart: mergedCart,
+          // Save the merged cart back to the database
+          // Only save to Firebase if there are changes to the cart
+          if (defaultCart.length > 0) {
+            console.log('Saving merged cart to Firebase...');
+            await this.setUserInfo();
+          }
+
+        } else {
+          console.log('No such document! Initializing default session...');
+          this.userSession = initDefaultSession();
+          await this.setUserInfo(); // Save the default session to Firebase
         }
-        
-        console.log('Updated userSession:', this.userSession);
-
-        // Save the merged cart back to the database
-        await this.setUserInfo()
-
-        // optionnal, clear the default cart after merging
-        // this.userSession.cart = []
-
-        //this.setUserInfo()
-        // console.log('userSession : ', this.userSession)
-      } else {
-        console.log('No such document!')
-        this.userSession = this.initDefaultSession()
-        this.setUserInfo()
+      } catch (error) {
+        console.error('Error retrieving user info:', error.message);
       }
     },
 
     async setUserInfo() {
-      const authStore = useStoreAuth()
-      const batch = writeBatch(db)
+      const authStore = useStoreAuth();
+      const userDocRef = doc(db, 'users', authStore.authInfo.uid);
 
-      const userDocRef = doc(db, 'users', authStore.authInfo.uid)
-      // await setDoc(userDocRef, data, { merge: true })
-      batch.set(userDocRef, this.userSession, { merge: true });
-      
-
-      const userDocRefConsents = doc(db, 'users', authStore.authInfo.uid,
-                                               'consents', 'date_consent')
-      const dataConsents = { date_infos: '2023-10-01' }
-      // await setDoc(userDocRefConsents,data2 , { merge: true })
-      batch.set(userDocRefConsents, dataConsents, { merge: true });
-
-
-      const userDocRefOrders = doc(db, 'users', authStore.authInfo.uid,
-        'orders', 'date_order')
-      const dataOrders = { date_infos: '2023-10-01' }
-      // await setDoc(userDocRefConsents,data2 , { merge: true })
-      batch.set(userDocRefOrders, dataOrders, { merge: true });      
-
-      // Commit the batch
-      await batch.commit();
-
-      console.log('storeUser :  start  iniiiit created <<<')
+      const batch = writeBatch(db);
+    
+    
+      // Sanitize userSession to remove undefined values
+      const sanitizedUserSession = JSON.parse(JSON.stringify({
+        cart: this.userSession.cart,
+        selectedArray: this.userSession.selectedArray,
+        last_login: this.userSession.last_login
+      }));
+    
+      try {
+        // Save the sanitized userSession to Firestore
+        batch.set(userDocRef, sanitizedUserSession, { merge: true });
+    
+        // Save consents data
+        const userDocRefConsents = doc(db, 'users', authStore.authInfo.uid, 'consents', 'date_consent');
+        const dataConsents = { date_infos: '2023-10-01' };
+        batch.set(userDocRefConsents, dataConsents, { merge: true });
+    
+        // Save orders data
+        const userDocRefOrders = doc(db, 'users', authStore.authInfo.uid, 'orders', 'date_order');
+        const dataOrders = { date_infos: '2023-10-01' };
+        batch.set(userDocRefOrders, dataOrders, { merge: true });
+    
+        // Commit the batch
+        await batch.commit();
+    
+        console.log('User session saved to Firebase:', sanitizedUserSession);
+      } catch (error) {
+        console.error('Error saving user session:', error.message);
+      }
     },
 
 
     clearSession() {
-      this.userSession = initDefaultSession()
+      this.userSession = {
+        ...initDefaultSession(), // Reset to default session
+        _cleared: true, // Mark the session as cleared
+      };
+      localStorage.removeItem('userSession'); // Clear persisted state
+      console.log('User session cleared:', this.userSession);
     },
 
 
@@ -185,16 +154,70 @@ export const useStoreUser = defineStore('storeUser', {
     },
 
 
+    async createOrder(paypalOrderId, paymentChoice) {
+
+      const authStore = useStoreAuth()
+      // const userDocRef = doc(db, 'users', authStore.authInfo.uid) 
+
+      // Unwrap the reactive Proxy to get the plain array
+      const plainCheckout = toRaw(this.userSession.checkout || []).map(item => toRaw(item));
+
+      console.log("Checkout before saving (raw):", plainCheckout);
+
+      // Filter out undefined values
+      const filteredCheckout = plainCheckout.filter(item => item !== undefined);
+      console.log("Filtered checkout:", filteredCheckout);
+
+      // Calculate the total price
+      const totalPrice = this.userSession.checkout.reduce((sum, item) => sum + parseInt(item.price, 10), 0);
+
+      // Format the current date and time
+      const currentDateTime = new Date();
+
+      const formattedDateTime = currentDateTime.toISOString().replace(/[:.]/g, '-'); // Use ISO format and replace colons and dots with dashes
+
+
+      // Generate a readable document name
+      const documentName = `Order-${formattedDateTime}`;
+
+      // Reference to the orders collection
+      const orderDocRef = doc(db, 'users', authStore.authInfo.uid, 'orders', documentName);
+
+
+
+      const orderData = {
+        userId: authStore.authInfo.uid || "unknown-user", // Fallback to "unknown-user" if uid is undefined
+        paymentChoice: paymentChoice || "unknown", // Fallback to "unknown" if paymentChoice is undefined
+        orderId: paypalOrderId || "unknown-order", // Fallback to "unknown-order" if paypalOrderId is undefined
+        products: filteredCheckout, // Use the filtered plain array
+        total: totalPrice,
+        totalFormated: `${(totalPrice / 100).toFixed(2)} EUR`,
+        createdFormated: formattedDateTime,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+      };
+  
+      try {
+        await setDoc(orderDocRef, orderData);
+        console.log("Order saved:", orderData);
+    
+        // Clear cart and checkout session
+        this.userSession.cart = [];
+        this.userSession.checkout = [];
+      } catch (error) {
+        console.error("Error saving order:", error.message);
+      }
+    }
 
 
     /* addToCart(item) {
-      this.userSession.cart.push(item);
+      this.userSession.cart.push(item)
     },
     removeFromCart(itemIndex) {
-      this.userSession.cart.splice(itemIndex, 1);
+      this.userSession.cart.splice(itemIndex, 1)
     },
     clearCart() {
-      this.userSession.cart = [];
+      this.userSession.cart = []
     } */
 
     

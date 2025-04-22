@@ -85,21 +85,21 @@
 
 
 
-<div class="overflow-hidden max-w-full text-center">
-  <span class="block items-center text-2xl mb-4">Choose your language</span>
-  <ul class="flex flex-wrap justify-center items-center gap-4">
-    <li 
-      v-for="lang in languages" 
-      :key="lang.id" 
-      @click="chooseLanguage(lang)" 
-      class="hover:bg-blue-200 cursor-pointer px-3 py-2 flex items-center"
-      :class="{ 'border-2 border-blue-500 rounded-md': selectedLanguage === lang.id }"
-    >
-      <img :src="lang.image" :alt="lang.alt" class="w-6 h-5 inline-block">
-      <span class="pl-2 text-xl">{{ lang.text }}</span>
-    </li>
-  </ul>
-</div>
+                    <div class="overflow-hidden max-w-full text-center">
+                      <span class="block items-center text-2xl mb-4">Choose your language</span>
+                      <ul class="flex flex-wrap justify-center items-center gap-4">
+                        <li 
+                          v-for="lang in languages" 
+                          :key="lang.id" 
+                          @click="chooseLanguage(lang)" 
+                          class="hover:bg-blue-200 cursor-pointer px-3 py-2 flex items-center"
+                          :class="{ 'border-2 border-blue-500 rounded-md': selectedLanguage === lang.id }"
+                        >
+                          <img :src="lang.image" :alt="lang.alt" class="w-6 h-5 inline-block">
+                          <span class="pl-2 text-xl">{{ lang.text }}</span>
+                        </li>
+                      </ul>
+                    </div>
 
                     <!-- New Buy Packages Button -->
                     <div v-if="isInCart" class="pt-1">
@@ -308,8 +308,9 @@ watchEffect(() => {
   ) {
     volumePromoData.value =
       storeProducts.products[urlParams.graphicNovel][urlParams.volumeNum][language.value]
-  console.log(volumePromoData.value)
-    productInfosForCart.value = {
+    console.log(volumePromoData.value)
+   
+   productInfosForCart.value = {
         graphic_novel_name : volumePromoData.value.graphic_novel_title,
         graphic_novel_uid : volumePromoData.value.graphic_novel_uid,
         volume_uid : volumePromoData.value.volume_uid, 
@@ -318,7 +319,8 @@ watchEffect(() => {
         language: language.value,
         thumbnail: volumePromoData.value.thumbnail,
         price: volumePromoData.value.price,
-        product_uid: volumePromoData.value.uid_product
+        product_uid: volumePromoData.value.uid_product,
+        new_in_cart : true
     }  
 
     console.log('Updated Volume Promo Data:', volumePromoData.value);

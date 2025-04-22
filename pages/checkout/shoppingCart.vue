@@ -52,20 +52,23 @@
                     <!-- :isSelected="isItemSelected(product)"
                     :selectedArray="selectedArray"  :key="product.product_uid">-->
 
-                    <div class="text-white"> userStore.userSession.checkout {{userStore.userSession.checkout}} </div>
+                    <!-- <div class="text-white"> userStore.userSession.checkout {{userStore.userSession.checkout}} </div>
 
                      <br>
                      <br>
-                     <div class="text-white">userStore.userSession.cart :  {{userStore.userSession.cart}} </div>
+
+
+                    <div class="text-white">userStore.userSession.selectedArray : {{userStore.userSession.selectedArray}} </div>
                     <br>
-
-                    <div class="text-white">userStore.userSession.selectedArray : {{userStore.userSession.selectedArray}} </div>   
+                     <div class="text-white">userStore.userSession.cart :  {{userStore.userSession.cart}} </div>
+                    <br> -->
 
                 </div>
 
                 <div class="md:hidden block my-4"/>
                 <div class="md:w-[35%]">
-                    <div id="Summary" class="bg-white rounded-lg p-4">
+                  <div class="sticky top-4">
+                    <div id="Summary" class="bg-white rounded-lg p-4 ">
                         <div class="text-2xl font-extrabold mb-2">Summary</div>
                         <div class="flex items-center justify-between my-4">
                             <div class="font-semibold">Total</div>
@@ -110,6 +113,7 @@
                         </p>
 
                     </div>
+                  </div>
                 </div>
             </div>
         </div>
@@ -124,45 +128,33 @@ import { navigateTo } from '#app';
 
 const userStore = useStoreUser();
 
-
+console.log(userStore.userSession)
 // const selectedArray = ref(userStore.userSession.selectedArray || []);
 // const selectedArray = ref([...userStore.userSession.cart]);
+if (!userStore.userSession.selectedArray) {
 
-// Ensure userStore.userSession.selectedArray is initialized
+  userStore.userSession.selectedArray = []; // Initialize as an empty array if undefined
+}
+
+
 onMounted(() => {
+
+  console.log('Initial selectedArray:', userStore.userSession.selectedArray);
+
+  // Ensure userStore.userSession.selectedArray is initialized
   if (!userStore.userSession.selectedArray || userStore.userSession.selectedArray.length === 0) {
-    userStore.userSession.selectedArray = [...userStore.userSession.cart];
+    // Add only items with new_in_cart: true to selectedArray
+    userStore.userSession.cart.forEach((item) => {
+      if (item.new_in_cart === true) {
+        // Push the item reactively
+        userStore.userSession.selectedArray.push(item);
+        console.log('Added to selectedArray:', item);
+      }
+    });
   }
+  console.log('Final selectedArray:', userStore.userSession.selectedArray);
+
 });
-
-// Function to synchronize selectedArray with the cart
-const syncSelectedArray = () => {
-  userStore.userSession.cart.forEach((product) => {
-    console.log(product)
-    const isAlreadySelected = userStore.userSession.selectedArray.some(
-      (selected) =>
-        selected.graphic_novel_uid === product.graphic_novel_uid &&
-        selected.volume_uid === product.volume_uid &&
-        selected.volume_name === product.volume_name &&
-        selected.product_uid === product.product_uid
-    );
-
-    if (!isAlreadySelected) {
-      userStore.userSession.selectedArray.push(product); // Add new product to selectedArray
-    }
-  });
-};
-
-// syncSelectedArray()
-// Call `syncSelectedArray` whenever the cart changes
-/* watch(
-  () => userStore.userSession.cart,
-  (newCart) => {
-    console.log('Cart changed:', newCart);
-    syncSelectedArray();
-  },
-  { deep: true }
-); */
 
 
 // Function to remove an item from the cart and update selectedArray
@@ -208,25 +200,40 @@ const cards = ref([
 
 // Compute the total price dynamically based on selectedArray
 const totalPriceComputed = computed(() => {
-  return userStore.userSession.selectedArray.reduce((total, prod) => {
+  const selectedArray = userStore.userSession.selectedArray; 
+
+  return selectedArray.reduce((total, prod) => {
     return total + (parseFloat(prod.price) || 0); // Ensure price is valid
   }, 0) / 100; // Return the total price as a fixed decimal
 });
 
 // Check if an item is selected
 const isItemSelected = (item) => {
-  return userStore.userSession.selectedArray.some(
+  // Ensure selectedArray is defined and is an array
+  const selectedArray = userStore.userSession.selectedArray;
+  // Check if the item is already in selectedArray
+  const isSelected = selectedArray.some(
     (selected) =>
       selected.graphic_novel_uid === item.graphic_novel_uid &&
       selected.volume_uid === item.volume_uid &&
       selected.volume_name === item.volume_name &&
       selected.product_uid === item.product_uid
   );
+
+  // If the item is not selected but has new_in_cart === true, add it to selectedArray
+  if (!isSelected && item.new_in_cart === true) {
+    userStore.userSession.selectedArray.push(item);
+    console.log('Automatically selected item with new_in_cart === true:', item);
+    return true; // Consider it selected
+  }
+
+  return isSelected; // Return the actual selection state
 };
 
 // Function to toggle selection of items
 const selectedRadioFunc = (item) => {
-  const index = userStore.userSession.selectedArray.findIndex(
+  const selectedArray = userStore.userSession.selectedArray;
+  const index = selectedArray.findIndex(
     (selected) =>
       selected.graphic_novel_uid === item.graphic_novel_uid &&
       selected.volume_uid === item.volume_uid &&
@@ -236,11 +243,27 @@ const selectedRadioFunc = (item) => {
 
   if (index === -1) {
     // If the item is not in the selectedArray, add it
-    userStore.userSession.selectedArray.push(item);
+        userStore.userSession.selectedArray.push({ ...item, new_in_cart: false })
+        // userStore.userSession.selectedArray.push(item)
+
   } else {
     // If the item is already in the selectedArray, remove it
     userStore.userSession.selectedArray.splice(index, 1);
   }
+
+  // Find the corresponding item in the cart and update new_in_cart to false
+  const cartItem = userStore.userSession.cart.find(
+    (cartProd) =>
+      cartProd.graphic_novel_uid === item.graphic_novel_uid &&
+      cartProd.volume_uid === item.volume_uid &&
+      cartProd.volume_name === item.volume_name &&
+      cartProd.product_uid === item.product_uid
+  );
+
+  if (cartItem) {
+    cartItem.new_in_cart = false; // Update the new_in_cart property in the cart
+  }
+
 };
 
 // Function to proceed to checkout
