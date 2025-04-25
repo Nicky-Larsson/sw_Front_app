@@ -33,7 +33,7 @@ onMounted(() => {
   // Redirect to the main menu after 4 seconds
   timeoutId = setTimeout(() => {
     navigateTo('/'); // Replace '/' with your main menu route
-  }, 4000);
+  }, 3500);
 });
 
 onUnmounted(() => {

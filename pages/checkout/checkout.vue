@@ -1,321 +1,302 @@
 <template>
-        <div id="CheckoutPage" class="mt-4 max-w-[1200px] mx-auto px-2">
-  
-            <div class="md:flex gap-4 justify-between mx-auto w-full">
-                <div class="md:w-[65%]">
-                    <div class="bg-white rounded-lg p-4">
-
-                        <div class="text-xl font-semibold mb-2">Shipping Address</div>
-
-                        <div v-if="currentAddress && currentAddress.data">
-                            <NuxtLink 
-                                to=""
-                                class="flex items-center pb-2 text-blue-500 hover:text-red-400"
-                            >
-                                <Icon name="mdi:plus" size="18" class="mr-2"/>
-                                Update Address
-                            </NuxtLink>
-
-                            <div class="pt-2 border-t">
-                                <div class="underline pb-1">Delivery Address</div>
-                                <ul class="text-xs">
-                                    <li class="flex items-center gap-2">
-                                        <div>Contact name:</div> 
-                                        <div class="font-bold">{{ currentAddress.data.name }}</div>
-                                    </li>
-                                    <li class="flex items-center gap-2">
-                                        <div>Address:</div> 
-                                        <div class="font-bold">{{ currentAddress.data.address }}</div>
-                                    </li>
-                                    <li class="flex items-center gap-2">
-                                        <div>Zip Code:</div> 
-                                        <div class="font-bold">{{ currentAddress.data.zipcode }}</div>
-                                    </li>
-                                    <li class="flex items-center gap-2">
-                                        <div>City:</div> 
-                                        <div class="font-bold">{{ currentAddress.data.city }}</div>
-                                    </li>
-                                    <li class="flex items-center gap-2">
-                                        <div>Country:</div> 
-                                        <div class="font-bold">{{ currentAddress.data.country }}</div>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <NuxtLink 
-                            v-else
-                            to=""
-                            class="flex items-center text-blue-500 hover:text-red-400"
-                        >
-                            <Icon name="mdi:plus" size="18" class="mr-2"/>
-                            Add New Address
-                        </NuxtLink>
-                    </div>
-
-
-                    <!-- <div class="text-white">userStore.userSession.selectedArray :  {{userStore.userSession.selectedArray}} </div> -->
-
-                    <div id="Items" class="bg-white rounded-lg p-4 mt-4">
-                        <div v-for="product in userStore.userSession.checkout" :key="product.id">
-                            <CheckoutItem :product="product" />
-                        </div>
-                    </div>
-
-                    <!-- <div class="text-white"> userStore.userSession.checkout  {{userStore.userSession.checkout}} </div>
-
-                    <br><br>
-                     <div class="text-white">selectedArray :  {{selectedArray}} </div>
-                    <br><br>
-                    
-                    <div class="text-white">userStore.userSession.selectedArray : {{userStore.userSession.selectedArray}} </div>  --> 
-                </div>
-
-
-                <div class="md:hidden block my-4"/>
-                <div class="md:w-[35%]">
-                    <div class="sticky top-4">
-                        <div id="PlaceOrder" class="bg-white rounded-lg p-4">
-
-                            <div class="text-2xl font-extrabold mb-2">Summary</div>
-
-                            <div class="flex items-center justify-between my-4">
-                                <div class="">Total Shipping</div>
-                                <div class="">Free</div>
-                            </div>
-
-                            <div class="border-t" />
-
-                            <div class="flex items-center justify-between my-4">
-                                <div class="font-semibold">Total</div>
-                                <div class="text-2xl font-semibold">
-                                <span class="font-extrabold">{{ total / 100 }}</span>  €
-                                </div>
-                            </div>
-
-                           <div id="paypal-button-container" class="mt-4"></div>
-                            
-                            <form @submit.prevent="pay()">
-                               <!--  <div 
-                                    class="border border-gray-500 p-2 rounded-sm" 
-                                    id="card-element" 
-                                /> -->
-
-                                <p 
-                                    id="card-error" 
-                                    role="alert" 
-                                    class="text-red-700 text-center font-semibold" 
-                                />
-
-                                <button 
-                                    :disabled="isProcessing"
-                                    type="submit"
-                                    class="
-                                    mt-4
-                                        bg-gradient-to-r 
-                                    from-[#FE630C] 
-                                    to-[#FF3200]
-                                        w-full 
-                                        text-white 
-                                        text-[21px] 
-                                        font-semibold 
-                                        p-1.5 
-                                        rounded-full
-                                    "
-                                    :class="isProcessing ? 'opacity-70' : 'opacity-100'"
-                                >
-                                    <Icon v-if="isProcessing" name="eos-icons:loading" />
-                                    <div v-else>Place order</div>
-                                </button>
-                            </form>
-
-                        </div>
-
-                        <div class="bg-white rounded-lg p-4 mt-4">
-                            <div class="text-lg font-semibold mb-2 mt-2">AliExpress</div>
-                            <p class="my-2">
-                                AliExpress keeps your information and payment safe
-                            </p>
-
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <client-only>
+  <div id="CheckoutPage" class="mt-4 max-w-[1200px] mx-auto px-2">
+    <div class="md:flex gap-4 justify-between mx-auto w-full">
+      <div class="md:w-[65%]">
+        <div class="bg-white rounded-lg p-4">
+          <div class="text-xl font-semibold mb-2">Client Infos</div>
+          <div v-if="currentAddress && currentAddress.data">
+            <NuxtLink 
+              to=""
+              class="flex items-center pb-2 text-blue-500 hover:text-red-400"
+            >
+              <Icon name="mdi:plus" size="18" class="mr-2" />
+              Update Address
+            </NuxtLink>
+          </div>
         </div>
-</template>
 
+        <div id="Items" class="bg-white rounded-lg p-4 mt-4">
+          <div v-for="product in userStore.userSession.checkout" :key="product.id">
+            <CheckoutItem :product="product" />
+          </div>
+        </div>
+      </div>
+
+      <div class="md:w-[35%]">
+        <div id="PlaceOrder" class="bg-white rounded-lg p-4">
+          <div class="text-2xl font-extrabold mb-2">Summary</div>
+          <div class="flex items-center justify-between my-4">
+            <div class="font-semibold">Total</div>
+            <div class="text-2xl font-semibold">
+              <span class="font-extrabold">{{ totalPriceComputed }} €</span>
+            </div>
+          </div>
+
+          <!-- PayPal Button -->
+
+          <div id="paypal-button-container" class="mt-4"></div>
+
+          <!-- Stripe Button -->
+          <form @submit.prevent="payWithStripe" class="mt-1 bg-white p-6 rounded-lg shadow-lg border border-gray-200">
+
+
+            <!-- Stripe Branding -->
+            <div class="flex items-center justify-center mb-4">
+              <img src="/payment/stripe.jpg" alt="Powered by Stripe" class="h-9 mr-2 " />
+            </div>
+
+            <!-- Stripe Card Element -->
+            <div class="mb-4">
+
+              <div id="card-element" class="border border-gray-300 rounded-md p-3 bg-gray-50 shadow-sm"></div>
+              <p id="card-error" class="text-red-500 text-sm mt-2"></p>
+            </div>
+              <div class="flex items-center mb-4">
+                  <img src="/payment/visa.png" alt="visa" class="h-6 mr-2" />
+                  <img src="/payment/mastercard.png" alt="mastercard" class="h-6 mr-2" />
+                  <span class="text-sm text-gray-500">Powered by Stripe</span>
+              </div>
+            <!-- Submit Button -->
+            <button
+              :disabled="isProcessing"
+              type="submit"
+              class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 px-4 rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div v-if="isProcessing" class="flex items-center justify-center">
+                <svg
+                  class="animate-spin h-5 w-5 text-white mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  ></path>
+                </svg>
+                Processing...
+              </div>
+              <div v-else>Pay Now</div>
+            </button>
+          </form>
+        </div>
+
+        <div class="bg-white rounded-lg p-4 mt-4">
+          <div class="text-lg font-semibold mb-2">Payment methods</div>
+          <div class="flex items-center justify-start gap-8 my-4">
+            <div v-for="(card, index) in cards" :key="index">
+              <img class="h-6" :src="card" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </client-only>
+</template>
 
 <script setup>
 import { useStoreUser } from '~/stores/storeUser';
-const userStore = useStoreUser()
-// const user = useSupabaseUser()
-const route = useRoute()
+import { ref, computed, onMounted, nextTick } from 'vue';
+import { navigateTo } from '#app';
+import { loadStripe } from '@stripe/stripe-js';
+import { useStorePayment } from '~/stores/storePayment'; // Import the payment store
 
-/* definePageMeta({ middleware: "auth" }) */
 
-let stripe = null
-let elements = null
-let card = null
-let form = null
-let total = ref(0)
-let clientSecret = null
-let currentAddress = ref(null)
-let isProcessing = ref(false)
+const userStore = useStoreUser();
+const paymentStore = useStorePayment();
 
-/*
-onBeforeMount(async () => {
-    if (userStore.checkout.length < 1) {
-        return navigateTo('/shoppingcart')
-    }
 
-    total.value = 0.00
-     if (user.value) {
-        currentAddress.value = await useFetch(`/api/prisma/get-address-by-user/${user.value.id}`)
-        setTimeout(() => userStore.isLoading = false, 200)
-    }
-})
-*/
+const totalPriceComputed = computed(() => {
+  const selectedArray = userStore.userSession.checkout;
+  return selectedArray.reduce((total, prod) => {
+    return total + (parseFloat(prod.price) || 0);
+  }, 0) / 100; // Return the total price as a fixed decimal
+});
 
-/* watchEffect(() => {
-    if (route.fullPath == '/checkout' && !user.value) {
-        return navigateTo('/auth')
-    }
-}) */
+const cards = ref([
+  '/payment/visa.png',
+  '/payment/mastercard.png',
+  '/payment/paypal.png',
+  '/payment/applepay.png',
+]);
 
+const currentAddress = ref(null);
+const isProcessing = ref(false);
+let stripe = null;
+let elements = null;
+let card = null;
+
+// Initialize PayPal on mount
 onMounted(async () => {
-    // isProcessing.value = true
-    userStore.userSession.checkout.forEach(item => {
-        total.value += parseInt(item.price, 10)
-    })
+  try {
+    await nextTick(); // Wait for the DOM to be fully updated
 
-    // Initialize PayPal Buttons
-    if (window.paypal) {
-        window.paypal.Buttons({
+    // Initialize PayPal
+    const paypalContainer = document.querySelector("#paypal-button-container");
+ if (paypalContainer && window.paypal) { // Check if paypal object exists
+      window.paypal.Buttons({
         createOrder: (data, actions) => {
-            return actions.order.create({
+          // Creates the order on PayPal's side
+          console.log('Creating PayPal order...');
+          return actions.order.create({
             purchase_units: [
-                {
+              {
                 amount: {
-                    value: (total.value / 100).toFixed(2), // Convert total to PayPal format
+                  value: totalPriceComputed.value.toFixed(2),
+                  currency_code: 'EUR'
                 },
-                },
+              },
             ],
-            });
+          });
         },
         onApprove: async (data, actions) => {
-            const order = await actions.order.capture();
-            console.log("Order successfully captured:", order);
+          console.log('PayPal onApprove triggered. OrderID:', data.orderID);
+          isProcessing.value = true;
 
-            // Handle successful payment
-            await userStore.createOrder(order.id, 'paypal'); // Save the order in your backend
-            
-            // Clear the cart and checkout session
-            userStore.userSession.cart = [];
-            userStore.userSession.checkout = [];
-            navigateTo("/checkout/purchaseSuccess");
-            console.log('Order completed');
+          try {
+            // Call your Nitro server route to capture payment and finalize order
+            console.log(`Client: Calling /api/paypal/capture for OrderID: ${data.orderID}`);
+            const response = await $fetch('/api/paypal/capture', {
+              method: 'POST',
+              body: {
+                orderID: data.orderID,
+                // Pass necessary checkout items for the server to save
+                checkoutItems: toRaw(userStore.userSession.checkout || [])
+              }
+            });
+
+            // Check the response from the Nitro server
+            if (response.success) {
+              console.log('Client: Server confirmed payment and order save. Order ID:', response.orderId);
+              // Clear cart locally (server should ideally handle the authoritative state)
+              userStore.clearCart(); // Assuming you have this action
+              userStore.userSession.checkout = []; // Clear checkout state
+              navigateTo('/checkout/purchaseSuccess');
+            } else {
+              // This case might not be hit if server throws errors using createError,
+              // but included for robustness if server returns { success: false }
+              throw new Error(response.message || 'Server reported an issue finalizing the order.');
+            }
+
+          } catch (error) {
+            // Handle errors from the $fetch call (network, or errors thrown by Nitro)
+            console.error('Client: Error calling /api/paypal/capture or processing response:', error);
+            // Nuxt's $fetch throws errors with a 'data' property for structured server errors
+            const message = error.data?.statusMessage || // Message from createError
+                            error.message ||             // Generic JS error message
+                           'An unexpected error occurred during payment processing.';
+            alert('Payment processing failed: ' + message);
+            // Do NOT navigate to success page
+          } finally {
+            isProcessing.value = false;
+          }
         },
         onError: (err) => {
-            console.error("PayPal payment error:", err);
-            showError("An error occurred during the payment process.");
+          // Handles errors *within* the PayPal SDK (e.g., popup issues)
+          console.error('PayPal SDK onError:', err);
+          alert('An error occurred with the PayPal button setup or during approval.');
+          isProcessing.value = false;
         },
-        }).render("#paypal-button-container");
-    }
-
-})
-
-/* watch(() => total.value, () => {
-    if (total.value > 0) {
-        stripeInit()
-    }
-}) */
-
-/* const stripeInit = async () => {
-    const runtimeConfig = useRuntimeConfig()
-    stripe = Stripe(runtimeConfig.stripePk);
-
-    let res = await $fetch('/api/stripe/paymentintent', {
-        method: 'POST',
-        body: {
-            amount: total.value,
+        onCancel: (data) => {
+          // Handles user closing the PayPal popup
+          console.log('PayPal payment cancelled by user.');
+          alert('Payment cancelled.');
+          isProcessing.value = false;
         }
-    })
-    clientSecret = res.client_secret
+      }).render("#paypal-button-container");
+    } else {
+      console.error('PayPal SDK (window.paypal) not loaded or #paypal-button-container not found.');
+    }
+
+    // Initialize Stripe
+    stripe = await loadStripe('pk_test_51RH043Ra6buvWRWkCFky34bguFtWWf5QxJGSA9wJXojXjTyUZAYeNTLJe6Wb0RtW16TazCRn3Eu1xvB7Q3BafA0r00Ez03oo0n'); // Replace with your actual Stripe Publishable Key
+    if (!stripe) {
+      throw new Error('Stripe failed to initialize. Check your public key.');
+    }
 
     elements = stripe.elements();
-    var style = {
-        base: {
-            fontSize: "18px",
-        },
-        invalid: {
-            fontFamily: 'Arial, sans-serif',
-            color: "#EE4B2B",
-            iconColor: "#EE4B2B"
-        }
-    };
-    card = elements.create("card", { 
-        hidePostalCode: true, 
-        style: style 
+    card = elements.create('card');
+    const cardElement = document.querySelector('#card-element');
+    if (cardElement) {
+      card.mount('#card-element');
+    }
+  } catch (error) {
+    console.error('Initialization Error:', error.message);
+  }
+});
+
+const email = ref('test@mail.com');
+const alias = ref('Nicky-Larsson');
+// Handle Stripe Payment
+const payWithStripe = async () => {
+  isProcessing.value = true;
+
+  try {
+    // Step 1: Create a payment intent using the store
+    const clientSecret = await paymentStore.createPaymentIntent(
+      Math.round(totalPriceComputed.value * 100), // Amount in cents
+      email.value, // Client's email
+      alias.value  // Client's alias
+    );
+    console.log('Client Secret:', clientSecret);
+
+    if (!clientSecret) {
+      throw new Error('Client secret is missing. Please try again.');
+    }
+
+    // Step 2: Save the order as "pending" before confirming the payment
+    const orderId = await userStore.createOrderWithStripe(clientSecret, 'stripe', 'pending');
+    if (!orderId) {
+      throw new Error('Failed to save the order. Please try again.');
+    }
+
+    // Step 3: Confirm the payment on the frontend
+    const { paymentIntent, error } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: { card: card },
     });
 
-    // Stripe injects an iframe into the DOM
-    card.mount("#card-element");
-    card.on("change", function (event) {
-        // Disable the Pay button if there are no card details in the Element
-        document.querySelector("button").disabled = event.empty;
-        document.querySelector("#card-error").textContent = event.error ? event.error.message : "";
-    });
+    if (error) {
+      console.error('Stripe Error:', error.message);
 
-    isProcessing.value = false
-}
-*/
-
-/* const pay = async () => {
-    if (currentAddress.value && currentAddress.value.data == '') {
-        showError('Please add shipping address')
-        return 
+      // Update the order to "failed" if payment fails
+      await userStore.updateOrderStatus(orderId, 'failed');
+      throw new Error(error.message);
     }
-    isProcessing.value = true
-    
-    let result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { card: card },
-    })
 
-    if (result.error) {
-        showError(result.error.message);
-        isProcessing.value = false
-    } else {
-        await createOrder(result.paymentIntent.id)
-        userStore.userSession.cart = []
-        userStore.checkout = []
-        setTimeout(() => {
-            return navigateTo('/purchaseSuccess')
-        }, 500)
-    }
-} */
+    console.log('Stripe Payment Intent:', paymentIntent);
 
-/* 
-const createOrder = async (stripeId) => {
-    await useFetch('/api/prisma/create-order', {
-        method: "POST",
-        body: {
-            userId: user.value.id,
-            stripeId: stripeId,
-            name: currentAddress.value.data.name,
-            address: currentAddress.value.data.address,
-            zipcode: currentAddress.value.data.zipcode,
-            city: currentAddress.value.data.city,
-            country: currentAddress.value.data.country,
-            products: userStore.checkout
-        }
-    })
-} */
+    // Step 4: Update the order to "paid" after successful payment
+    await userStore.updateOrderStatus(orderId, 'paid');
 
+    // Step 5: Navigate to the success page
+    navigateTo('/checkout/purchaseSuccess');
+  } catch (error) {
+    console.error('Error processing payment:', error.message);
+    alert('Payment failed: ' + error.message);
+  } finally {
+    isProcessing.value = false;
+  }
+};
+
+// Show error messages
 const showError = (errorMsgText) => {
-    let errorMsg = document.querySelector("#card-error");
-
+  const errorMsg = document.querySelector("#card-error");
+  if (errorMsg) {
     errorMsg.textContent = errorMsgText;
-    setTimeout(() => { errorMsg.textContent = "" }, 4000);
+    console.error("Error:", errorMsgText);
+  }
 };
 
 </script>

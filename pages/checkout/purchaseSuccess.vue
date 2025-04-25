@@ -8,9 +8,25 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, onUnmounted } from 'vue';
+import { navigateTo } from '#app'; // Use navigateTo for redirection
 
-const purchaseSuccess = ref('')     
+let timeoutId; // Declare a variable to store the timeout ID
+
+onMounted(() => {
+  // Redirect to the main menu after 4 seconds
+  timeoutId = setTimeout(() => {
+    navigateTo('/'); // Replace '/' with your main menu route
+  }, 4000);
+});
+
+onUnmounted(() => {
+  // Clear the timeout if the component is destroyed
+  if (timeoutId) {
+    clearTimeout(timeoutId);
+    console.log('Timeout cleared');
+  }
+}); 
 </script>
 
 <style scoped>

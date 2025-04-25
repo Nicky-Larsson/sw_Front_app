@@ -7,7 +7,6 @@ import {
   query, orderBy, setDoc, getDoc, writeBatch 
 } from 'firebase/firestore'
 import { toRaw } from 'vue';
-let userCollectionRef
 
 
 export const useStoreUser = defineStore('storeUser', {
@@ -154,61 +153,117 @@ export const useStoreUser = defineStore('storeUser', {
     },
 
 
-    async createOrder(paypalOrderId, paymentChoice) {
-
-      const authStore = useStoreAuth()
-      // const userDocRef = doc(db, 'users', authStore.authInfo.uid) 
-
+    async createOrder(orderId, paymentChoice = 'paypal', status = 'pending') {
+      const authStore = useStoreAuth();
+    
       // Unwrap the reactive Proxy to get the plain array
       const plainCheckout = toRaw(this.userSession.checkout || []).map(item => toRaw(item));
-
+    
       console.log("Checkout before saving (raw):", plainCheckout);
-
+    
       // Filter out undefined values
       const filteredCheckout = plainCheckout.filter(item => item !== undefined);
       console.log("Filtered checkout:", filteredCheckout);
-
+    
       // Calculate the total price
-      const totalPrice = this.userSession.checkout.reduce((sum, item) => sum + parseInt(item.price, 10), 0);
-
+      const totalPrice = this.userSession.checkout.reduce((sum, item) => sum + parseInt(item.price || 0, 10), 0);
+    
       // Format the current date and time
       const currentDateTime = new Date();
-
       const formattedDateTime = currentDateTime.toISOString().replace(/[:.]/g, '-'); // Use ISO format and replace colons and dots with dashes
-
-
-      // Generate a readable document name
-      const documentName = `Order-${formattedDateTime}`;
-
+    
       // Reference to the orders collection
-      const orderDocRef = doc(db, 'users', authStore.authInfo.uid, 'orders', documentName);
-
-
-
+      const orderDocRef = doc(db, 'users', authStore.authInfo.uid, 'orders', orderId);
+    
       const orderData = {
         userId: authStore.authInfo.uid || "unknown-user", // Fallback to "unknown-user" if uid is undefined
-        paymentChoice: paymentChoice || "unknown", // Fallback to "unknown" if paymentChoice is undefined
-        orderId: paypalOrderId || "unknown-order", // Fallback to "unknown-order" if paypalOrderId is undefined
+        paymentChoice: paymentChoice, // Payment method (PayPal)
+        orderId: orderId || "unknown-order", // Use PayPal's order ID
         products: filteredCheckout, // Use the filtered plain array
         total: totalPrice,
         totalFormated: `${(totalPrice / 100).toFixed(2)} EUR`,
         createdFormated: formattedDateTime,
         createdAt: new Date().toISOString(),
-        status: "pending",
+        status: status, // Initial status (pending, paid, or failed)
       };
-  
+    
       try {
+        // Save the order to Firestore
+        await setDoc(orderDocRef, orderData);
+        console.log("Order saved:", orderData);
+        // Clear cart and checkout session
+        this.userSession.cart = [];
+        this.userSession.checkout = [];
+        return orderId; // Return the order ID
+      } catch (error) {
+        console.error("Error saving order:", error.message);
+        return null; // Indicate failure
+      }
+    },
+
+    async updateOrderStatus(orderId, status) {
+      const authStore = useStoreAuth();
+    
+      try {
+        const orderDocRef = doc(db, 'users', authStore.authInfo.uid, 'orders', orderId);
+        await updateDoc(orderDocRef, { status: status });
+        console.log(`Order ${orderId} updated to status: ${status}`);
+      } catch (error) {
+        console.error(`Error updating order ${orderId} to status ${status}:`, error.message);
+      }
+    },
+
+    async createOrderWithStripe(orderId, paymentChoice = 'stripe', status = 'pending') {
+      const authStore = useStoreAuth();
+    
+      // Unwrap the reactive Proxy to get the plain array
+      const plainCheckout = toRaw(this.userSession.checkout || []).map(item => toRaw(item));
+    
+      console.log("Checkout before saving (raw):", plainCheckout);
+    
+      // Filter out undefined values
+      const filteredCheckout = plainCheckout.filter(item => item !== undefined);
+      console.log("Filtered checkout:", filteredCheckout);
+    
+      // Calculate the total price
+      const totalPrice = this.userSession.checkout.reduce((sum, item) => sum + parseInt(item.price, 10), 0);
+    
+      // Format the current date and time
+      const currentDateTime = new Date();
+      const formattedDateTime = currentDateTime.toISOString().replace(/[:.]/g, '-'); // Use ISO format and replace colons and dots with dashes
+    
+      // Generate a readable document name
+      const documentName = `Order-${formattedDateTime}`;
+    
+      // Reference to the orders collection
+      const orderDocRef = doc(db, 'users', authStore.authInfo.uid, 'orders', documentName);
+    
+      const orderData = {
+        userId: authStore.authInfo.uid || "unknown-user", // Fallback to "unknown-user" if uid is undefined
+        paymentChoice: paymentChoice, // Payment method (Stripe)
+        orderId: orderId || "unknown-order", // Use paymentIntent.id as the order ID
+        products: filteredCheckout, // Use the filtered plain array
+        total: totalPrice,
+        totalFormated: `${(totalPrice / 100).toFixed(2)} EUR`,
+        createdFormated: formattedDateTime,
+        createdAt: new Date().toISOString(),
+        status: status, // Initial status (pending, paid, or failed)
+      };
+    
+      try {
+        // Save the order to Firestore
         await setDoc(orderDocRef, orderData);
         console.log("Order saved:", orderData);
     
         // Clear cart and checkout session
         this.userSession.cart = [];
         this.userSession.checkout = [];
+        return documentName; // Return the order ID
       } catch (error) {
         console.error("Error saving order:", error.message);
+        return null; // Indicate failure
       }
     }
-
 
     /* addToCart(item) {
       this.userSession.cart.push(item)
@@ -219,9 +274,6 @@ export const useStoreUser = defineStore('storeUser', {
     clearCart() {
       this.userSession.cart = []
     } */
-
-    
-
 
   }
 })
