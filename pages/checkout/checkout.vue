@@ -112,8 +112,10 @@ import { ref, computed, onMounted, nextTick } from 'vue';
 import { navigateTo } from '#app';
 import { loadStripe } from '@stripe/stripe-js';
 import { useStorePayment } from '~/stores/storePayment'; // Import the payment store
+import { useRuntimeConfig } from '#app';
 
 
+const config = useRuntimeConfig();
 const userStore = useStoreUser();
 const paymentStore = useStorePayment();
 
@@ -173,7 +175,8 @@ onMounted(async () => {
               body: {
                 orderID: data.orderID,
                 // Pass necessary checkout items for the server to save
-                checkoutItems: toRaw(userStore.userSession.checkout || [])
+                checkoutItems: toRaw(userStore.userSession.checkout || []),
+                userId: authStore.authInfo.uid
               }
             });
 
@@ -221,7 +224,8 @@ onMounted(async () => {
     }
 
     // Initialize Stripe
-    stripe = await loadStripe('pk_test_51RH043Ra6buvWRWkCFky34bguFtWWf5QxJGSA9wJXojXjTyUZAYeNTLJe6Wb0RtW16TazCRn3Eu1xvB7Q3BafA0r00Ez03oo0n'); // Replace with your actual Stripe Publishable Key
+    stripe = await loadStripe(config.public.stripePublishableKey);
+ // Replace with your actual Stripe Publishable Key
     if (!stripe) {
       throw new Error('Stripe failed to initialize. Check your public key.');
     }
@@ -242,48 +246,46 @@ const alias = ref('Nicky-Larsson');
 // Handle Stripe Payment
 const payWithStripe = async () => {
   isProcessing.value = true;
-
   try {
-    // Step 1: Create a payment intent using the store
-    const clientSecret = await paymentStore.createPaymentIntent(
-      Math.round(totalPriceComputed.value * 100), // Amount in cents
-      email.value, // Client's email
-      alias.value  // Client's alias
-    );
-    console.log('Client Secret:', clientSecret);
+    // 1. Create payment intent and order
+    const { clientSecret, orderId } = await $fetch('/api/stripe/create-intent', {
+      method: 'POST',
+      body: {
+        amount: Math.round(totalPriceComputed.value * 100),
+        email: email.value,
+        alias: alias.value,
+        checkoutItems: toRaw(userStore.userSession.checkout || []),
+        userId: authStore.authInfo.uid
+      }
+    });
 
-    if (!clientSecret) {
-      throw new Error('Client secret is missing. Please try again.');
-    }
+    if (!clientSecret || !orderId) throw new Error('Server error: missing payment intent or order.');
 
-    // Step 2: Save the order as "pending" before confirming the payment
-    const orderId = await userStore.createOrderWithStripe(clientSecret, 'stripe', 'pending');
-    if (!orderId) {
-      throw new Error('Failed to save the order. Please try again.');
-    }
-
-    // Step 3: Confirm the payment on the frontend
+    // 2. Confirm payment on the frontend
     const { paymentIntent, error } = await stripe.confirmCardPayment(clientSecret, {
       payment_method: { card: card },
     });
 
     if (error) {
-      console.error('Stripe Error:', error.message);
-
-      // Update the order to "failed" if payment fails
-      await userStore.updateOrderStatus(orderId, 'failed');
+      // 3. Notify backend of failure (for logging)
+      await $fetch('/api/stripe/update-order', {
+        method: 'POST',
+        body: { userId: authStore.authInfo.uid, orderId, status: 'failed', error: error.message }
+      });
       throw new Error(error.message);
     }
 
-    console.log('Stripe Payment Intent:', paymentIntent);
+    // 4. Notify backend of success (update order to 'paid')
+    await $fetch('/api/stripe/update-order', {
+      method: 'POST',
+      body: { userId: authStore.authInfo.uid, orderId, status: 'paid', paymentIntent }
+    });
 
-    // Step 4: Update the order to "paid" after successful payment
-    await userStore.updateOrderStatus(orderId, 'paid');
-
-    // Step 5: Navigate to the success page
+    // 5. Success: clear cart and navigate
+    userStore.clearCart();
+    userStore.userSession.checkout = [];
     navigateTo('/checkout/purchaseSuccess');
   } catch (error) {
-    console.error('Error processing payment:', error.message);
     alert('Payment failed: ' + error.message);
   } finally {
     isProcessing.value = false;

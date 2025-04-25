@@ -1,156 +1,137 @@
-import { defineStore } from 'pinia'
-import { db } from '@/js/firebase'
-import { 
+import { defineStore } from 'pinia';
+// Remove the direct import of db
+// import { db } from '@/js/firebase';
+import {
   collection,
-  doc, deleteDoc, updateDoc, addDoc, 
-  query, orderBy, setDoc, getDoc, writeBatch 
-} from 'firebase/firestore'
-// import { useStoreAuth } from '@/stores/storeAuth'
+  doc, deleteDoc, updateDoc, addDoc,
+  query, orderBy, setDoc, getDoc, writeBatch
+} from 'firebase/firestore';
+import { useNuxtApp } from '#app'; // Import useNuxtApp
 
-let notesCollectionRef
-let notesCollectionQuery
-
-let getNotesSnapshot = null
+// Keep these if used elsewhere
+// let notesCollectionRef;
+// let notesCollectionQuery;
+// let getNotesSnapshot = null;
 
 export const useStoreAdminProducts = defineStore('storeAdminProducts', {
   state: () => {
-    return { 
-      products: []
-    }
+    return {
+      products: [] // Assuming this holds the structure from promoRiwaya.js
+    };
   },
   persist: {
-    storage: piniaPluginPersistedstate.localStorage(),
-  }, 
+    // Remove explicit storage, rely on global config from nuxt.config.ts
+    // storage: piniaPluginPersistedstate.localStorage(),
+  },
   actions: {
     async getProducts() {
+      // Keep this logic as is, it imports local data
       try {
-        this.products = []
-        const data = await import('~/stores/seed/promoRiwaya.js')
-        this.products = data.default
-        console.log('Products loaded:', this.products)
+        this.products = [];
+        const data = await import('~/stores/seed/promoRiwaya.js');
+        this.products = data.default; // Assuming data.default holds the desired structure
+        console.log('Products loaded from seed file:', this.products);
       } catch (error) {
-        console.error('Failed to load products:', error)
+        console.error('Failed to load products from seed file:', error);
       }
     },
+
     async addProducts() {
-      
-      await this.getProducts()
+      const { $firestore } = useNuxtApp(); // Get injected Firestore instance
 
-      const batch = writeBatch(db)
-
-      const COLLECTION = { 
-        name: 'graphic_nov2', 
-        graphicNovel_uid:"sunset_land",
-        graphicNovel_name:"Sunset Land" }
-
-
-
-      /*   volume: "volume_01",
-           price: 299,
-           currency: "€",
-           access: { ar: false, fr: false, en: false, ma: false }
-      } */
-
-      const productData = {
-        ar: { cover: 'link_cover', number: 'المجلد الأول', title: 'بداية المغامرات' },
-        fr: { cover: 'link_cover', number: 'volume 1', title: 'début aventure' },
-        en: { cover: 'cover link', number: 'Volume 1', title: 'adventure begin' },
-        ma: { cover: 'ghilaf', number: 'Volume 1', title: 'بداية المغامرات' }
+      // Check if Firestore is available
+      if (!$firestore) {
+        console.error("Firestore not available via Nuxt plugin in addProducts.");
+        return;
       }
 
-      const graphicNovelInfosDocRef = doc(db, COLLECTION.name, COLLECTION.graphicNovel_uid,)
-
-      // Add 3D Art and Artwork references
-      const art3dDocRef = doc(db, COLLECTION.name, COLLECTION.graphicNovel_uid, 'arts_3d', 'mina_arc_ghoula_01')
-      const artWorksDocRef = doc(db, COLLECTION.name, COLLECTION.graphicNovel_uid, 'artworks', 'art_001_vol_01')
-
-      batch.set(graphicNovelInfosDocRef, { logo_banner: 'link', title: 'Sunset Land' }, { merge: true })
-      batch.set(art3dDocRef, {}, { merge: true })
-      batch.set(artWorksDocRef, {}, { merge: true })
-
-      // VOLUMES
-      // Add Volume Info
-      // const volumeInfoDocRef = doc(db, COLLECTION.name, COLLECTION.graphicNovel_uid,, 'volumes', graphicNovel.volume)
-      // batch.set(volumeInfoDocRef, { currency: graphicNovel.currency, price: graphicNovel.price }, { merge: true })
-
-      // Language-specific data
+      // Ensure products are loaded from the seed file first
+      if (!this.products || (this.products.volumes && this.products.volumes.length === 0)) {
+         await this.getProducts();
+         // Check again if loading failed
+         if (!this.products || (this.products.volumes && this.products.volumes.length === 0)) {
+            console.error("Cannot add products, failed to load seed data.");
+            return;
+         }
+      }
 
 
-      // Product Version
+      // Use the injected $firestore instance for the batch
+      const batch = writeBatch($firestore);
+
+      const COLLECTION = {
+        name: 'graphic_nov2',
+        graphicNovel_uid: "sunset_land",
+        graphicNovel_name: "Sunset Land"
+      };
+
+      // Keep your batch logic, just replace 'db' with '$firestore'
+      const graphicNovelInfosDocRef = doc($firestore, COLLECTION.name, COLLECTION.graphicNovel_uid);
+      const art3dDocRef = doc($firestore, COLLECTION.name, COLLECTION.graphicNovel_uid, 'arts_3d', 'mina_arc_ghoula_01');
+      const artWorksDocRef = doc($firestore, COLLECTION.name, COLLECTION.graphicNovel_uid, 'artworks', 'art_001_vol_01');
+
+      batch.set(graphicNovelInfosDocRef, { logo_banner: 'link', title: 'Sunset Land' }, { merge: true });
+      batch.set(art3dDocRef, {}, { merge: true });
+      batch.set(artWorksDocRef, {}, { merge: true });
+
       const globalInfos = {
         graphic_novel: COLLECTION.graphicNovel_name,
         graphic_novel_uid: COLLECTION.graphicNovel_uid,
-        price: 299,
-        currency: '€'
-      } 
+        price: 299, // Example price, adjust if needed
+        currency: '€' // Example currency
+      };
 
-      // Safely iterate over volumes using for...of
+      // Safely iterate over volumes using forEach (as you were doing)
       if (this.products.volumes && Array.isArray(this.products.volumes)) {
         this.products.volumes.forEach((volumePromo) => {
-            // product  
-            const productVersionDocRef = doc(db, COLLECTION.name, COLLECTION.graphicNovel_uid, 'volumes', volumePromo.volume_uid, 'product', `prod_version`)
-            batch.set(productVersionDocRef, { free_access: true }, { merge: true })     
-       
-            // Object.entries(productData).forEach((product) => {
-            // })
+          if (!volumePromo || !volumePromo.volume_uid) {
+             console.warn('Skipping volume due to missing data:', volumePromo);
+             return; // Skip this iteration
+          }
 
-            //volumes
-            const volumeInfosDocRef = doc(db, COLLECTION.name, COLLECTION.graphicNovel_uid, 'volumes', volumePromo.volume_uid)
-            batch.set(volumeInfosDocRef, globalInfos , { merge: true })
+          // Product Version Doc Ref using $firestore
+          const productVersionDocRef = doc($firestore, COLLECTION.name, COLLECTION.graphicNovel_uid, 'volumes', volumePromo.volume_uid, 'product', `prod_version`);
+          batch.set(productVersionDocRef, { free_access: true }, { merge: true }); // Example data
 
-            console.log(volumePromo)
-            // Promo
-            // Object.entries(volumePromo).forEach(([data]) => {
-            
-            const promoDocRef = doc(db, COLLECTION.name, COLLECTION.graphicNovel_uid, 'volumes', volumePromo.volume_uid, 'promo', `${volumePromo.volume_uid}_promo`)
-            batch.set(promoDocRef, volumePromo, { merge: true })
-            
-            //})
-        })
+          // Volume Info Doc Ref using $firestore
+          const volumeInfosDocRef = doc($firestore, COLLECTION.name, COLLECTION.graphicNovel_uid, 'volumes', volumePromo.volume_uid);
+          batch.set(volumeInfosDocRef, globalInfos, { merge: true });
 
+          // Promo Doc Ref using $firestore
+          const promoDocRef = doc($firestore, COLLECTION.name, COLLECTION.graphicNovel_uid, 'volumes', volumePromo.volume_uid, 'promo', `${volumePromo.volume_uid}_promo`);
+          // Ensure volumePromo is a valid object before setting
+          if (typeof volumePromo === 'object' && volumePromo !== null) {
+             batch.set(promoDocRef, volumePromo, { merge: true });
+          } else {
+             console.warn(`Skipping promo for volume ${volumePromo.volume_uid} due to invalid data.`);
+          }
+        });
       } else {
-        console.warn('No volumes found in products.')
+        console.warn('No volumes array found in loaded products data.');
       }
-
-
-
-
 
       try {
         await batch.commit();
-        console.log('Batch commit successful')
+        console.log('Batch commit successful');
       } catch (error) {
-        console.error('Batch commit failed:', error)
+        console.error('Batch commit failed:', error);
       }
     },
 
     init() {
-      this.getProducts()
-      console.log('init: Called in StoreProduct  <--------')
+      // Keep this as is
+      this.getProducts();
+      console.log('init: Called in StoreAdminProduct <--------');
     },
-
-
   },
   getters: {
-
+    // Keep getters as is
   }
-})
+});
 
-
-
-
-
-function thumbnailsRiwaya() {
-  return {
-  }
-}
-
-function versionRiwaya() {
-  return {
-  }
-}
-
-function promoRiwaya() {
-  return {
-  }
-}
+// Keep helper functions if needed
+/*
+function thumbnailsRiwaya() { ... }
+function versionRiwaya() { ... }
+function promoRiwaya() { ... }
+*/

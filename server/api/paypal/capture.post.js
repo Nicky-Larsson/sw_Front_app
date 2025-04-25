@@ -43,17 +43,21 @@ if (!paypalClientId || !paypalClientSecret || !paypalEnv) {
   throw new Error("PayPal environment variables missing in runtimeConfig.");
 }
 
-const environment = paypalEnv === 'live'
-  ? new paypal.core.LiveEnvironment(paypalClientId, paypalClientSecret)
-  : new paypal.core.SandboxEnvironment(paypalClientId, paypalClientSecret);
+let environment;
+if (paypalEnv === 'sandbox') {
+  environment = new paypal.core.SandboxEnvironment(paypalClientId, paypalClientSecret);
+} else if (paypalEnv === 'live') {
+  environment = new paypal.core.LiveEnvironment(paypalClientId, paypalClientSecret);
+} else {
+  throw new Error("Unknown PayPal environment: " + paypalEnv);
+}
 const client = new paypal.core.PayPalHttpClient(environment);
 // ------------------------------------
 
 export default defineEventHandler(async (event) => {
-  // ... (rest of your handler logic remains the same)
   const body = await readBody(event);
   const paypalOrderId = body.orderID;
-  const userId = 'HARDCODED_USER_ID_REPLACE_ME'; // <<<--- REPLACE WITH ACTUAL USER ID LOGIC
+  const userId = body.userId;
   const checkoutItems = body.checkoutItems || [];
   const totalPrice = checkoutItems.reduce((sum, item) => sum + parseInt(item.price || 0, 10), 0);
 
@@ -61,33 +65,85 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing PayPal Order ID or User ID' });
   }
 
-  // 1. Capture PayPal Payment
+  // 1. Create order in Firestore with status 'pending'
+  const orderDocRef = db.collection('users').doc(userId).collection('orders').doc(paypalOrderId);
+  const orderData = {
+    userId,
+    paypalOrderId,
+    checkoutItems,
+    totalPrice,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+
+  try {
+    await orderDocRef.set(orderData);
+  } catch (err) {
+    console.error("Server: Failed to create pending order in Firestore:", err.message);
+    throw createError({ statusCode: 500, statusMessage: 'Could not create order in Firestore.' });
+  }
+
+  // 2. Attempt to capture PayPal payment
   const request = new paypal.orders.OrdersCaptureRequest(paypalOrderId);
   request.requestBody({});
-
   let capture;
   try {
     capture = await client.execute(request);
     if (capture.result.status !== 'COMPLETED') {
+      // Payment not completed, update order to 'failed'
+      await orderDocRef.update({ status: 'failed', failedAt: new Date().toISOString() });
       throw createError({ statusCode: 400, statusMessage: `PayPal payment status not COMPLETED: ${capture.result.status}` });
     }
   } catch (err) {
-    console.error("Server: PayPal capture failed:", err.message);
+    // Payment failed, update order to 'failed'
+    try {
+      await orderDocRef.update({ status: 'failed', failedAt: new Date().toISOString(), error: err.message });
+    } catch (updateErr) {
+      console.error("Server: Failed to update order to failed after PayPal error:", updateErr.message);
+    }
     throw createError({ statusCode: 500, statusMessage: 'PayPal payment capture failed.' });
   }
 
-  // 2. Save/Update Order in Firestore
-  const orderDocRef = db.collection('users').doc(userId).collection('orders').doc(paypalOrderId);
-  const orderData = { /* ... your order data ... */ status: 'paid' };
-
+  // 3. Payment succeeded, update order to 'paid'
   try {
-    await orderDocRef.set(orderData);
+    await orderDocRef.update({
+      status: 'paid',
+      paidAt: new Date().toISOString(),
+      paypalCapture: capture.result
+    });
     return { success: true, orderId: paypalOrderId };
   } catch (err) {
-    console.error(`Server: Firestore save failed for order ${paypalOrderId}:`, err.message);
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Payment successful (PayPal ID: ${paypalOrderId}), but failed to save order details. Please contact support.`
-    });
+    // Firestore update failed, but payment succeeded
+    console.error("Server: Payment succeeded but failed to update order to paid:", err.message);
+  
+    // Log the failed update for manual review
+    try {
+      await db
+          .collection('orderReports')
+          .doc('paypalOrders')
+          .collection(paypalOrderId)
+          .doc('failedOrderUpdates')
+          .set({
+            userId,
+            attemptedUpdate: {
+              status: 'paid',
+              paidAt: new Date().toISOString(),
+              paypalCapture: capture.result
+            },
+            originalOrderData: orderData,
+            error: err.message,
+            status: 'unresolved',
+            timestamp: new Date().toISOString()
+          });
+    } catch (logErr) {
+      console.error("Server: Failed to log failed order update:", logErr.message);
+    }
+  
+    // Still return success so user gets access, but log for manual fix
+    return {
+      success: true,
+      orderId: paypalOrderId,
+      warning: 'Payment succeeded, but failed to update order in Firestore. Please contact support if you have issues.'
+    };
   }
 });

@@ -64,11 +64,17 @@ export default defineNuxtConfig({
       paypal: {
         clientId: process.env.PAYPAL_CLIENT_ID, // Client ID is often public
         environment: process.env.PAYPAL_ENVIRONMENT,
-      }
+      },
+      stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+
       // Add other public keys here
     }
   },
-
+  // Configure the pinia-plugin-persistedstate module
+  piniaPluginPersistedstate: {
+    storage: 'localStorage', // Use the module's safe 'localStorage' adapter by default
+    // You can also use 'sessionStorage' or 'cookies'
+  },
 
   /* piniaPluginPersistedstate: {
     storage: 'localStorage', // 'sessionStorage', 'cookies'
