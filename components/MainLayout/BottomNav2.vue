@@ -191,8 +191,10 @@ const clickRightMenu = () => {
       console.log('authStore', authStore.authInfo.email)
     return;
   } */
+  console.log('Auth UID:', authStore.authInfo.uid); // <-- ADD THIS
 
   console.log('userStore', userStore.userSession.alias)
+  console.log('userStore', userStore.userSession)
   console.log('authStore', authStore.authInfo.email)
 }
 

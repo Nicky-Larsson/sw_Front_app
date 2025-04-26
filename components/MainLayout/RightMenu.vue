@@ -125,8 +125,6 @@ const authStore = useStoreAuth()
 
 const userStore = useStoreUser();
 
-// userStore.clearSession()
-// const user = useSupabaseUser()
 
 console.log(userStore.userSession)
 // authStore.authInfo.email
@@ -156,15 +154,15 @@ const toggleMenu = () => {
 
 const logout = async () => {
   try {
-    await authStore.logoutUser(); // Wait for logout to complete
-    userStore.clearSession(); // Clear session only after successful logout
+    await authStore.logoutUser();
+    authStore.clearSession();    // <-- Add this line for immediate clearing
+    userStore.clearSession();
     console.log("Logout successful, session cleared");
-    toggleMenu(); // Close the menu
+    toggleMenu();
   } catch (error) {
     console.error("Logout failed:", error.message);
   }
 };
-
 
 
 </script>

@@ -54,6 +54,12 @@
 <script setup>
 import { ref } from 'vue'
 
+
+onMounted(() => {
+  const authStore = useStoreAuth();
+  authStore.init();
+});
+
 const leftStarted = ref(false)
 const rightStarted = ref(false)
 

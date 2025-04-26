@@ -132,6 +132,15 @@ export const useStoreAuth = defineStore('storeAuth', {
         // Auth state change is handled by onAuthStateChanged in init(),
         // which will update authInfo and call userStore.getUserInfo()
         console.log("Login successful via signInWithEmailAndPassword.");
+        console.log("userCredential:", userCredential.user);
+        const authUserData = userCredential.user;
+        this.authInfo.uid = authUserData.uid;
+        this.authInfo.email = authUserData.email;
+  
+        const userStore = useStoreUser();
+        await userStore.getUserInfo();
+        // const userStore = useStoreUser();
+        // await userStore.setUserInfo(); // Load user data into the store
         // We don't need to manually set authInfo here as onAuthStateChanged will trigger
         return true; // Return true for successful login attempt
       } catch (error) {
@@ -141,22 +150,13 @@ export const useStoreAuth = defineStore('storeAuth', {
     },
 
     async logoutUser() {
-      const { $firebaseAuth } = useNuxtApp(); // Get injected Auth instance
-      const userStore = useStoreUser();
-
+      const { $firebaseAuth } = useNuxtApp();
       if (!$firebaseAuth) {
         console.error("Firebase Auth not available for logout.");
-        return; // Cannot log out if auth service isn't available
+        return;
       }
-
       try {
-        // Save user data before logging out (optional, but often good practice)
-        // Ensure setUserInfo also uses $firestore correctly
-        await userStore.setUserInfo();
-
-        // Use the injected $firebaseAuth instance
         await signOut($firebaseAuth);
-        // onAuthStateChanged will handle clearing the local state (authInfo and userSession)
         console.log('SignOut called successfully.');
       } catch (error) {
         console.error('Logout failed:', error.message);

@@ -27,6 +27,17 @@ export const useStoreUser = defineStore('storeUser', {
       const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances
       const authStore = useStoreAuth();
 
+      // Guard: If already loaded for this user, skip fetching again
+      if (
+        this.userSession &&
+        this.userSession.email &&
+        authStore.authInfo &&
+        this.userSession.email === authStore.authInfo.email
+      ) {
+        console.log('getUserInfo: Session already loaded, skipping fetch.');
+        return;
+      }
+
       // Check if instances are available and user is logged in
       if (!$firestore || !$firebaseAuth || !authStore.authInfo?.uid) {
          console.error("Firestore/Auth not available or user not logged in for getUserInfo.");
@@ -93,12 +104,20 @@ export const useStoreUser = defineStore('storeUser', {
 
         } else {
           console.log('No user document found! Initializing default session in Firestore...');
-          // User exists in Auth but not Firestore DB, save default session
-          this.userSession = initDefaultSession();
-          // Add email/alias if available from authStore
-          this.userSession.email = authStore.authInfo.email || '';
-          // Save the default session to Firebase
-          await this.setUserInfo();
+          // Only create a new user document if this is a real first login, not after logout/session clear
+          if (
+            authStore.authInfo?.uid &&
+            authStore.authInfo?.email &&
+            !this.userSession._cleared // <-- Guard: don't write if session was cleared
+          ) {
+            this.userSession = initDefaultSession();
+            this.userSession.email = authStore.authInfo.email || '';
+            this.userSession.alias = authStore.authInfo.alias || '';
+            await this.setUserInfo();
+          } else {
+            // Do NOT write to Firestore if not a real user
+            this.userSession = initDefaultSession();
+          }
         }
       } catch (error) {
         console.error('Error retrieving user info:', error.message);
@@ -125,10 +144,10 @@ export const useStoreUser = defineStore('storeUser', {
       const dataToSave = {
         cart: this.userSession.cart || [],
         selectedArray: this.userSession.selectedArray || [],
-        last_login: new Date().toISOString(), // Update last_login on save
-        // Add other fields you explicitly want to save/update here
-        // email: this.userSession.email, // Example
-        // alias: this.userSession.alias, // Example
+        last_login: new Date().toISOString(),
+        alias: this.userSession.alias || 'no alias',
+        email: this.userSession.email || '',
+        // Add any other fields you want to persist!
       };
       // Simple deep clone to avoid reactivity issues and undefined values for Firestore
       const sanitizedDataToSave = JSON.parse(JSON.stringify(dataToSave));
