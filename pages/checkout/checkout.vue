@@ -48,15 +48,14 @@
 
             <!-- Stripe Card Element -->
             <div class="mb-4">
-
               <div id="card-element" class="border border-gray-300 rounded-md p-3 bg-gray-50 shadow-sm"></div>
               <p id="card-error" class="text-red-500 text-sm mt-2"></p>
             </div>
-              <div class="flex items-center mb-4">
-                  <img src="/payment/visa.png" alt="visa" class="h-6 mr-2" />
-                  <img src="/payment/mastercard.png" alt="mastercard" class="h-6 mr-2" />
-                  <span class="text-sm text-gray-500">Powered by Stripe</span>
-              </div>
+            <div class="flex items-center mb-4">
+                <img src="/payment/visa.png" alt="visa" class="h-6 mr-2" />
+                <img src="/payment/mastercard.png" alt="mastercard" class="h-6 mr-2" />
+                <span class="text-sm text-gray-500">Powered by Stripe</span>
+            </div>
             <!-- Submit Button -->
             <button
               :disabled="isProcessing"
@@ -89,6 +88,43 @@
               <div v-else>Pay Now</div>
             </button>
           </form>
+
+          <!-- Google Pay Button Container -->
+          <div class="mt-4">
+            <div class="text-center mb-2 text-sm text-gray-600">Or pay with:</div>
+            <div id="payment-request-button"></div>
+            
+            <!-- Fallback message that appears only when Google Pay isn't available -->
+            <p id="payment-request-not-available" class="hidden text-center text-sm text-gray-500 mt-2">
+              Google Pay is not available on this device or browser.
+            </p>
+          </div>
+
+          <!-- Development Google Pay Test Button -->
+          <div v-if="!isProd" class="mt-4 mb-4">
+            <div class="text-center text-sm font-medium text-gray-700 mb-2">For Development Testing</div>
+            <button 
+              class="w-full bg-black text-white py-3 px-4 rounded-lg flex items-center justify-center"
+              @click="testGooglePayFlow"
+            >
+              <img src="/payment/googlepay.png" alt="Google Pay" class="h-6 mr-2" />
+              Test Google Pay Flow
+            </button>
+          </div>
+
+          <!-- Add this button to your payment options in checkout.vue template section -->
+          <div class="mt-4 mb-4">
+            <button 
+              class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg flex items-center justify-center"
+              @click="payWithCMI"
+              :disabled="isProcessing"
+            >
+              <img src="/payment/cmi-logo.png" alt="CMI" class="h-6 mr-2" />
+              Pay with Credit Card (CMI)
+            </button>
+          </div>
+
+
         </div>
 
         <div class="bg-white rounded-lg p-4 mt-4">
@@ -113,19 +149,14 @@ import { navigateTo } from '#app';
 import { loadStripe } from '@stripe/stripe-js';
 import { useStorePayment } from '~/stores/storePayment'; // Import the payment store
 import { useRuntimeConfig } from '#app';
+import { useStoreAuth } from '~/stores/storeAuth'; // <-- Add this import
 
 
 const config = useRuntimeConfig();
 const userStore = useStoreUser();
 const paymentStore = useStorePayment();
+const authStore = useStoreAuth(); 
 
-
-const totalPriceComputed = computed(() => {
-  const selectedArray = userStore.userSession.checkout;
-  return selectedArray.reduce((total, prod) => {
-    return total + (parseFloat(prod.price) || 0);
-  }, 0) / 100; // Return the total price as a fixed decimal
-});
 
 const cards = ref([
   '/payment/visa.png',
@@ -139,6 +170,71 @@ const isProcessing = ref(false);
 let stripe = null;
 let elements = null;
 let card = null;
+
+const email = ref(userStore.userSession.email || '')
+const alias = ref(userStore.userSession.alias || '')
+
+// Add this to your script
+const isProd = ref(process.env.NODE_ENV === 'production');
+
+
+const totalPriceComputed = computed(() => {
+  const selectedArray = userStore.userSession.checkout;
+  return selectedArray.reduce((total, prod) => {
+    return total + (parseFloat(prod.price) || 0);
+  }, 0) / 100; // Return the total price as a fixed decimal
+});
+
+
+const testGooglePayFlow = async () => {
+  isProcessing.value = true;
+  try {
+    console.log("Starting Google Pay test flow...");
+    
+    if (!stripe) {
+      throw new Error("Stripe not initialized. Please try again.");
+    }
+    
+    // Instead of creating a payment method directly, use a test payment method ID
+    const paymentMethodId = 'pm_card_visa'; // Stripe's test payment method
+    
+    console.log("Using Stripe test payment method ID:", paymentMethodId);
+    
+    // Send the request to your server
+    const response = await $fetch('/api/stripe/process-googlepay', {
+      method: 'POST',
+      body: {
+        paymentMethodId: paymentMethodId,
+        userId: authStore.authInfo.uid,
+        email: email.value,
+        alias: alias.value,
+        amount: Math.round(totalPriceComputed.value * 100),
+        checkoutItems: toRaw(userStore.userSession.checkout || []),
+        // Add this to simulate Google Pay in the Stripe dashboard
+        paymentSource: 'googlepay_test'
+      }
+    });
+    
+    console.log("Google Pay test flow response:", response);
+    
+    if (response.success) {
+      userStore.clearCart();
+      userStore.userSession.checkout = [];
+      userStore.userSession.selectedArray = []; 
+      navigateTo('/checkout/purchaseSuccess');
+    } else {
+      alert('Payment failed: ' + (response.message || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error("Google Pay test flow failed:", error);
+    alert('Test payment failed: ' + (error.data?.statusMessage || error.message));
+  } finally {
+    isProcessing.value = false;
+  }
+};
+
+
+
 
 // Initialize PayPal on mount
 onMounted(async () => {
@@ -170,6 +266,13 @@ onMounted(async () => {
           try {
             // Call your Nitro server route to capture payment and finalize order
             console.log(`Client: Calling /api/paypal/capture for OrderID: ${data.orderID}`);
+
+            console.log('Sending to /api/paypal/capture:', {
+              orderID: data.orderID,
+              checkoutItems: toRaw(userStore.userSession.checkout || []),
+              userId: authStore.authInfo.uid
+            });
+
             const response = await $fetch('/api/paypal/capture', {
               method: 'POST',
               body: {
@@ -186,6 +289,7 @@ onMounted(async () => {
               // Clear cart locally (server should ideally handle the authoritative state)
               userStore.clearCart(); // Assuming you have this action
               userStore.userSession.checkout = []; // Clear checkout state
+              userStore.userSession.selectedArray = []; 
               navigateTo('/checkout/purchaseSuccess');
             } else {
               // This case might not be hit if server throws errors using createError,
@@ -236,13 +340,99 @@ onMounted(async () => {
     if (cardElement) {
       card.mount('#card-element');
     }
+    // --- Add Payment Request Button (Google Pay) ---
+    const paymentRequest = stripe.paymentRequest({
+      country: 'FR',
+      currency: 'eur',
+      total: {
+        label: 'Total',
+        amount: Math.round(totalPriceComputed.value * 100),
+      },
+      requestPayerName: true,
+      requestPayerEmail: true,
+    });
+
+
+    const prButton = elements.create('paymentRequestButton', {
+      paymentRequest: paymentRequest,
+      style: {
+        paymentRequestButton: {
+          type: 'default',
+          theme: 'gray',
+          height: '44px',
+        },
+      },
+    });
+
+    // Google Pay/Apple Pay 
+    // In your paymentRequest.on('paymentmethod') handler in checkout.vue
+    paymentRequest.on('paymentmethod', async (ev) => {
+      isProcessing.value = true;
+      
+      try {
+        // Send the paymentMethod ID to your server
+        const response = await $fetch('/api/stripe/process-googlepay', {
+          method: 'POST',
+          body: {
+            paymentMethodId: ev.paymentMethod.id,
+            userId: authStore.authInfo.uid,
+            email: email.value,
+            alias: alias.value,
+            amount: Math.round(totalPriceComputed.value * 100),
+            checkoutItems: toRaw(userStore.userSession.checkout || [])
+          }
+        });
+
+        if (response.requiresAction) {
+          // Handle additional authentication if needed
+          const { error, paymentIntent } = await stripe.confirmCardPayment(
+            response.clientSecret
+          );
+          
+          if (error) {
+            ev.complete('fail');
+            throw new Error(error.message);
+          } else if (paymentIntent.status === 'succeeded') {
+            ev.complete('success');
+            userStore.clearCart();
+            userStore.userSession.checkout = [];
+            userStore.userSession.selectedArray = [];
+            navigateTo('/checkout/purchaseSuccess');
+          }
+        } else {
+          // Payment succeeded immediately
+          ev.complete('success');
+          userStore.clearCart();
+          userStore.userSession.checkout = [];
+          navigateTo('/checkout/purchaseSuccess');
+        }
+      } catch (error) {
+        ev.complete('fail');
+        alert('Google Pay payment failed: ' + error.message);
+      } finally {
+        isProcessing.value = false;
+      }
+    });
+
+    // Show the button if Google Pay is available
+    paymentRequest.canMakePayment().then((result) => {
+      console.log("Payment method detected:", result);
+      if (result) {
+        console.log("Google Pay is available!");
+        prButton.mount('#payment-request-button');
+      } else {
+        console.log("Google Pay is NOT available");
+        document.getElementById('payment-request-not-available').classList.remove('hidden');
+      }
+    });
+
   } catch (error) {
     console.error('Initialization Error:', error.message);
   }
 });
 
-const email = ref('test@mail.com');
-const alias = ref('Nicky-Larsson');
+
+
 // Handle Stripe Payment
 const payWithStripe = async () => {
   isProcessing.value = true;
@@ -284,13 +474,61 @@ const payWithStripe = async () => {
     // 5. Success: clear cart and navigate
     userStore.clearCart();
     userStore.userSession.checkout = [];
+    userStore.userSession.selectedArray = [];
     navigateTo('/checkout/purchaseSuccess');
+    
   } catch (error) {
     alert('Payment failed: ' + error.message);
   } finally {
     isProcessing.value = false;
   }
 };
+
+
+// Add this function to your existing <script setup> section
+const payWithCMI = async () => {
+  isProcessing.value = true;
+  try {
+    const response = await $fetch('/api/cmi/create-payment', {
+      method: 'POST',
+      body: {
+        userId: authStore.authInfo.uid,
+        email: email.value,
+        alias: alias.value,
+        amount: Math.round(totalPriceComputed.value * 100),
+        checkoutItems: toRaw(userStore.userSession.checkout || [])
+      }
+    });
+    
+    if (response.success) {
+      // Create and submit CMI form
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = response.cmiUrl;
+      
+      // Add all parameters as hidden fields
+      Object.entries(response.formData).forEach(([key, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      });
+      
+      // Add form to document and submit
+      document.body.appendChild(form);
+      form.submit();
+    } else {
+      alert('Payment initialization failed');
+    }
+  } catch (error) {
+    console.error("CMI payment failed:", error);
+    alert('Payment failed: ' + (error.data?.statusMessage || error.message));
+  } finally {
+    isProcessing.value = false;
+  }
+};
+
 
 // Show error messages
 const showError = (errorMsgText) => {

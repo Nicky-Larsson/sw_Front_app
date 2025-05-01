@@ -155,8 +155,10 @@ const toggleMenu = () => {
 const logout = async () => {
   try {
     await authStore.logoutUser();
+    await userStore.setCartInfoDb();
     authStore.clearSession();    // <-- Add this line for immediate clearing
     userStore.clearSession();
+
     console.log("Logout successful, session cleared");
     toggleMenu();
   } catch (error) {

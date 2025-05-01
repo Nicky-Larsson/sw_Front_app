@@ -8,7 +8,10 @@
         <div  class="mt-4 max-w-[1200px] mx-auto px-2">
             <div v-if="storeProducts.products.sunset_land" class="grid xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-2 grid-cols-1 gap-23">
                 <div v-for="volume in storeProducts.products.sunset_land" :key="volume">
-                    <productList :volume="volume.fr"/>
+                <productList
+                    :volume="volume.fr"
+                    @add-to-cart="addToCart"
+                />
                 </div>
             </div>
         </div>
@@ -86,7 +89,14 @@ const storeProducts = useStoreProducts()
 const storeAdminProducts = useStoreAdminProducts()
 
 
-
+const addToCart = (product) => {
+  if (!product || !product.graphic_novel_uid || !product.volume_uid || !product.product_uid) {
+    console.warn('Attempted to add invalid product to cart:', product);
+    return;
+  }
+  userStore.userSession.cart.push(product);
+  debouncedSaveCart();
+};
 
 // console.log('storeProducts.products : ')
 // console.log(storeProducts.products)

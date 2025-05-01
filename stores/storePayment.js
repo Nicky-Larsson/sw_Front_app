@@ -12,7 +12,7 @@ export const useStorePayment = defineStore('storePayment', {
       try {
         console.log('Creating payment intent for:', { amount, email, alias });
 
-        const response = await $fetch('/api/create-payment-intent', {
+        const response = await $fetch('/api/stripe/create-intent', {
           method: 'POST',
           body: {
             amount, // Amount in cents

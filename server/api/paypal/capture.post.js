@@ -14,6 +14,8 @@ try {
     throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not defined in runtimeConfig.');
   }
   serviceAccount = JSON.parse(serviceAccountJson); // Parse the JSON string from env/runtimeConfig
+  console.log("Loaded service account email:", serviceAccount.client_email);
+
 } catch (e) {
   console.error("Failed to parse Firebase service account key JSON:", e.message);
   throw new Error("Invalid Firebase service account key configuration.");
@@ -65,8 +67,58 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing PayPal Order ID or User ID' });
   }
 
+/*   console.log('userId:', userId);
+  console.log('checkoutItems:', checkoutItems);
+console.log('orderID:', paypalOrderId); */
+  
+  if (!userId) {
+    throw new Error('userId is missing or undefined!');
+  }
+  if (!Array.isArray(checkoutItems) || checkoutItems.length === 0) {
+    throw new Error('checkoutItems is missing or not an array!');
+  }
+  if (!paypalOrderId) {
+    throw new Error('orderID is missing or undefined!');
+  }
+
+
+
+  // Helper function to get the code
+  function getPaymentMethodCode(paymentSource) {
+    switch(paymentSource.toLowerCase()) {
+      case 'googlepay':
+      case 'googlepay_test':
+        return 'GP';
+      case 'paypal':
+        return 'PP';
+      case 'stripe':
+      case 'card':
+        return 'CC';
+      default:
+        return 'OT'; // Other
+    }
+  }
+
+  // 1. Create a new order in Firestore with 'pending' status
+  const now = new Date();
+  const dateCode = now.getFullYear().toString().slice(2) + 
+                  (now.getMonth()+1).toString().padStart(2,'0') + 
+                  now.getDate().toString().padStart(2,'0');
+  const timeCode = now.getHours().toString().padStart(2,'0') + 
+                  now.getMinutes().toString().padStart(2,'0');
+  const randomPart = Math.floor(Math.random()*100).toString().padStart(2,'0');
+
+  // Add payment method code to the order ID
+  const paymentMethodCode = getPaymentMethodCode(body.paymentSource || 'paypal');
+
+  //  const orderId = `SW-${dateCode}-${timeCode}-${randomPart}`;
+  const orderId = `SW-${dateCode}-${timeCode}-${randomPart}-${paymentMethodCode}`;
+
+
   // 1. Create order in Firestore with status 'pending'
-  const orderDocRef = db.collection('users').doc(userId).collection('orders').doc(paypalOrderId);
+  const orderDocRef = db.collection('users').doc(userId).collection('orders').doc(orderId);
+  
+  
   const orderData = {
     userId,
     paypalOrderId,
@@ -76,7 +128,17 @@ export default defineEventHandler(async (event) => {
     createdAt: new Date().toISOString()
   };
 
+
   try {
+    await db.collection('test_admin_write').add({ test: true, time: Date.now() });
+    console.log('Admin SDK test write succeeded');
+  } catch (e) {
+    console.error('Admin SDK test write failed:', e);
+  }
+
+
+  try {
+    console.log("Creating pending order in Firestore:", orderData);
     await orderDocRef.set(orderData);
   } catch (err) {
     console.error("Server: Failed to create pending order in Firestore:", err.message);

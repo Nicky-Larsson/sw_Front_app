@@ -125,6 +125,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useStoreUser } from '@/stores/storeUser';
 import { navigateTo } from '#app';
+import debounce from 'lodash/debounce';
 
 const userStore = useStoreUser();
 
@@ -156,6 +157,9 @@ onMounted(() => {
 
 });
 
+const debouncedSaveCart = debounce(function() {
+  userStore.setCartInfoDb();
+}, 2000); // Save at most once every 2 seconds
 
 // Function to remove an item from the cart and update selectedArray
 const removeFromCart = (item) => {
@@ -174,6 +178,8 @@ const removeFromCart = (item) => {
       selected.volume_name !== item.volume_name ||
       selected.product_uid !== item.product_uid
   );
+  debouncedSaveCart.call(this);
+
 };
 
 

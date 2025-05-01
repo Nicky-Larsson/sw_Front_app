@@ -47,7 +47,13 @@
 
 
                 <p class="px-1 pb-1">
-                    <span class="text-[#009A66] text-xl font-semibold">Add to Cart</span>
+                <button
+                    class="text-[#009A66] text-xl font-semibold"
+                    @click.stop="$emit('add-to-cart', volume)"
+                    type="button"
+                >
+                    Add to Cart
+                </button>
                 </p>
 
             </div>
@@ -56,15 +62,19 @@
 </template>
 
 <script setup>
-    const props = defineProps(['volume'])
-    const { volume } = toRefs(props)
+import { toRefs, computed } from 'vue';
 
-    const priceComputed = computed(() => {
-        return volume.value.price / 100
-    })
+const props = defineProps(['volume']);
+const { volume } = toRefs(props);
 
-    const oldPriceComputed = computed(() => {
-        let res =  (volume.value.price + (volume.value.price / 20))  / 100
-        return res.toFixed(2)
-    })
+const emit = defineEmits(['add-to-cart']);
+
+const priceComputed = computed(() => {
+  return volume.value.price / 100;
+});
+
+const oldPriceComputed = computed(() => {
+  let res = (volume.value.price + (volume.value.price / 20)) / 100;
+  return res.toFixed(2);
+});
 </script>

@@ -44,7 +44,7 @@ export const useStoreAuth = defineStore('storeAuth', {
             this.authInfo.uid = authUserData.uid;
             this.authInfo.email = authUserData.email;
             // Initialize user store AFTER confirming auth state
-            userStore.getUserInfo(); // Fetch user data now that we know they are logged in
+            userStore.getUserInfoDb(); // Fetch user data now that we know they are logged in
           }
         } else {
           // User is signed out
@@ -67,15 +67,20 @@ export const useStoreAuth = defineStore('storeAuth', {
         return { success: false, error: "Initialization failed." };
       }
 
-      try {
-        // Use the injected $firebaseAuth instance
-        const userCredential = await createUserWithEmailAndPassword($firebaseAuth, credentials.email, credentials.password);
-        const authUserData = userCredential.user;
-        console.log('Registration successful, authInfo:', authUserData);
+        try {
+          // 1. Create Firebase Auth user
+          const userCredential = await createUserWithEmailAndPassword(
+            $firebaseAuth,
+            credentials.email,
+            credentials.password
+          );
+          const uid = userCredential.user.uid;
+      
+          // 2. Create Firestore user document
+        const userDocRef = doc($firestore, 'users', uid);
 
-        // Prepare user data for Firestore
         const userData = {
-          email: authUserData.email,
+          email: credentials.email,
           alias: additionalInfo?.alias || 'Anonymous', // Use provided alias or default
           avatar: '',
           createdAt: new Date().toISOString(),
@@ -96,18 +101,16 @@ export const useStoreAuth = defineStore('storeAuth', {
           choosedLanguage: 'fr'
         };
 
-        // Use the injected $firestore instance
-        const userDocRef = doc($firestore, 'users', authUserData.uid);
         await setDoc(userDocRef, userData);
         console.log('User document created in Firestore.');
 
         // Update local state AFTER successful registration and DB write
-        this.authInfo.uid = authUserData.uid;
-        this.authInfo.email = authUserData.email;
+        // this.authInfo.uid = authUserData.uid;
+        // this.authInfo.email = authUserData.email;
 
         // Optionally load user data into userStore immediately
-        const userStore = useStoreUser();
-        await userStore.getUserInfo(); // Load the newly created user data
+        // const userStore = useStoreUser();
+        // await userStore.getUserInfoDb(); // Load the newly created user data
 
         return { success: true };
 
@@ -130,7 +133,7 @@ export const useStoreAuth = defineStore('storeAuth', {
         // Use the injected $firebaseAuth instance
         const userCredential = await signInWithEmailAndPassword($firebaseAuth, credentials.email, credentials.password);
         // Auth state change is handled by onAuthStateChanged in init(),
-        // which will update authInfo and call userStore.getUserInfo()
+        // which will update authInfo and call userStore.getUserInfoDb()
         console.log("Login successful via signInWithEmailAndPassword.");
         console.log("userCredential:", userCredential.user);
         const authUserData = userCredential.user;
@@ -138,9 +141,9 @@ export const useStoreAuth = defineStore('storeAuth', {
         this.authInfo.email = authUserData.email;
   
         const userStore = useStoreUser();
-        await userStore.getUserInfo();
+        await userStore.getUserInfoDb();
         // const userStore = useStoreUser();
-        // await userStore.setUserInfo(); // Load user data into the store
+        // await userStore.set UserInfo(); // Load user data into the store
         // We don't need to manually set authInfo here as onAuthStateChanged will trigger
         return true; // Return true for successful login attempt
       } catch (error) {

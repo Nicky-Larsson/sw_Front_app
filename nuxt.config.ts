@@ -50,8 +50,12 @@ export default defineNuxtConfig({
     // Server-only keys (not exposed to client)
     firebaseServiceAccountKey: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
     paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET, // Keep secret server-side
-
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY, // Keep secret server-side
     // Public keys (exposed to client via NUXT_PUBLIC_)
+    // CMI
+    cmiStoreKey: process.env.CMI_STORE_KEY,
+    cmiStoreName: process.env.CMI_STORE_NAME,
+    cmiPaymentUrl: process.env.CMI_PAYMENT_URL || 'https://test.cmi.co.ma/fim/est3Dgate',
     public: {
       firebase: {
         apiKey: process.env.NUXT_PUBLIC_FIREBASE_API_KEY,
@@ -65,9 +69,9 @@ export default defineNuxtConfig({
         clientId: process.env.PAYPAL_CLIENT_ID, // Client ID is often public
         environment: process.env.PAYPAL_ENVIRONMENT,
       },
-      stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-
-      // Add other public keys here
+      stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+      // CMI
+      siteUrl: process.env.SITE_URL || 'http://localhost:3000'
     }
   },
   // Configure the pinia-plugin-persistedstate module

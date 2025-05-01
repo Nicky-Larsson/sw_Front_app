@@ -159,6 +159,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useStoreUser } from '@/stores/storeUser';
 import { useStoreProducts } from '@/stores/storeProducts'
 import { storeToRefs } from 'pinia';
+import debounce from 'lodash/debounce';
+
 
 const route = useRoute()
 const router = useRouter()
@@ -288,8 +290,9 @@ const isInCart = computed(() => {
   for (const prod of userStore.userSession.cart) {
     if (
       productInfosForCart.value.graphic_novel_uid === prod.graphic_novel_uid &&
-      productInfosForCart.value.volume_uid === prod.volume_uid &&
-      productInfosForCart.value.product_uid === prod.product_uid
+      productInfosForCart.value.volume_uid === prod.volume_uid 
+      // && productInfosForCart.value.product_uid === prod.product_uid 
+           // <---- Think to rename this paramter
     ) {
       return true; // Product is in the cart
     }
@@ -319,7 +322,7 @@ watchEffect(() => {
         language: language.value,
         thumbnail: volumePromoData.value.thumbnail,
         price: volumePromoData.value.price,
-        product_uid: volumePromoData.value.uid_product,
+        product_uid: volumePromoData.value.product_uid,
         new_in_cart : true
     }  
 
@@ -357,13 +360,65 @@ const priceComputed = computed(() => {
     return '0.00'
 })
 
+
+
+watch(
+  () => userStore.userSession.cart,
+  (newCart) => {
+    if (newCart.some(item => item === undefined)) {
+      console.warn('Watcher: Undefined detected in cart:', newCart);
+    }
+  },
+  { deep: true }
+);
+
+watch(
+  () => userStore.userSession.selectedArray,
+  (newSelectedArray) => {
+    if (newSelectedArray.some(item => item === undefined)) {
+      console.warn('Watcher: Undefined detected in selectedArray:', newSelectedArray);
+    }
+  },
+  { deep: true }
+);
+
+const debouncedSaveCart = debounce(function() {
+  // Debug: Check for undefineds before saving
+  if (userStore.userSession.cart.some(item => item === undefined)) {
+    console.warn('Undefined detected in cart before save:', userStore.userSession.cart);
+  }
+  if (userStore.userSession.selectedArray.some(item => item === undefined)) {
+    console.warn('Undefined detected in selectedArray before save:', userStore.userSession.selectedArray);
+  }
+  userStore.setCartInfoDb();
+}, 2000);
+
 const addToCart = () => {
-  console.log(productInfosForCart.value)
-  console.log(userStore.userSession.cart)
-  
+  // Check for undefined/null or incomplete product
+  const product = productInfosForCart.value;
+  console.log('Product to add:', product);
+  console.log('product.graphic_novel_uid :', product.graphic_novel_uid);
+  console.log('product.volume_uid :', product.volume_uid);
+  console.log('product.product_uid :', product.product_uid);
+
+  if (
+    !product ||
+    !product.graphic_novel_uid ||
+    !product.volume_uid ||
+    !product.product_uid
+  ) {
+    console.warn('Attempted to add invalid product to cart:', product);
+    return;
+  }
+
+  console.log(product);
+  console.log(userStore.userSession.cart);
+
   if (!isInCart.value) {
-    userStore.userSession.cart.push(productInfosForCart.value);
-    console.log('Product added to cart:', productInfosForCart.value);
+    userStore.userSession.cart.push(product);
+    console.log('Product added to cart:', product);
+
+    debouncedSaveCart.call(this);
   } else {
     console.log('Product is already in the cart');
   }

@@ -20,10 +20,10 @@ export const useStoreUser = defineStore('storeUser', {
     // Keep your init action structure
     async init() {
       // console.log('StoreUser init action called');
-      // Add any initialization logic needed here, potentially calling getUserInfo
+      // Add any initialization logic needed here, potentially calling getUserInfoDb
     },
 
-    async getUserInfo() {
+    async getUserInfoDb() {
       const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances
       const authStore = useStoreAuth();
 
@@ -34,13 +34,13 @@ export const useStoreUser = defineStore('storeUser', {
         authStore.authInfo &&
         this.userSession.email === authStore.authInfo.email
       ) {
-        console.log('getUserInfo: Session already loaded, skipping fetch.');
+        console.log('getUserInfoDb: Session already loaded, skipping fetch.');
         return;
       }
 
       // Check if instances are available and user is logged in
       if (!$firestore || !$firebaseAuth || !authStore.authInfo?.uid) {
-         console.error("Firestore/Auth not available or user not logged in for getUserInfo.");
+         console.error("Firestore/Auth not available or user not logged in for getUserInfoDb.");
          // Maybe reset to default session or handle error
          this.userSession = initDefaultSession();
          return;
@@ -95,29 +95,18 @@ export const useStoreUser = defineStore('storeUser', {
           // Save the potentially updated merged cart back to Firebase if defaultCart had items
           if (defaultCart.length > 0 && JSON.stringify(loggedInCart) !== JSON.stringify(mergedCart)) {
              console.log('Saving merged cart changes back to Firebase...');
-             // Call setUserInfo, but maybe only save the cart part?
-             // Be careful not to overwrite other fields unintentionally if setUserInfo saves everything.
-             // Let's refine setUserInfo to be more specific or create a dedicated saveCart function.
-             // For now, calling the existing setUserInfo which saves cart, selectedArray, last_login
-             await this.setUserInfo();
+             // Call set_UserInfo, but maybe only save the cart part?
+             // Be careful not to overwrite other fields unintentionally if set_UserInfo saves everything.
+             // Let's refine set UserInfo to be more specific or create a dedicated saveCart function.
+             // For now, calling the existing set_UserInfo which saves cart, selectedArray, last_login
+             // await this.setUserInfo();
+             await this.setCartInfoDb();
           }
 
         } else {
-          console.log('No user document found! Initializing default session in Firestore...');
-          // Only create a new user document if this is a real first login, not after logout/session clear
-          if (
-            authStore.authInfo?.uid &&
-            authStore.authInfo?.email &&
-            !this.userSession._cleared // <-- Guard: don't write if session was cleared
-          ) {
-            this.userSession = initDefaultSession();
-            this.userSession.email = authStore.authInfo.email || '';
-            this.userSession.alias = authStore.authInfo.alias || '';
-            await this.setUserInfo();
-          } else {
-            // Do NOT write to Firestore if not a real user
-            this.userSession = initDefaultSession();
-          }
+          console.error('User document missing in Firestore! This should not happen after registration.');
+          this.userSession = initDefaultSession();
+          // Optionally, show an error to the user or trigger a support alert
         }
       } catch (error) {
         console.error('Error retrieving user info:', error.message);
@@ -126,12 +115,93 @@ export const useStoreUser = defineStore('storeUser', {
       }
     },
 
+    async initUserDocument() {
+      const { $firestore, $firebaseAuth } = useNuxtApp();
+      const authStore = useStoreAuth();
+    
+      if (!$firestore || !$firebaseAuth || !authStore.authInfo?.uid) {
+        console.error("Firestore/Auth not available or user not logged in for initUserDocument.");
+        return;
+      }
+    
+      const userDocRef = doc($firestore, 'users', authStore.authInfo.uid);
+      const dataToSave = {
+        ...initDefaultSession(),
+        email: authStore.authInfo.email || '',
+        alias: authStore.authInfo.alias || '',
+        createdAt: new Date().toISOString(),
+        last_login: new Date().toISOString(),
+      };
+    
+      try {
+        await setDoc(userDocRef, dataToSave, { merge: true });
+        console.log('Initialized new user document:', dataToSave);
+      } catch (error) {
+        console.error('Error initializing user document:', error.message);
+      }
+    },
+
+    async setCartInfoDb() {
+      const { $firestore, $firebaseAuth } = useNuxtApp();
+      const authStore = useStoreAuth();
+    
+      if (!$firestore || !$firebaseAuth || !authStore.authInfo?.uid) {
+        console.error("Firestore/Auth not available or user not logged in for setCartInfo.");
+        return;
+      }
+    
+      // Helper to remove undefined fields from objects
+      function removeUndefinedFields(obj) {
+        if (Array.isArray(obj)) {
+          return obj
+            .filter(item => item !== undefined && item !== null)
+            .map(removeUndefinedFields);
+        } else if (obj && typeof obj === 'object') {
+          return Object.fromEntries(
+            Object.entries(obj)
+              .filter(([_, v]) => v !== undefined)
+              .map(([k, v]) => [k, removeUndefinedFields(v)])
+          );
+        }
+        return obj;
+      }
+    
+      // Clean cart and selectedArray
+      const cleanCart = Array.isArray(this.userSession.cart)
+        ? this.userSession.cart
+            .filter(item => item !== undefined && item !== null)
+            .map(removeUndefinedFields)
+        : [];
+    
+      const cleanSelectedArray = Array.isArray(this.userSession.selectedArray)
+        ? this.userSession.selectedArray
+            .filter(item => item !== undefined && item !== null)
+            .map(removeUndefinedFields)
+        : [];
+    
+      const userDocRef = doc($firestore, 'users', authStore.authInfo.uid);
+      const dataToSave = {
+        cart: cleanCart,
+        selectedArray: cleanSelectedArray,
+        last_login: new Date().toISOString(),
+      };
+    
+      console.log("dataToSave", dataToSave);
+    
+      try {
+        await setDoc(userDocRef, dataToSave, { merge: true });
+        console.log('Cart info saved to Firebase:', dataToSave);
+      } catch (error) {
+        console.error('Error saving cart info:', error.message);
+      }
+    },
+
     async setUserInfo() {
       const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances
       const authStore = useStoreAuth();
 
       if (!$firestore || !$firebaseAuth || !authStore.authInfo?.uid) {
-         console.error("Firestore/Auth not available or user not logged in for setUserInfo.");
+         console.error("Firestore/Auth not available or user not logged in for set_UserInfo.");
          return;
       }
 
@@ -140,13 +210,13 @@ export const useStoreUser = defineStore('storeUser', {
       const batch = writeBatch($firestore); // Use injected $firestore
 
       // Keep your sanitization logic
-      // Only save specific fields you intend to manage via setUserInfo
+      // Only save specific fields you intend to manage via set-UserInfo
       const dataToSave = {
         cart: this.userSession.cart || [],
         selectedArray: this.userSession.selectedArray || [],
         last_login: new Date().toISOString(),
-        alias: this.userSession.alias || 'no alias',
-        email: this.userSession.email || '',
+        // alias: this.userSession.alias || 'no alias',
+        // email: this.userSession.email || '',
         // Add any other fields you want to persist!
       };
       // Simple deep clone to avoid reactivity issues and undefined values for Firestore
