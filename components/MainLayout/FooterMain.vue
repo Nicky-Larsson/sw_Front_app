@@ -1,7 +1,7 @@
 <template>
     <div class="container mx-auto pt-10">
-    
-      <NuxtImg src="footer.jpg" alt="image" class="w-full"/>
+          <img src="/footer.jpg" alt="image" class="w-full"/>
+
     
     </div>
 </template>

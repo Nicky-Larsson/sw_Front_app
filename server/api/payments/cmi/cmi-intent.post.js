@@ -1,7 +1,8 @@
 import { defineEventHandler, readBody, createError } from 'h3';
 import { useRuntimeConfig } from '#imports';
 import crypto from 'crypto';
-import { getFirebaseDb } from '../../utils/firebase';
+import { getFirebaseDb } from '../../../utils/firebase';
+import { createOrderData } from '../orderTemplate';
 
 
 export default defineEventHandler(async (event) => {
@@ -52,27 +53,33 @@ export default defineEventHandler(async (event) => {
     // Store order in Firestore
     const orderDocRef = db.collection('users').doc(body.userId).collection('orders').doc(orderId);
     
-    await orderDocRef.set({
-      userId: body.userId,
-      checkoutItems: body.checkoutItems,
-      totalAmount: body.amount / 100,
-      status: 'pending',
-      paymentMethod: 'cmi',
-      createdAt: new Date().toISOString()
-    });
+    await orderDocRef.set(
+      createOrderData(body, 'cmi', {
+        orderId,
+        currency: 'mad',
+        totalPrice: body.amount / 100,
+        payment_infos: {
+          paymentProvider: 'cmi',
+          cmiOrderId: orderId,
+          paymentMethod: 'cmi',
+          payment_email_id: body.email,
+          sent_metadata: body.metadata || {},
+        }
+        // Add other provider-specific fields if needed
+      })
+    );
     
 
     const isDev = process.env.CMI_ENV === 'TEST';
     if (isDev && !config.cmiStoreKey) {
-      // Return mock payment URL instead of actual CMI URL
       return {
         success: true,
-        cmiUrl: `/mock-cmi-payment`, // Local route to mock page
+        cmiUrl: '/checkout/cmiPaymentPage',
         formData: {
           amount: amount,
           oid: orderId,
-          okUrl: `${config.public.siteUrl}/checkout/purchaseSuccess`,
-          failUrl: `${config.public.siteUrl}/checkout/checkout`,
+          okUrl: `/checkout/purchaseSuccess`,
+          failUrl: `/checkout/checkout`,
         },
         orderId: orderId
       };
@@ -87,8 +94,8 @@ export default defineEventHandler(async (event) => {
         amount: amount,
         currency: currencyCode,
         oid: orderId,
-        okUrl: `${config.public.siteUrl}/checkout/purchaseSuccess`,
-        failUrl: `${config.public.siteUrl}/checkout/purchaseFailed`,
+        okUrl: `/checkout/purchaseSuccess`,
+        failUrl: `/checkout/purchaseFailed`,   // ${config.public.siteUrl}
         lang: 'fr',
         hash: hash,
         storetype: '3d_pay_hosting',

@@ -2,7 +2,7 @@
    <client-only>
     <div class="container mx-auto pt-2 md:w-[35%]">
       <nuxt-link to="">
-        <NuxtImg src="/library.jpg" alt="image" class="w-350 h-140  object-fill" />
+        <img src="/library.jpg" alt="image" class="w-350 h-140  object-fill" />
       </nuxt-link>
       <div class="flex flex-col text-amber-50 text-center text-4xl block"> 
 

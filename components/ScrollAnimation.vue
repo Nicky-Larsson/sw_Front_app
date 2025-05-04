@@ -1,7 +1,7 @@
 <template>
     <div class="container mx-auto pt-1">
       <nuxt-link :to="imageList[props.imageName][1]">
-        <NuxtImg :src="imageList[props.imageName][0]" alt="image" class="w-full" />
+        <img :src="imageList[props.imageName][0]" alt="image" class="w-full" />
       </nuxt-link>
     
     </div>

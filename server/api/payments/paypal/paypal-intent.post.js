@@ -3,6 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { readBody } from 'h3';
 import { useRuntimeConfig } from '#imports'; // Use Nuxt's auto-import
+import { createOrderData } from '../orderTemplate'; 
 
 // --- Firebase Admin SDK Initialization ---
 const config = useRuntimeConfig(); // Access runtime config server-side
@@ -60,7 +61,9 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
   const paypalOrderId = body.orderID;
   const userId = body.userId;
-  const checkoutItems = body.checkoutItems || [];
+  // const checkoutItems = body.checkoutItems || [];
+  const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
+
   const totalPrice = checkoutItems.reduce((sum, item) => sum + parseInt(item.price || 0, 10), 0);
 
   if (!paypalOrderId || !userId) {
@@ -119,14 +122,31 @@ console.log('orderID:', paypalOrderId); */
   const orderDocRef = db.collection('users').doc(userId).collection('orders').doc(orderId);
   
   
-  const orderData = {
+/*   const orderData = {
     userId,
     paypalOrderId,
     checkoutItems,
     totalPrice,
     status: 'pending',
     createdAt: new Date().toISOString()
-  };
+  }; */
+
+
+
+  const orderData = createOrderData(body, 'paypal', {
+    orderId,
+    currency: 'eur',
+    totalPrice,
+    payment_infos: {
+      paymentProvider: 'paypal',
+      paypalOrderId,
+      paymentMethod: paymentMethodCode, // e.g. 'PP'
+      payment_email_id: body.email,
+      sent_metadata: body.metadata || {},
+    }
+    // Add other provider-specific fields if needed
+  });
+
 
 
   try {
@@ -171,7 +191,16 @@ console.log('orderID:', paypalOrderId); */
     await orderDocRef.update({
       status: 'paid',
       paidAt: new Date().toISOString(),
-      paypalCapture: capture.result
+      paypal_webhook_answer: {
+        captureId: capture.result.id,
+        status: capture.result.status,
+        payerEmail: capture.result.payer?.email_address || '',
+        payerId: capture.result.payer?.payer_id || '',
+        paymentMethod: 'paypal',
+        amount: capture.result.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || '',
+        currency: capture.result.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.currency_code || '',
+        // Add more PayPal-specific fields as needed
+      }
     });
     return { success: true, orderId: paypalOrderId };
   } catch (err) {

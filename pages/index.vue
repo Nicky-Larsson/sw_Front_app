@@ -34,13 +34,6 @@
 
 import { ref } from 'vue';
 import { onMounted } from 'vue';
-import { useFlowbite } from '~/composables/useFlowbite';
-
-onMounted(() => {
-  useFlowbite(() => {
-    initFlowbite();
-  })
-})
 
 
 

@@ -1,3 +1,4 @@
+<!-- filepath: /home/vagrant/App_folder/SimoWarch-app-v1/pages/checkout/cmiPaymentPage.vue -->
 <template>
   <div class="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full bg-white rounded-lg shadow-lg overflow-hidden">
@@ -10,7 +11,6 @@
           </div>
         </div>
       </div>
-      
       <!-- Payment details -->
       <div class="p-6">
         <div class="mb-6 text-center">
@@ -22,7 +22,6 @@
           <h3 class="text-lg font-bold text-gray-900">Secure Payment</h3>
           <p class="text-gray-500">Centre Monétique Interbancaire</p>
         </div>
-        
         <!-- Order Information -->
         <div class="bg-gray-50 p-4 rounded-lg mb-6">
           <div class="flex justify-between mb-2">
@@ -38,7 +37,6 @@
             <span>{{ currentDate }}</span>
           </div>
         </div>
-        
         <!-- Card Input Fields (just for show) -->
         <div class="mb-6">
           <div class="mb-4">
@@ -56,7 +54,6 @@
             </div>
           </div>
         </div>
-        
         <!-- Action Buttons -->
         <div class="space-y-3">
           <button @click="simulateSuccess" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors">
@@ -88,44 +85,52 @@ const currentDate = computed(() => {
 });
 
 onMounted(() => {
-  // Get parameters from URL query
   const { oid, amount: amountParam, okUrl, failUrl } = route.query;
-  
   orderId.value = oid || 'TEST-ORDER';
   amount.value = amountParam || '100.00';
-  originUrl.value = okUrl || '/checkout/checkout';
-  
-  // Also store failUrl in local storage to use in case of failure
-  if (failUrl) {
+  originUrl.value = (okUrl && okUrl !== 'undefined' && okUrl !== undefined) ? okUrl : '/checkout/purchaseSuccess';
+  if (failUrl && failUrl !== 'undefined' && failUrl !== undefined) {
     localStorage.setItem('cmi_fail_url', failUrl);
+  } else {
+    localStorage.removeItem('cmi_fail_url');
   }
 });
 
-const simulateSuccess = () => {
-  // Simulate successful payment process (add a small delay for realism)
+// --- Add these methods ---
+const postToCallback = async (success = true) => {
+  const payload = {
+    oid: orderId.value,
+    ProcReturnCode: success ? '00' : '99',
+    Response: success ? 'Approved' : 'Declined',
+    TransId: success ? 'TEST-TRANS-ID' : undefined
+  };
+  await fetch('/api/payments/cmi/cmi-callback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+};
+
+const simulateSuccess = async () => {
+  await postToCallback(true);
   setTimeout(() => {
-    // Optionally: Call your server to update order status
-    // $fetch('/api/cmi/callback', { method: 'POST', body: { oid: orderId.value, ProcReturnCode: '00', Response: 'Approved' } });
-    
-    // Redirect to success URL
-    navigateTo(originUrl.value || '/checkout/purchaseSuccess');
+    const url = (originUrl.value && originUrl.value !== 'undefined' && originUrl.value !== undefined)
+      ? originUrl.value
+      : '/checkout/purchaseSuccess';
+    navigateTo(url);
   }, 1500);
 };
 
-const simulateFailure = () => {
-  // Simulate failed payment
+const simulateFailure = async () => {
+  await postToCallback(false);
   setTimeout(() => {
-    // Optionally: Call your server to update order status
-    // $fetch('/api/cmi/callback', { method: 'POST', body: { oid: orderId.value, ProcReturnCode: '99', Response: 'Declined' } });
-    
-    // Redirect to failure URL
-    const failUrl = localStorage.getItem('cmi_fail_url') || '/checkout/checkout';
-    navigateTo(failUrl);
+    const failUrl = localStorage.getItem('cmi_fail_url');
+    navigateTo((failUrl && failUrl !== 'undefined' && failUrl !== undefined) ? failUrl : '/checkout/checkout');
   }, 1500);
 };
 
-const goBack = () => {
-  // Go back to checkout page
+const goBack = async () => {
+  await postToCallback(false);
   navigateTo('/checkout/checkout');
 };
 </script>

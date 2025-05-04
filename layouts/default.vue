@@ -79,14 +79,7 @@ const triggerCloseMenu = () => {
 }
 
 
-/* import { onMounted } from 'vue'
-import { useFlowbite } from '~/composables/useFlowbite';
 
-onMounted(() => {
-  useFlowbite(() => {
-    initFlowbite();
-  })
-}) */
 
 //    <!-- <nuxt-link to="/users/[oeuvre]/tomes/2/liens"> liens </nuxt-link>
 //    <nuxt-link to="/promo/[oeuvre]/tomes/1"> promo </nuxt-link> -->

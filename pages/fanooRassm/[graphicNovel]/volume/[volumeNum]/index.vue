@@ -15,7 +15,7 @@
                       <div v-for="(image, index) in previewArray" :key="index">
                             <img 
                                 @mouseover="updateCurrentImage(image, index)"
-                                @click="updateCurrentImage(image, index)"
+                                
                                 width="70"
                                 class="rounded-md object-fit border-[3px] cursor-pointer"
                                 :class="currentImage === image ? 'border-[#FF5353]' : ''"

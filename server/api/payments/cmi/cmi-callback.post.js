@@ -1,7 +1,6 @@
 import { defineEventHandler, readBody } from 'h3';
-import { getFirestore } from 'firebase-admin/firestore';
-
-const db = getFirestore();
+import { getFirebaseDb } from '../../../utils/firebase'; // adjust path if needed
+const db = getFirebaseDb();
 
 export default defineEventHandler(async (event) => {
   try {
@@ -37,8 +36,15 @@ export default defineEventHandler(async (event) => {
       await orderDoc.ref.update({
         status: 'paid',
         paidAt: new Date().toISOString(),
-        transactionId: TransId,
-        paymentDetails: body
+        updatedAt: new Date().toISOString(),
+        cmi_webhook_answer: {
+          transactionId: body.TransId,
+          authCode: body.AuthCode, // if available
+          response: body.Response,
+          cardBrand: body.CardType || '', // if available
+          cardLast4: body.PAN || '',      // if available
+          // ...other fields as needed
+        }
       });
     } else {
       await orderDoc.ref.update({

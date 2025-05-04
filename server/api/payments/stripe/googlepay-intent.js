@@ -1,9 +1,12 @@
 import Stripe from 'stripe';
-import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { readBody } from 'h3';
 import { useRuntimeConfig } from '#imports';
+import { getFirebaseDb } from '../../../utils/firebase'; 
+import { createOrderData } from '../orderTemplate';
+
 // import { allowedNodeEnvironmentFlags } from 'process';
+
 
 // --- Firebase Admin SDK Initialization ---
 const config = useRuntimeConfig();
@@ -46,14 +49,16 @@ if (!getApps().length) {
     throw new Error("Could not initialize Firebase Admin SDK.");
   }
 }
-const db = getFirestore();
 
+const db = getFirebaseDb();
 // --- Stripe Client Initialization ---
 const stripe = new Stripe(config.stripeSecretKey);
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
-  const { paymentMethodId, userId, email, alias, amount, checkoutItems } = body;
+  const { paymentMethodId, userId, email, alias, amount } = body;
+  const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
+
 
   if (!paymentMethodId || !userId || !amount) {
     throw createError({ 
@@ -109,16 +114,23 @@ export default defineEventHandler(async (event) => {
     // Then create document with custom ID
     const orderRef = await db.collection('users').doc(userId).collection('orders').doc(orderId);
     
-    await orderRef.set({
-      userId,
-      checkoutItems,
-      totalAmount: amount,
-      paymentMethod: 'googlepay',
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    });
+    await orderRef.set(
+      createOrderData(body, 'googlepay', {
+        orderId,
+        currency: 'eur',
+        totalPrice: amount,
+        payment_infos: {
+          paymentProvider: 'googlepay',
+          paymentIntentId: '', // to be filled after intent creation
+          paymentMethod: paymentMethodCode,
+          payment_email_id: email,
+          sent_metadata: body.metadata || {},
+        }
+        // Add other provider-specific fields if needed
+      })
+    );
 
-    // Add this where you create the payment intent:
+    
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency: 'eur',
@@ -141,8 +153,26 @@ export default defineEventHandler(async (event) => {
       // Update order status to paid
       await orderRef.update({
         status: 'paid',
-        stripePaymentIntentId: paymentIntent.id,
-        paidAt: new Date().toISOString()
+        paidAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        payment_infos: {
+          paymentProvider: 'googlepay',
+          paymentIntentId: paymentIntent.id,
+          paymentIntentStatus: paymentIntent.status,
+          paymentMethod: paymentIntent.payment_method_types?.[0] || '', // e.g. 'card'
+          payment_email_id: email,
+          payment_brand: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.brand || '',
+          payment_country: paymentIntent.charges?.data?.[0]?.country || '',
+          sent_metadata: paymentIntent.metadata || {},
+        },
+        stripe_webhook_answer: {
+          paymentIntentId: paymentIntent.id,
+          paymentIntentStatus: paymentIntent.status,
+          paymentMethodType: paymentIntent.payment_method_types?.[0] || '',
+          paymentBrand: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.brand || '',
+          paymentLast4: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.last4 || '',
+          paymentCountry: paymentIntent.charges?.data?.[0]?.country || '',
+        }
       });
 
       return {

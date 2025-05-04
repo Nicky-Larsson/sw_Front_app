@@ -71,7 +71,7 @@ export default defineNuxtConfig({
       },
       stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
       // CMI
-      siteUrl: process.env.SITE_URL || 'http://localhost:3000'
+      // siteUrl: process.env.SITE_URL || 'http://localhost:3000'
     }
   },
   // Configure the pinia-plugin-persistedstate module
