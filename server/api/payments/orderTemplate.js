@@ -10,6 +10,8 @@ export function createOrderData(body, provider, providerFields = {}) {
       failedAt: '',
       currency: providerFields.currency || 'eur',
       totalPrice: body.amount / 100,
+      nb_checkout_product: Array.isArray(body.checkoutItems) ? body.checkoutItems.length : 0,
+      nb_refund_product: 0,
       user_infos: {
         userId: body.userId,
         email: body.email,
@@ -18,8 +20,7 @@ export function createOrderData(body, provider, providerFields = {}) {
       payment_infos: providerFields.payment_infos || {},
       [`${provider}_webhook_answer`]: {},
       checkout_infos: {
-        items: Array.isArray(body.checkoutItems) ? body.checkoutItems : [],
-        issue: [],
+        items: Array.isArray(body.checkoutItems) ? body.checkoutItems : []
       },
       refund_infos: {
         refund_demands_nb: 0,
@@ -36,12 +37,12 @@ export function createOrderData(body, provider, providerFields = {}) {
           // }
         ],
       },
-      products_access_infos: {
-        nb_checkout_product: Array.isArray(body.checkoutItems) ? body.checkoutItems.length : 0,
-        nb_refund_product: 0,
+      /* products_access_infos: {
         nb_access_product: Array.isArray(body.checkoutItems) ? body.checkoutItems.length : 0,
-        productsAccessList: Array.isArray(body.checkoutItems) ? body.checkoutItems : [],
-      },
+        productsAccessList: Array.isArray(body.checkoutItems) 
+        ? body.checkoutItems.map(item => ({ product_uid: item.product_uid })) 
+        : [],
+      }, */
       supportNotes: [],
       tags: [],
       ...providerFields.extraFields // for any other custom fields

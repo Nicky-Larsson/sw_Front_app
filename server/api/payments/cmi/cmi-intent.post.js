@@ -3,6 +3,7 @@ import { useRuntimeConfig } from '#imports';
 import crypto from 'crypto';
 import { getFirebaseDb } from '../../../utils/firebase';
 import { createOrderData } from '../orderTemplate';
+import { updateProductsAccess } from '../../../utils/productsAccess.js'; // Import the function
 
 
 export default defineEventHandler(async (event) => {
@@ -59,9 +60,8 @@ export default defineEventHandler(async (event) => {
         currency: 'mad',
         totalPrice: body.amount / 100,
         payment_infos: {
-          paymentProvider: 'cmi',
+          payment_method: 'cmi',
           cmiOrderId: orderId,
-          paymentMethod: 'cmi',
           payment_email_id: body.email,
           sent_metadata: body.metadata || {},
         }
@@ -84,6 +84,35 @@ export default defineEventHandler(async (event) => {
         orderId: orderId
       };
     }
+
+
+    // Simulate payment confirmation (replace this with actual CMI callback handling)
+    const paymentStatus = 'succeeded'; // Simulate a successful payment status
+    if (paymentStatus === 'succeeded') {
+      // Update order status to paid
+      await orderDocRef.update({
+        status: 'paid',
+        paidAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        payment_infos: {
+          payment_provider: 'cmi',
+          payment_intentId: orderId,
+          payment_intentStatus: 'succeeded',
+          payment_email_id: body.email,
+        }
+      });
+
+      // **Update products_access for the user**
+      const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
+      await updateProductsAccess(body.userId, checkoutItems);
+
+      return {
+        success: true,
+        orderId
+      };
+    }
+
+
 
     // Return CMI form data
     return {

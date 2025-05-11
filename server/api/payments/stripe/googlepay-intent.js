@@ -4,6 +4,7 @@ import { readBody } from 'h3';
 import { useRuntimeConfig } from '#imports';
 import { getFirebaseDb } from '../../../utils/firebase'; 
 import { createOrderData } from '../orderTemplate';
+import { updateProductsAccess } from '../../../utils/productsAccess.js';
 
 // import { allowedNodeEnvironmentFlags } from 'process';
 
@@ -156,24 +157,28 @@ export default defineEventHandler(async (event) => {
         paidAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         payment_infos: {
-          paymentProvider: 'googlepay',
-          paymentIntentId: paymentIntent.id,
-          paymentIntentStatus: paymentIntent.status,
-          paymentMethod: paymentIntent.payment_method_types?.[0] || '', // e.g. 'card'
+          payment_provider: 'googlepay',
+          payment_intentId: paymentIntent.id,
+          payment_intentStatus: paymentIntent.status,
+          payment_method: paymentIntent.payment_method_types?.[0] || '', // e.g. 'card'
           payment_email_id: email,
           payment_brand: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.brand || '',
           payment_country: paymentIntent.charges?.data?.[0]?.country || '',
           sent_metadata: paymentIntent.metadata || {},
         },
-        stripe_webhook_answer: {
-          paymentIntentId: paymentIntent.id,
-          paymentIntentStatus: paymentIntent.status,
-          paymentMethodType: paymentIntent.payment_method_types?.[0] || '',
-          paymentBrand: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.brand || '',
-          paymentLast4: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.last4 || '',
-          paymentCountry: paymentIntent.charges?.data?.[0]?.country || '',
+        webhook_answer: {
+          payment_method: 'googlepay',
+          payment_intentId: paymentIntent.id,
+          payment_intentStatus: paymentIntent.status,
+          payment_methodType: paymentIntent.payment_method_types?.[0] || '',
+          payment_brand: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.brand || '',
+          payment_last: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.last4 || '',
+          payment_country: paymentIntent.charges?.data?.[0]?.country || '',
         }
       });
+
+      // **Update products_access for the user**
+      await updateProductsAccess(userId, checkoutItems);
 
       return {
         success: true,

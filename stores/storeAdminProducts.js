@@ -45,6 +45,12 @@ export const useStoreAdminProducts = defineStore('storeAdminProducts', {
         return;
       }
 
+
+      if (!this.products || !this.products.volumes || !Array.isArray(this.products.volumes)) {
+        console.error('Products or volumes are not properly initialized.');
+        return;
+      }
+
       // Ensure products are loaded from the seed file first
       if (!this.products || (this.products.volumes && this.products.volumes.length === 0)) {
          await this.getProducts();

@@ -1,5 +1,9 @@
 import { defineEventHandler, readBody } from 'h3';
 import { getFirebaseDb } from '../../../utils/firebase'; // adjust path if needed
+import { updateProductsAccess } from '../../../utils/productsAccess.js'; // Import the function
+
+
+
 const db = getFirebaseDb();
 
 export default defineEventHandler(async (event) => {
@@ -37,7 +41,8 @@ export default defineEventHandler(async (event) => {
         status: 'paid',
         paidAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        cmi_webhook_answer: {
+        webhook_answer: {
+          payment_method: 'cmi',
           transactionId: body.TransId,
           authCode: body.AuthCode, // if available
           response: body.Response,
@@ -46,6 +51,16 @@ export default defineEventHandler(async (event) => {
           // ...other fields as needed
         }
       });
+
+
+      // **Update products_access for the user**
+      const userId = orderDoc.data().userId; // Assuming userId is stored in the order document
+      const checkoutItems = orderDoc.data().checkoutItems || []; // Assuming checkoutItems are stored in the order document
+      await updateProductsAccess(userId, checkoutItems);
+
+      console.log(`Products access updated for user: ${userId}`);
+
+
     } else {
       await orderDoc.ref.update({
         status: 'failed',

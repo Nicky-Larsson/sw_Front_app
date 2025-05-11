@@ -214,7 +214,7 @@ const isProd = ref(process.env.NODE_ENV === 'production');
 
 
 const totalPriceComputed = computed(() => {
-  const selectedArray = userStore.userSession.checkout;
+const selectedArray = userStore.userSession.checkout;
   return selectedArray.reduce((total, prod) => {
     return total + (parseFloat(prod.price) || 0);
   }, 0) / 100; // Return the total price as a fixed decimal
@@ -245,7 +245,6 @@ const testGooglePayFlow = async () => {
         alias: alias.value,
         amount: Math.round(totalPriceComputed.value * 100),
         checkoutItems: toRaw(userStore.userSession.checkout || []),
-        // Add this to simulate Google Pay in the Stripe dashboard
         paymentSource: 'googlepay_test'
       }
     });
@@ -253,10 +252,8 @@ const testGooglePayFlow = async () => {
     console.log("Google Pay test flow response:", response);
     
     if (response.success) {
-      userStore.clearCart();
-      userStore.userSession.checkout = [];
-      userStore.userSession.selectedArray = []; 
-      navigateTo('/checkout/purchaseSuccess');
+      // Redirect to processing page instead of success
+      navigateTo(`/checkout/processing?orderId=${response.orderId}`);
     } else {
       alert('Payment failed: ' + (response.message || 'Unknown error'));
     }
@@ -267,8 +264,6 @@ const testGooglePayFlow = async () => {
     isProcessing.value = false;
   }
 };
-
-
 
 
 // Initialize PayPal on mount
@@ -290,14 +285,21 @@ onMounted(async () => {
       }
       if (paypalContainer && window.paypal) {
         window.paypal.Buttons({
-          createOrder: (data, actions) => ({
-            purchase_units: [{
-              amount: {
-                value: totalPriceComputed.value.toFixed(2),
-                currency_code: 'EUR'
-              },
-            }],
-          }),
+          createOrder: async (data, actions) => {
+            const response = await $fetch('/api/payments/paypal/create-order', {
+              method: 'POST',
+              body: {
+                amount: totalPriceComputed.value.toFixed(2),
+                currency: 'EUR',
+                checkoutItems: toRaw(userStore.userSession.checkout || []),
+                userId: authStore.authInfo.uid
+              }
+            });
+            if (!response.id) {
+              throw new Error('Failed to create PayPal order');
+            }
+            return response.id;
+          },
           onApprove: async (data, actions) => {
             isProcessing.value = true;
             try {
@@ -306,14 +308,17 @@ onMounted(async () => {
                 body: {
                   orderID: data.orderID,
                   checkoutItems: toRaw(userStore.userSession.checkout || []),
-                  userId: authStore.authInfo.uid
+                  userId: authStore.authInfo.uid,
+                  email: userStore.userSession.email,
+                  alias: userStore.userSession.alias,
+                  totalPrice: totalPriceComputed.value,
+                  currency: 'EUR',
                 }
               });
+              
               if (response.success) {
-                userStore.clearCart();
-                userStore.userSession.checkout = [];
-                userStore.userSession.selectedArray = [];
-                navigateTo('/checkout/purchaseSuccess');
+                // Redirect to processing page instead of success
+                navigateTo(`/checkout/processing?orderId=${response.orderId}&paymentId=${data.orderID}`);
               } else {
                 throw new Error(response.message || 'Server reported an issue finalizing the order.');
               }
@@ -381,6 +386,7 @@ onMounted(async () => {
               checkoutItems: toRaw(userStore.userSession.checkout || [])
             }
           });
+          
           if (response.requiresAction) {
             const { error, paymentIntent } = await stripe.confirmCardPayment(response.clientSecret);
             if (error) {
@@ -388,16 +394,13 @@ onMounted(async () => {
               throw new Error(error.message);
             } else if (paymentIntent.status === 'succeeded') {
               ev.complete('success');
-              userStore.clearCart();
-              userStore.userSession.checkout = [];
-              userStore.userSession.selectedArray = [];
-              navigateTo('/checkout/purchaseSuccess');
+              // Redirect to processing page instead of success
+              navigateTo(`/checkout/processing?orderId=${response.orderId}&paymentId=${paymentIntent.id}`);
             }
           } else {
             ev.complete('success');
-            userStore.clearCart();
-            userStore.userSession.checkout = [];
-            navigateTo('/checkout/purchaseSuccess');
+            // Redirect to processing page
+            navigateTo(`/checkout/processing?orderId=${response.orderId}`);
           }
         } catch (error) {
           ev.complete('fail');
@@ -421,12 +424,13 @@ onMounted(async () => {
 });
 
 
-
 // Handle Stripe Payment
 const payWithStripe = async () => {
   isProcessing.value = true;
   try {
     // 1. Create payment intent and order
+    console.log('Sending checkoutItems:', toRaw(userStore.userSession.checkout));
+    
     const { clientSecret, orderId } = await $fetch('/api/payments/stripe/stripe-intent', {
       method: 'POST',
       body: {
@@ -446,17 +450,18 @@ const payWithStripe = async () => {
     });
 
     if (error) {
-      alert('Payment failed: ' + error.message);
-      return;
+      throw new Error(error.message || 'Payment failed');
     }
 
-
-    // 5. Success: clear cart and navigate
-    userStore.clearCart();
-    userStore.userSession.checkout = [];
-    userStore.userSession.selectedArray = [];
-    navigateTo('/checkout/purchaseSuccess');
-    
+    if (paymentIntent.status === 'succeeded') {
+      // Important: do NOT clear cart here since the processing page will do it
+      // This ensures good UX while maintaining accurate checkout state
+      
+      // 3. Redirect to processing page
+      navigateTo(`/checkout/processing?orderId=${orderId}&paymentId=${paymentIntent.id}`);
+    } else {
+      throw new Error('Payment not successful');
+    }
   } catch (error) {
     alert('Payment failed: ' + error.message);
   } finally {

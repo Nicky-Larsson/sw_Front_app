@@ -98,7 +98,13 @@ export const useStoreProducts = defineStore('storeProducts', {
                     price: promoData[lang].price,
                     currency: promoData[lang].currency,
                     free_access: promoData[lang].free_access,
-                    product_uid: promoData[lang].uid_product,
+                    product_uid: {
+                      graphic_novel_uid: promoData.graphic_novel_uid,
+                      volume_uid: promoData.volume_uid,
+                      lang: lang,
+                    }, // Updated to match new structure
+                    lang_version: lang, // Added
+                    langage: promoData[lang].langage || 'Unknown', // Added
                   };
                 }
               });

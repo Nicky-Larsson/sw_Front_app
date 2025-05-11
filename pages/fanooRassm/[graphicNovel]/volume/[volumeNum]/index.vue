@@ -28,13 +28,16 @@
                 
                 <div class="md:w-[60%] bg-white p-3 rounded-lg text-amber-950">
                     <div class="relative group" v-if="volumePromoData.volume_uid && volumePromoData.volume_num">
-                        <p class="mb-2">{{ volumePromoData.graphic_novel_title }}</p>
+                        <p class="mb-2">{{ volumePromoData.product_uid.graphic_novel_uid }}</p>
                         <p class="mb-2 text-2xl">
-                          {{  volumePromoData.volume_name || '-' }} 
-                        </p>                         
+                          {{ volumePromoData.volume_name || '-' }}
+                        </p>
                         <p class="mb-2 text-xl">
                           {{ volumePromoData.volume_title || '-' }}
-                        </p>                        
+                        </p>
+                        <p class="mb-2 text-xl">
+                          Language: {{ volumePromoData.langage || 'Unknown' }}
+                        </p>                
                         <!-- Description Text -->
                         <p 
                           class="font-light text-[22px] mb-2 max-h-45 overflow-y-auto pr-2 pb-10 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 peer"
@@ -289,10 +292,9 @@ const updateCurrentImage = (image, index) => {
 const isInCart = computed(() => {
   for (const prod of userStore.userSession.cart) {
     if (
-      productInfosForCart.value.graphic_novel_uid === prod.graphic_novel_uid &&
-      productInfosForCart.value.volume_uid === prod.volume_uid 
-      // && productInfosForCart.value.product_uid === prod.product_uid 
-           // <---- Think to rename this paramter
+      productInfosForCart.value.product_uid.graphic_novel_uid === prod.product_uid.graphic_novel_uid &&
+      productInfosForCart.value.product_uid.volume_uid === prod.product_uid.volume_uid 
+      // && productInfosForCart.value.product_uid.lang === prod.product_uid.lang
     ) {
       return true; // Product is in the cart
     }

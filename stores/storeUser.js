@@ -141,60 +141,7 @@ export const useStoreUser = defineStore('storeUser', {
       }
     },
 
-    async setCartInfoDb() {
-      const { $firestore, $firebaseAuth } = useNuxtApp();
-      const authStore = useStoreAuth();
-    
-      if (!$firestore || !$firebaseAuth || !authStore.authInfo?.uid) {
-        console.error("Firestore/Auth not available or user not logged in for setCartInfo.");
-        return;
-      }
-    
-      // Helper to remove undefined fields from objects
-      function removeUndefinedFields(obj) {
-        if (Array.isArray(obj)) {
-          return obj
-            .filter(item => item !== undefined && item !== null)
-            .map(removeUndefinedFields);
-        } else if (obj && typeof obj === 'object') {
-          return Object.fromEntries(
-            Object.entries(obj)
-              .filter(([_, v]) => v !== undefined)
-              .map(([k, v]) => [k, removeUndefinedFields(v)])
-          );
-        }
-        return obj;
-      }
-    
-      // Clean cart and selectedArray
-      const cleanCart = Array.isArray(this.userSession.cart)
-        ? this.userSession.cart
-            .filter(item => item !== undefined && item !== null)
-            .map(removeUndefinedFields)
-        : [];
-    
-      const cleanSelectedArray = Array.isArray(this.userSession.selectedArray)
-        ? this.userSession.selectedArray
-            .filter(item => item !== undefined && item !== null)
-            .map(removeUndefinedFields)
-        : [];
-    
-      const userDocRef = doc($firestore, 'users', authStore.authInfo.uid);
-      const dataToSave = {
-        cart: cleanCart,
-        selectedArray: cleanSelectedArray,
-        last_login: new Date().toISOString(),
-      };
-    
-      console.log("dataToSave", dataToSave);
-    
-      try {
-        await setDoc(userDocRef, dataToSave, { merge: true });
-        console.log('Cart info saved to Firebase:', dataToSave);
-      } catch (error) {
-        console.error('Error saving cart info:', error.message);
-      }
-    },
+ 
 
     async setUserInfo() {
       const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances
@@ -252,12 +199,138 @@ export const useStoreUser = defineStore('storeUser', {
       console.log('User session cleared:', this.userSession);
     },
 
+
+   async setCartInfoDb() {
+      const { $firestore, $firebaseAuth } = useNuxtApp();
+      const authStore = useStoreAuth();
+    
+      if (!$firestore || !$firebaseAuth || !authStore.authInfo?.uid) {
+        console.error("Firestore/Auth not available or user not logged in for setCartInfo.");
+        return;
+      }
+    
+      // Helper to remove undefined fields from objects
+      function removeUndefinedFields(obj) {
+        if (Array.isArray(obj)) {
+          return obj
+            .filter(item => item !== undefined && item !== null)
+            .map(removeUndefinedFields);
+        } else if (obj && typeof obj === 'object') {
+          return Object.fromEntries(
+            Object.entries(obj)
+              .filter(([_, v]) => v !== undefined)
+              .map(([k, v]) => [k, removeUndefinedFields(v)])
+          );
+        }
+        return obj;
+      }
+    
+      // Clean cart and selectedArray
+      const cleanCart = Array.isArray(this.userSession.cart)
+        ? this.userSession.cart
+            .filter(item => item !== undefined && item !== null)
+            .map(removeUndefinedFields)
+        : [];
+    
+      const cleanSelectedArray = Array.isArray(this.userSession.selectedArray)
+        ? this.userSession.selectedArray
+            .filter(item => item !== undefined && item !== null)
+            .map(removeUndefinedFields)
+        : [];
+    
+      const userDocRef = doc($firestore, 'users', authStore.authInfo.uid);
+      const dataToSave = {
+        cart: cleanCart,
+        selectedArray: cleanSelectedArray,
+        last_login: new Date().toISOString(),
+      };
+    
+      console.log("dataToSave", dataToSave);
+    
+      try {
+        await setDoc(userDocRef, dataToSave, { merge: true });
+        console.log('Cart info saved to Firebase:', dataToSave);
+      } catch (error) {
+        console.error('Error saving cart info:', error.message);
+      }
+    },
+
     // Keep clearCart as is
     clearCart() {
       this.userSession.cart = [];
-      this.userSession.checkout = []; // Also clear checkout when cart is cleared
+      this.userSession.checkout = [];
+      this.userSession.selectedArray = [];
       console.log('Cart and Checkout cleared');
     },
+
+
+    async setCheckoutInfoDb() {
+      const { $firestore } = useNuxtApp();
+      const authStore = useStoreAuth();
+
+      if (!$firestore || !authStore.authInfo?.uid) {
+        console.error("Firestore/Auth not available or user not logged in for setCheckoutInfoDb.");
+        return null;
+      }
+
+      // Clean checkout items
+      const cleanCheckout = Array.isArray(this.userSession.checkout)
+        ? this.userSession.checkout
+            .filter(item => item !== undefined && item !== null)
+            .map(item => {
+              // Deep clone and remove undefined fields
+              return JSON.parse(JSON.stringify(item));
+            })
+        : [];
+
+      // Calculate total price
+      const totalPrice = cleanCheckout.reduce((sum, item) => 
+        sum + parseInt(item.price || 0, 10), 0);
+
+      const userDocRef = doc($firestore, 'users', authStore.authInfo.uid);
+      const dataToSave = {
+        checkout: cleanCheckout,
+        checkoutTotal: totalPrice,
+        checkoutTotalFormatted: `${(totalPrice / 100).toFixed(2)} EUR`,
+        checkoutCreatedAt: new Date().toISOString()
+      };
+
+      try {
+        await setDoc(userDocRef, dataToSave, { merge: true });
+        console.log('Checkout info saved to Firebase:', dataToSave);
+        return true;
+      } catch (error) {
+        console.error('Error saving checkout info:', error.message);
+        return false;
+      }
+    },
+    
+    // Function to clear checkout after successful order
+    async clearCheckoutData() {
+      const { $firestore } = useNuxtApp();
+      const authStore = useStoreAuth();
+
+      if (!$firestore || !authStore.authInfo?.uid) {
+        return;
+      }
+
+      try {
+        const userDocRef = doc($firestore, 'users', authStore.authInfo.uid);
+        await updateDoc(userDocRef, {
+          checkout: [],
+          checkoutTotal: 0,
+          checkoutTotalFormatted: '0.00 EUR',
+          checkoutCreatedAt: ''
+        });
+        
+        // Also clear in local state
+        this.userSession.checkout = [];
+        console.log('Checkout data cleared');
+      } catch (error) {
+        console.error('Error clearing checkout data:', error);
+      }
+    },
+
 
     async createOrder(orderId, paymentChoice = 'paypal', status = 'pending') {
       const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances

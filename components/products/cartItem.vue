@@ -133,41 +133,10 @@ const removeFromCart = () => {
 };
 
 
-/* 
-const removeFromCart = () => {
-  // Remove the item from the cart
-  userStore.userSession.cart = userStore.userSession.cart.filter(
-    (prod) =>
-      prod.graphic_novel_uid !== product.value.graphic_novel_uid ||
-      prod.volume_uid !== product.value.volume_uid ||
-      prod.volume_name !== product.value.volume_name ||
-      prod.product_uid !== product.value.product_uid
-  )
-
-  // Update the selectedArray to match the updated cart
-  selectedArray.value = selectedArray.value.filter(
-    (selected) =>
-      selected.graphic_novel_uid !== product.value.graphic_novel_uid ||
-      selected.volume_uid !== product.value.volume_uid ||
-      selected.volume_name !== product.value.volume_name ||
-      selected.product_uid !== product.value.product_uid
-  )
-}
- */
 
 
 
 
-
-/*   for (const prod of userStore.userSession.cart) {
-    if (
-      productInfosForCart.value.graphic_novel_uid === prod.graphic_novel_uid &&
-      productInfosForCart.value.volume_uid === prod.volume_uid &&
-      productInfosForCart.value.product_uid === prod.product_uid
-    ) {
-      return true; // Product is in the cart
-    }
-  } */
 
 </script>
 

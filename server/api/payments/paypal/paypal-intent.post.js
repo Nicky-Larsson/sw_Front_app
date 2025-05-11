@@ -4,6 +4,8 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { readBody } from 'h3';
 import { useRuntimeConfig } from '#imports'; // Use Nuxt's auto-import
 import { createOrderData } from '../orderTemplate'; 
+import { updateProductsAccess } from '../../../utils/productsAccess.js';
+
 
 // --- Firebase Admin SDK Initialization ---
 const config = useRuntimeConfig(); // Access runtime config server-side
@@ -61,10 +63,13 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
   const paypalOrderId = body.orderID;
   const userId = body.userId;
+  const sw_email = body.email; // <-- now available
+  const alias = body.alias; // <-- now available
+  const currency = body.currency; // <-- now available
   // const checkoutItems = body.checkoutItems || [];
   const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
-
   const totalPrice = checkoutItems.reduce((sum, item) => sum + parseInt(item.price || 0, 10), 0);
+
 
   if (!paypalOrderId || !userId) {
     throw createError({ statusCode: 400, statusMessage: 'Missing PayPal Order ID or User ID' });
@@ -135,31 +140,39 @@ console.log('orderID:', paypalOrderId); */
 
   const orderData = createOrderData(body, 'paypal', {
     orderId,
-    currency: 'eur',
+    currency: body.currency,
     totalPrice,
+    userId,
+    alias,
+    sw_email,
     payment_infos: {
       paymentProvider: 'paypal',
       paypalOrderId,
-      paymentMethod: paymentMethodCode, // e.g. 'PP'
-      payment_email_id: body.email,
       sent_metadata: body.metadata || {},
+      paymentMethod: paymentMethodCode // e.g. 'PP'
     }
     // Add other provider-specific fields if needed
   });
 
 
-
-  try {
-    await db.collection('test_admin_write').add({ test: true, time: Date.now() });
-    console.log('Admin SDK test write succeeded');
-  } catch (e) {
-    console.error('Admin SDK test write failed:', e);
+  function removeUndefined(obj) {
+    if (Array.isArray(obj)) {
+      return obj.map(removeUndefined);
+    } else if (obj && typeof obj === 'object') {
+      return Object.fromEntries(
+        Object.entries(obj)
+          .filter(([_, v]) => v !== undefined)
+          .map(([k, v]) => [k, removeUndefined(v)])
+      );
+    }
+    return obj;
   }
-
 
   try {
     console.log("Creating pending order in Firestore:", orderData);
-    await orderDocRef.set(orderData);
+    // await orderDocRef.set(orderData);
+    const cleanedOrderData = removeUndefined(orderData);
+    await orderDocRef.set(cleanedOrderData);
   } catch (err) {
     console.error("Server: Failed to create pending order in Firestore:", err.message);
     throw createError({ statusCode: 500, statusMessage: 'Could not create order in Firestore.' });
@@ -191,17 +204,20 @@ console.log('orderID:', paypalOrderId); */
     await orderDocRef.update({
       status: 'paid',
       paidAt: new Date().toISOString(),
-      paypal_webhook_answer: {
+      webhook_answer: {
+        payment_method: 'paypal',
         captureId: capture.result.id,
         status: capture.result.status,
         payerEmail: capture.result.payer?.email_address || '',
         payerId: capture.result.payer?.payer_id || '',
-        paymentMethod: 'paypal',
         amount: capture.result.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || '',
         currency: capture.result.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.currency_code || '',
         // Add more PayPal-specific fields as needed
       }
     });
+
+    await updateProductsAccess(userId, checkoutItems);
+
     return { success: true, orderId: paypalOrderId };
   } catch (err) {
     // Firestore update failed, but payment succeeded

@@ -165,26 +165,23 @@ const debouncedSaveCart = debounce(function() {
 const removeFromCart = (item) => {
   userStore.userSession.cart = userStore.userSession.cart.filter(
     (prod) =>
-      prod.graphic_novel_uid !== item.graphic_novel_uid ||
-      prod.volume_uid !== item.volume_uid ||
-      prod.volume_name !== item.volume_name ||
-      prod.product_uid !== item.product_uid
+      prod.product_uid.graphic_novel_uid !== item.product_uid.graphic_novel_uid ||
+      prod.product_uid.volume_uid !== item.product_uid.volume_uid ||
+      prod.product_uid.lang !== item.product_uid.lang
   );
 
   userStore.userSession.selectedArray = userStore.userSession.selectedArray.filter(
     (selected) =>
-      selected.graphic_novel_uid !== item.graphic_novel_uid ||
-      selected.volume_uid !== item.volume_uid ||
-      selected.volume_name !== item.volume_name ||
-      selected.product_uid !== item.product_uid
+      selected.product_uid.graphic_novel_uid !== item.product_uid.graphic_novel_uid ||
+      selected.product_uid.volume_uid !== item.product_uid.volume_uid ||
+      selected.product_uid.lang !== item.product_uid.lang
   );
   debouncedSaveCart.call(this);
-
 };
 
 
 const getProductKey = (product) => {
-  return `${product.graphic_novel_uid}-${product.volume_uid}-${product.volume_name}-${product.product_uid}`;
+  return `${product.product_uid.graphic_novel_uid}-${product.product_uid.volume_uid}-${product.product_uid.lang}`;
 };
 
 const cards = ref([
@@ -206,7 +203,7 @@ const cards = ref([
 
 // Compute the total price dynamically based on selectedArray
 const totalPriceComputed = computed(() => {
-  const selectedArray = userStore.userSession.selectedArray; 
+  const selectedArray = userStore.userSession.selectedArray;
 
   return selectedArray.reduce((total, prod) => {
     return total + (parseFloat(prod.price) || 0); // Ensure price is valid
@@ -241,17 +238,14 @@ const selectedRadioFunc = (item) => {
   const selectedArray = userStore.userSession.selectedArray;
   const index = selectedArray.findIndex(
     (selected) =>
-      selected.graphic_novel_uid === item.graphic_novel_uid &&
-      selected.volume_uid === item.volume_uid &&
-      selected.volume_name === item.volume_name &&
-      selected.product_uid === item.product_uid
-  )
+      selected.product_uid.graphic_novel_uid === item.product_uid.graphic_novel_uid &&
+      selected.product_uid.volume_uid === item.product_uid.volume_uid &&
+      selected.product_uid.lang === item.product_uid.lang
+  );
 
   if (index === -1) {
     // If the item is not in the selectedArray, add it
-        userStore.userSession.selectedArray.push({ ...item, new_in_cart: false })
-        // userStore.userSession.selectedArray.push(item)
-
+    userStore.userSession.selectedArray.push({ ...item, new_in_cart: false });
   } else {
     // If the item is already in the selectedArray, remove it
     userStore.userSession.selectedArray.splice(index, 1);
@@ -260,16 +254,14 @@ const selectedRadioFunc = (item) => {
   // Find the corresponding item in the cart and update new_in_cart to false
   const cartItem = userStore.userSession.cart.find(
     (cartProd) =>
-      cartProd.graphic_novel_uid === item.graphic_novel_uid &&
-      cartProd.volume_uid === item.volume_uid &&
-      cartProd.volume_name === item.volume_name &&
-      cartProd.product_uid === item.product_uid
+      cartProd.product_uid.graphic_novel_uid === item.product_uid.graphic_novel_uid &&
+      cartProd.product_uid.volume_uid === item.product_uid.volume_uid &&
+      cartProd.product_uid.lang === item.product_uid.lang
   );
 
   if (cartItem) {
     cartItem.new_in_cart = false; // Update the new_in_cart property in the cart
   }
-
 };
 
 // Function to proceed to checkout
@@ -278,19 +270,15 @@ const goToCheckout = () => {
   // Filter selectedArray to only include items that are still in the cart
   userStore.userSession.selectedArray = userStore.userSession.selectedArray.filter((selected) =>
     userStore.userSession.cart.some((cartItem) =>
-      cartItem.graphic_novel_uid === selected.graphic_novel_uid &&
-      cartItem.volume_uid === selected.volume_uid &&
-      cartItem.volume_name === selected.volume_name &&
-      cartItem.product_uid === selected.product_uid
+      cartItem.product_uid.graphic_novel_uid === selected.product_uid.graphic_novel_uid &&
+      cartItem.product_uid.volume_uid === selected.product_uid.volume_uid &&
+      cartItem.product_uid.lang === selected.product_uid.lang
     )
   );
-
   // Assign the selected items to the checkout array
   userStore.userSession.checkout = [...userStore.userSession.selectedArray];
-
-
-
   console.log('Selected items for checkout:', userStore.userSession.checkout);
+
 
   // Navigate to the checkout page
   return navigateTo('/checkout/checkout');
