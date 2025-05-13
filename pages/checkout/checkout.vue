@@ -165,13 +165,13 @@
 </template>
 
 <script setup>
-import { useStoreUser } from '~/stores/storeUser';
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { useStoreUser } from '@/stores/storeUser';
+import { ref, computed, onMounted, nextTick, watch, toRaw } from 'vue';
 import { navigateTo } from '#app';
 import { loadStripe } from '@stripe/stripe-js';
-import { useStorePayment } from '~/stores/storePayment'; // Import the payment store
+import { useStorePayment } from '@/stores/storePayment'; // Import the payment store
 import { useRuntimeConfig } from '#app';
-import { useStoreAuth } from '~/stores/storeAuth'; // <-- Add this import
+import { useStoreAuth } from '@/stores/storeAuth'; // <-- Add this import
 
 
 const config = useRuntimeConfig();
@@ -212,6 +212,7 @@ const alias = ref(userStore.userSession.alias || '')
 // Add this to your script
 const isProd = ref(process.env.NODE_ENV === 'production');
 
+console.log('checkout at checkout page:', userStore.userSession.checkout);
 
 const totalPriceComputed = computed(() => {
 const selectedArray = userStore.userSession.checkout;
@@ -234,7 +235,11 @@ const testGooglePayFlow = async () => {
     const paymentMethodId = 'pm_card_visa'; // Stripe's test payment method
     
     console.log("Using Stripe test payment method ID:", paymentMethodId);
-    
+
+    console.log('totalPriceComputed.value:', totalPriceComputed.value);
+    console.log('amount sent to backend:', Math.round(totalPriceComputed.value * 100));
+    console.log('checkoutItems:', toRaw(userStore.userSession.checkout));
+
     // Send the request to your server
     const response = await $fetch('/api/payments/stripe/googlepay-intent', {
       method: 'POST',
@@ -286,56 +291,60 @@ onMounted(async () => {
       if (paypalContainer && window.paypal) {
         window.paypal.Buttons({
           createOrder: async (data, actions) => {
+            const checkoutItems = toRaw(userStore.userSession.checkout || []);
+            console.log('checkoutItems in createOrder:', checkoutItems);
+        
+            if (!Array.isArray(checkoutItems) || checkoutItems.length === 0) {
+              throw new Error('Your cart is empty. Please add items to your cart before proceeding.');
+            }
+        
             const response = await $fetch('/api/payments/paypal/create-order', {
               method: 'POST',
               body: {
                 amount: totalPriceComputed.value.toFixed(2),
                 currency: 'EUR',
-                checkoutItems: toRaw(userStore.userSession.checkout || []),
-                userId: authStore.authInfo.uid
-              }
+                checkoutItems,
+                userId: authStore.authInfo.uid,
+              },
             });
+        
             if (!response.id) {
-              throw new Error('Failed to create PayPal order');
+              throw new Error('Failed to create PayPal order.');
             }
             return response.id;
           },
           onApprove: async (data, actions) => {
-            isProcessing.value = true;
-            try {
-              const response = await $fetch('/api/payments/paypal/paypal-intent', {
-                method: 'POST',
-                body: {
-                  orderID: data.orderID,
-                  checkoutItems: toRaw(userStore.userSession.checkout || []),
-                  userId: authStore.authInfo.uid,
-                  email: userStore.userSession.email,
-                  alias: userStore.userSession.alias,
-                  totalPrice: totalPriceComputed.value,
-                  currency: 'EUR',
-                }
-              });
-              
-              if (response.success) {
-                // Redirect to processing page instead of success
-                navigateTo(`/checkout/processing?orderId=${response.orderId}&paymentId=${data.orderID}`);
-              } else {
-                throw new Error(response.message || 'Server reported an issue finalizing the order.');
-              }
-            } catch (error) {
-              alert('Payment processing failed: ' + (error.data?.statusMessage || error.message));
-            } finally {
-              isProcessing.value = false;
+            console.log('PayPal onApprove data:', data);
+            console.log('authStore.authInfo.uid:', authStore.authInfo?.uid);
+
+            if (!data.orderID || !authStore.authInfo?.uid) {
+              alert('Missing PayPal Order ID or User ID. Please log in again.');
+              return;
+            }
+
+            const checkoutItems = toRaw(userStore.userSession.checkout || []);
+            console.log('checkoutItems in onApprove:', checkoutItems);
+        
+            const response = await $fetch('/api/payments/paypal/paypal-intent', {
+              method: 'POST',
+              body: {
+                orderID: data.orderID,
+                checkoutItems,
+                userId: authStore.authInfo.uid,
+                email: userStore.userSession.email,
+                alias: userStore.userSession.alias,
+                totalPrice: totalPriceComputed.value,
+                currency: 'EUR',
+              },
+            });
+        
+            if (response.success) {
+              navigateTo(`/checkout/processing?orderId=${response.orderId}&paymentId=${data.orderID}`);
+            } else {
+              throw new Error(response.message || 'Server reported an issue finalizing the order.');
             }
           },
-          onError: (err) => {
-            alert('An error occurred with the PayPal button setup or during approval.');
-            isProcessing.value = false;
-          },
-          onCancel: () => {
-            alert('Payment cancelled.');
-            isProcessing.value = false;
-          }
+          // ...onError, onCancel, etc.
         }).render("#paypal-button-container");
       }
     }
@@ -532,5 +541,7 @@ const showError = (errorMsgText) => {
     console.error("Error:", errorMsgText);
   }
 };
+
+
 
 </script>

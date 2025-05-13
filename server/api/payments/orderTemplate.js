@@ -9,7 +9,7 @@ export function createOrderData(body, provider, providerFields = {}) {
       paidAt: '',
       failedAt: '',
       currency: providerFields.currency || 'eur',
-      totalPrice: body.amount / 100,
+      totalPrice: providerFields.totalPrice,
       nb_checkout_product: Array.isArray(body.checkoutItems) ? body.checkoutItems.length : 0,
       nb_refund_product: 0,
       user_infos: {

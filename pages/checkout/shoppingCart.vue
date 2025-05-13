@@ -146,10 +146,8 @@ onMounted(() => {
   if (!userStore.userSession.selectedArray || userStore.userSession.selectedArray.length === 0) {
     // Add only items with new_in_cart: true to selectedArray
     userStore.userSession.cart.forEach((item) => {
-      if (item.new_in_cart === true) {
-        // Push the item reactively
+      if (item.new_in_cart === true && !isAlreadySelected(userStore.userSession.selectedArray, item)) {
         userStore.userSession.selectedArray.push(item);
-        console.log('Added to selectedArray:', item);
       }
     });
   }
@@ -264,9 +262,29 @@ const selectedRadioFunc = (item) => {
   }
 };
 
+
+const deduplicate = (array) => {
+  const seen = new Set();
+  return array.filter(item => {
+    const key = `${item.product_uid.graphic_novel_uid}-${item.product_uid.volume_uid}-${item.product_uid.lang}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const isAlreadySelected = (selectedArray, item) => {
+  return selectedArray.some(
+    (selected) =>
+      selected.product_uid.graphic_novel_uid === item.product_uid.graphic_novel_uid &&
+      selected.product_uid.volume_uid === item.product_uid.volume_uid &&
+      selected.product_uid.lang === item.product_uid.lang
+  );
+};
+
+
 // Function to proceed to checkout
 const goToCheckout = () => {
-
   // Filter selectedArray to only include items that are still in the cart
   userStore.userSession.selectedArray = userStore.userSession.selectedArray.filter((selected) =>
     userStore.userSession.cart.some((cartItem) =>
@@ -275,10 +293,15 @@ const goToCheckout = () => {
       cartItem.product_uid.lang === selected.product_uid.lang
     )
   );
+
+  // Deduplicate selectedArray
+  userStore.userSession.selectedArray = deduplicate(userStore.userSession.selectedArray);
+
   // Assign the selected items to the checkout array
   userStore.userSession.checkout = [...userStore.userSession.selectedArray];
-  console.log('Selected items for checkout:', userStore.userSession.checkout);
 
+  // console.log('selectedArray before checkout:', userStore.userSession.selectedArray);
+  // console.log('checkout after assignment:', userStore.userSession.checkout);
 
   // Navigate to the checkout page
   return navigateTo('/checkout/checkout');

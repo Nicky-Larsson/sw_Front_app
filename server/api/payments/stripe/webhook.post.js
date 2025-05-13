@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
           const orderDocRef = db.collection('users').doc(userId).collection('orders').doc(orderId);
           
           try {
-            // STEP 1: Create the order
+            // STEP 1: Create the order with provisional access
             const orderData = createOrderData(
               {
                 userId,
@@ -57,16 +57,18 @@ export default defineEventHandler(async (event) => {
                 alias: metadata.alias,
                 checkoutItems,
                 amount: paymentIntent.amount,
-                status: 'paid'
+                status: 'paid',
+                accessLevel: 'provisional', // Start with provisional access
+                provisionalExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
               },
               'stripe',
               {
                 orderId,
                 currency: paymentIntent.currency,
+                totalPrice: paymentIntent.amount, 
                 payment_infos: {
                   payment_method: 'stripe',
                   paymentIntentId: paymentIntent.id,
-                  paymentIntentStatus: paymentIntent.status,
                   payment_method_type: paymentIntent.payment_method_types?.[0] || '',
                   payment_brand: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.brand || '',
                   payment_last: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.last4 || '',
@@ -80,16 +82,17 @@ export default defineEventHandler(async (event) => {
               }
             );
             
-            // Create or overwrite the order document
+            // Create or update the order document
             await orderDocRef.set(orderData, { merge: true });
             
             try {
               // STEP 2: Update products access
               await updateProductsAccess(userId, checkoutItems);
               
-              // STEP 3: Mark order as fully processed with access granted
+              // STEP 3: Mark as fully processed with access granted
               await orderDocRef.update({
                 accessGranted: true,
+                accessLevel: 'full',
                 webhookProcessedAt: new Date().toISOString()
               });
               
@@ -105,16 +108,14 @@ export default defineEventHandler(async (event) => {
               
               console.log(`Order created and products access updated for user: ${userId}`);
             } catch (accessError) {
-              // If product access update fails, mark the order with error
-              console.error(`Order created but access update failed: ${accessError.message}`);
+              // If product access fails, mark the error
               await orderDocRef.update({
                 accessError: accessError.message,
                 status: 'error',
-                requiresManualAccess: true,
                 errorTime: new Date().toISOString()
               });
               
-              throw accessError; // Re-throw to be caught by the outer catch
+              throw accessError;
             }
           } catch (orderError) {
             console.error(`Error creating order: ${orderError.message}`);

@@ -3,12 +3,20 @@ import { getFirebaseDb } from '../../../utils/firebase';
 import { createOrderData } from '../orderTemplate';
 import { readBody } from 'h3';
 import { updateProductsAccess } from '../../../utils/productsAccess.js';
-
+import { checkDatabaseHealth } from '../../../utils/databaseHealth';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const db = getFirebaseDb();
 
 export default defineEventHandler(async (event) => {
+
+  // CRITICAL: Check database health before creating payment
+  const dbHealth = await checkDatabaseHealth();
+  if (!dbHealth.success) {
+    console.error('Payment rejected due to database issue:', dbHealth.message);
+    throw new Error(`We're experiencing technical difficulties. Please try again in a few minutes. (Database issue)`);
+  }
+
   const body = await readBody(event);
 
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -115,14 +123,16 @@ export default defineEventHandler(async (event) => {
 
     // Update products_access for the user
 
-    /* const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
-    console.log('Received checkoutItems:', body.checkoutItems);
+    const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
+    //console.log('Received checkoutItems:', body.checkoutItems);
+
 
     
+    console.log('Calling updateProductsAccess with:', body.userId, checkoutItems);
+
     await updateProductsAccess(body.userId, checkoutItems);
 
     console.log(`Order and products_access updated successfully for user: ${body.userId}`);
-    */
 
 
     return { clientSecret: paymentIntent.client_secret, orderId }; 

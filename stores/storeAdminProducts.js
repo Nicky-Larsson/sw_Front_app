@@ -28,7 +28,7 @@ export const useStoreAdminProducts = defineStore('storeAdminProducts', {
       // Keep this logic as is, it imports local data
       try {
         this.products = [];
-        const data = await import('~/stores/seed/promoRiwaya.js');
+        const data = await import('@/stores/seed/promoRiwaya.js');
         this.products = data.default; // Assuming data.default holds the desired structure
         console.log('Products loaded from seed file:', this.products);
       } catch (error) {

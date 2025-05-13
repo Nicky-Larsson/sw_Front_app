@@ -30,7 +30,7 @@
                 </li> <!-- ri:shopping-basket-2-line -->
 
                 <li class="text-xl pl-4 py-4 inline-block w-full hover:bg-gray-800 hover:text-blue-500"  @click="toggleMenu" >
-                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/user/buyingList">
+                  <nuxt-link class="flex items-center gap-2 p-0"  tag="button"  to="/user/orders">
                     <div class="flex justify-center items-center">
                     <Icon name="ix:history-list"  size="150%" />
                     </div>

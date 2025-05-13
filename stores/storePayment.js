@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { useStoreUser } from '~/stores/storeUser';
+// import { useStoreUser } from '@/stores/storeUser';
 
 export const useStorePayment = defineStore('storePayment', {
   state: () => ({

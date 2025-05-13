@@ -5,15 +5,7 @@ import { useRuntimeConfig } from '#imports';
 import { getFirebaseDb } from '../../../utils/firebase'; 
 import { createOrderData } from '../orderTemplate';
 import { updateProductsAccess } from '../../../utils/productsAccess.js';
-
-// import { allowedNodeEnvironmentFlags } from 'process';
-
-
-// --- Firebase Admin SDK Initialization ---
-const config = useRuntimeConfig();
-const serviceAccountJson = config.firebaseServiceAccountKey;
-
-
+import { checkDatabaseHealth } from '../../../utils/databaseHealth';
 
 // Add this helper function at the top of your file
 function ensureValidUrl(url, fallback = 'http://localhost:3000') {
@@ -27,6 +19,9 @@ function ensureValidUrl(url, fallback = 'http://localhost:3000') {
   return url;
 }
 
+// --- Firebase Admin SDK Initialization ---
+const config = useRuntimeConfig();
+const serviceAccountJson = config.firebaseServiceAccountKey;
 
 let serviceAccount;
 try {
@@ -56,28 +51,28 @@ const db = getFirebaseDb();
 const stripe = new Stripe(config.stripeSecretKey);
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event);
-  const { paymentMethodId, userId, email, alias, amount } = body;
-  const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
-
-
-  if (!paymentMethodId || !userId || !amount) {
-    throw createError({ 
-      statusCode: 400, 
-      statusMessage: 'Missing required parameters: paymentMethodId, userId, or amount' 
-    });
-  }
-
   try {
-    // First test if Firebase connection works
-    try {
-      const testQuery = await db.collection('users').limit(1).get();
-      console.log("Firebase connection successful:", testQuery.empty ? "No users found" : "Users found");
-    } catch (firebaseError) {
-      console.error("Firebase connection test failed:", firebaseError);
-      throw new Error(`Firebase authentication failed: ${firebaseError.message}`);
+    // CRITICAL: Check database health before creating payment
+    const dbHealth = await checkDatabaseHealth();
+    if (!dbHealth.success) {
+      console.error('Google Pay rejected due to database issue:', dbHealth.message);
+      throw createError({ 
+        statusCode: 503, 
+        statusMessage: `We're experiencing technical difficulties. Please try again in a few minutes. (Database issue)` 
+      });
     }
+        
 
+    const body = await readBody(event);
+    const { paymentMethodId, userId, email, alias, amount } = body;
+    const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
+
+    if (!paymentMethodId || !userId || !amount) {
+      throw createError({ 
+        statusCode: 400, 
+        statusMessage: 'Missing required parameters: paymentMethodId, userId, or amount' 
+      });
+    }
 
     // Helper function to get the code
     function getPaymentMethodCode(paymentSource) {
@@ -95,8 +90,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 1. Create a new order in Firestore with 'pending' status
-    // Replace lines 75-76 with this:
+    // Generate order ID with payment method code
     const now = new Date();
     const dateCode = now.getFullYear().toString().slice(2) + 
                     (now.getMonth()+1).toString().padStart(2,'0') + 
@@ -105,40 +99,48 @@ export default defineEventHandler(async (event) => {
                     now.getMinutes().toString().padStart(2,'0');
     const randomPart = Math.floor(Math.random()*100).toString().padStart(2,'0');
 
-
     const paymentMethodCode = getPaymentMethodCode(body.paymentSource || 'googlepay');
-    //  const orderId = `SW-${dateCode}-${timeCode}-${randomPart}`;
     const orderId = `SW-${dateCode}-${timeCode}-${randomPart}-${paymentMethodCode}`;
     
-        
-
     // Then create document with custom ID
     const orderRef = await db.collection('users').doc(userId).collection('orders').doc(orderId);
+     
+    const safeAmount = Number(amount);
     
-    await orderRef.set(
-      createOrderData(body, 'googlepay', {
-        orderId,
-        currency: 'eur',
-        totalPrice: amount,
-        payment_infos: {
-          paymentProvider: 'googlepay',
-          paymentIntentId: '', // to be filled after intent creation
-          paymentMethod: paymentMethodCode,
-          payment_email_id: email,
-          sent_metadata: body.metadata || {},
-        }
-        // Add other provider-specific fields if needed
-      })
-    );
+    console.log('amount:', amount, 'safeAmount:', safeAmount, 'type:', typeof amount);
+    
+    if (isNaN(safeAmount) || safeAmount <= 0) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid or missing amount value' });
+    }
+    console.log('safeAmount:', safeAmount, 'type:', typeof safeAmount);
 
     
+    const orderData = createOrderData(body, 'googlepay', {
+      orderId,
+      currency: 'eur',
+      totalPrice: safeAmount,
+      payment_infos: {
+        paymentProvider: 'googlepay',
+        paymentIntentId: '', // to be filled after intent creation
+        paymentMethod: paymentMethodCode,
+        payment_email_id: email,
+        sent_metadata: body.metadata || {},
+      },
+      // Set provisional access level
+      accessLevel: 'provisional',
+      provisionalExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    });
+    console.log('orderData before Firestore set:', orderData); // <--- Add this line
+    await orderRef.set(orderData);
+
+    // Create a payment intent with the payment method
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency: 'eur',
       payment_method: paymentMethodId,
       confirmation_method: 'manual',
       confirm: true,
-      return_url: `${ensureValidUrl(config.public.siteUrl)}/checkout/purchaseSuccess`,
+      return_url: `${ensureValidUrl(config.public.siteUrl)}/checkout/processing?orderId=${orderId}`,
       metadata: {
         orderId,
         userId,
@@ -149,7 +151,7 @@ export default defineEventHandler(async (event) => {
       } 
     });
 
-    // 3. Check if payment succeeded
+    // Check if payment succeeded
     if (paymentIntent.status === 'succeeded') {
       // Update order status to paid
       await orderRef.update({
@@ -177,7 +179,7 @@ export default defineEventHandler(async (event) => {
         }
       });
 
-      // **Update products_access for the user**
+      // Update products_access for the user
       await updateProductsAccess(userId, checkoutItems);
 
       return {

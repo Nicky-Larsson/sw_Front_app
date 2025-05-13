@@ -1,50 +1,60 @@
 import { getFirebaseDb } from '../../../utils/firebase';
 
 export default defineEventHandler(async (event) => {
-  const orderId = event.context.params.orderId;
-  const db = getFirebaseDb();
+  const { orderId } = event.context.params; // Extract orderId from the route
+  const { userId } = getQuery(event); // Extract userId from query parameters
+
+  if (!orderId || !userId) {
+    throw new Error('Missing orderId or userId in the request.');
+  }
   
+  console.log(`Order ID: ${orderId}, User ID: ${userId}`);
+
+
+  const db = getFirebaseDb();
+
   try {
-    // Try to find the order in any user collection
-    const ordersRef = db.collectionGroup('orders')
-      .where('orderId', '==', orderId);
-    
-    const snapshot = await ordersRef.get();
-    
-    if (snapshot.empty) {
-      // Order not found - still processing or doesn't exist
-      return { status: 'processing' };
+    if (!userId) {
+      throw new Error('Missing userId in the request. Ensure it is passed as a query parameter.');
     }
-    
-    // Get the order data
-    const orderDoc = snapshot.docs[0];
+
+    // Query the user's orders subcollection directly
+    const orderDoc = await db.collection('users').doc(userId).collection('orders').doc(orderId).get();
+
+    if (!orderDoc.exists) {
+      // Order not found - still pending
+      return { status: 'pending' }; // Use 'pending' if that's your desired status
+    }
+
     const orderData = orderDoc.data();
-    
-    // Check if there was an error during processing
-    if (orderData.status === 'error') {
+
+    // Check for explicit error status
+    if (orderData.status === 'error' || orderData.accessError) {
       return {
         status: 'error',
-        error: orderData.error || 'Unknown error',
-        orderId
+        error: orderData.accessError || orderData.error || 'Unknown error',
+        orderId,
       };
     }
-    
-    // Check if order is paid and access was granted
+
+    // Check if order is paid and has access
     if (orderData.status === 'paid') {
       return {
         status: 'paid',
         accessGranted: orderData.accessGranted || false,
-        orderId
+        accessLevel: orderData.accessLevel || 'none',
+        orderId,
       };
     }
-    
-    // Otherwise still processing
-    return { status: 'processing' };
+
+    // Default: still pending
+    return { status: orderData.status || 'pending' };
   } catch (error) {
     console.error(`Error checking order status for ${orderId}:`, error);
-    return { 
-      status: 'error', 
-      error: 'Server error checking order status'
+    return {
+      status: 'error',
+      error: 'Server error checking order status',
+      technical: error.message,
     };
   }
 });

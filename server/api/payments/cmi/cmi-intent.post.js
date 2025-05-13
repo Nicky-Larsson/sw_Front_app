@@ -4,16 +4,25 @@ import crypto from 'crypto';
 import { getFirebaseDb } from '../../../utils/firebase';
 import { createOrderData } from '../orderTemplate';
 import { updateProductsAccess } from '../../../utils/productsAccess.js'; // Import the function
-
+import { checkDatabaseHealth } from '../../../utils/databaseHealth';
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
   const body = await readBody(event);
-  
 
   const db = getFirebaseDb();
-  
+
   try {
+    // CRITICAL: Check database health before creating payment
+    const dbHealth = await checkDatabaseHealth();
+    if (!dbHealth.success) {
+      console.error('CMI payment rejected due to database issue:', dbHealth.message);
+      return {
+        success: false,
+        message: `We're experiencing technical difficulties. Please try again in a few minutes. (Database issue)`
+      };
+    }
+
     const body = await readBody(event);
     // Rest of your code...
   } catch (error) {
@@ -21,39 +30,38 @@ export default defineEventHandler(async (event) => {
     return { success: false, error: error.message };
   }
 
-
   try {
     // Validate inputs
     if (!body.email || !body.userId || !body.amount) {
-      throw createError({ 
-        statusCode: 400, 
-        statusMessage: 'Missing required parameters: email, userId, amount' 
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Missing required parameters: email, userId, amount'
       });
     }
-    
-    // Generate order ID 
+
+    // Generate order ID
     const now = new Date();
-    const dateCode = now.getFullYear().toString().slice(2) + 
-                    (now.getMonth()+1).toString().padStart(2,'0') + 
-                    now.getDate().toString().padStart(2,'0');
-    const timeCode = now.getHours().toString().padStart(2,'0') + 
-                    now.getMinutes().toString().padStart(2,'0');
-    const randomPart = Math.floor(Math.random()*100).toString().padStart(2,'0');
+    const dateCode = now.getFullYear().toString().slice(2) +
+      (now.getMonth() + 1).toString().padStart(2, '0') +
+      now.getDate().toString().padStart(2, '0');
+    const timeCode = now.getHours().toString().padStart(2, '0') +
+      now.getMinutes().toString().padStart(2, '0');
+    const randomPart = Math.floor(Math.random() * 100).toString().padStart(2, '0');
     const orderId = `SW-${dateCode}-${timeCode}-${randomPart}-CM`; // CM for CMI
-    
+
     // CMI specific parameters
     const storeKey = config.cmiStoreKey;
     const storeName = config.cmiStoreName;
     const amount = Math.round(body.amount / 100).toString(); // Convert cents to MAD
-    
+
     // Create hash for CMI security
     const currencyCode = '504'; // 504 is MAD
     const hashString = `${storeKey}${orderId}${amount}${currencyCode}${storeKey}`;
     const hash = crypto.createHash('sha512').update(hashString).digest('hex');
-    
+
     // Store order in Firestore
     const orderDocRef = db.collection('users').doc(body.userId).collection('orders').doc(orderId);
-    
+
     await orderDocRef.set(
       createOrderData(body, 'cmi', {
         orderId,
@@ -68,7 +76,6 @@ export default defineEventHandler(async (event) => {
         // Add other provider-specific fields if needed
       })
     );
-    
 
     const isDev = process.env.CMI_ENV === 'TEST';
     if (isDev && !config.cmiStoreKey) {
@@ -84,7 +91,6 @@ export default defineEventHandler(async (event) => {
         orderId: orderId
       };
     }
-
 
     // Simulate payment confirmation (replace this with actual CMI callback handling)
     const paymentStatus = 'succeeded'; // Simulate a successful payment status
@@ -112,8 +118,6 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-
-
     // Return CMI form data
     return {
       success: true,
@@ -134,8 +138,8 @@ export default defineEventHandler(async (event) => {
     };
   } catch (error) {
     console.error('CMI payment creation failed:', error);
-    throw createError({ 
-      statusCode: 500, 
+    throw createError({
+      statusCode: 500,
       statusMessage: error.message || 'Failed to create CMI payment'
     });
   }

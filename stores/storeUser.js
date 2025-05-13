@@ -9,6 +9,7 @@ import { toRaw } from 'vue';
 import { useNuxtApp } from '#app'; // Import useNuxtApp to access injected services
 
 
+
 export const useStoreUser = defineStore('storeUser', {
   state: () => ({
     userSession: initDefaultSession(), // Initialize userSession with the default structure
@@ -129,6 +130,7 @@ export const useStoreUser = defineStore('storeUser', {
         ...initDefaultSession(),
         email: authStore.authInfo.email || '',
         alias: authStore.authInfo.alias || '',
+        userId: authStore.authInfo.uid || '',
         createdAt: new Date().toISOString(),
         last_login: new Date().toISOString(),
       };
@@ -140,8 +142,6 @@ export const useStoreUser = defineStore('storeUser', {
         console.error('Error initializing user document:', error.message);
       }
     },
-
- 
 
     async setUserInfo() {
       const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances
@@ -198,7 +198,6 @@ export const useStoreUser = defineStore('storeUser', {
       // localStorage.removeItem('userSession'); // Handled by pinia-plugin-persistedstate? Check its config.
       console.log('User session cleared:', this.userSession);
     },
-
 
    async setCartInfoDb() {
       const { $firestore, $firebaseAuth } = useNuxtApp();
@@ -331,7 +330,6 @@ export const useStoreUser = defineStore('storeUser', {
       }
     },
 
-
     async createOrder(orderId, paymentChoice = 'paypal', status = 'pending') {
       const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances
       const authStore = useStoreAuth();
@@ -366,6 +364,9 @@ export const useStoreUser = defineStore('storeUser', {
       try {
         await setDoc(orderDocRef, orderData);
         console.log("Order saved:", orderData);
+
+        // await this.manageLastOrder('set', orderId, new Date().toISOString());
+
         // Clear cart and checkout session after successful order creation
         this.clearCart(); // Use the dedicated action
         return orderId;
@@ -393,8 +394,10 @@ export const useStoreUser = defineStore('storeUser', {
         console.error(`Error updating order ${orderId} to status ${status}:`, error.message);
       }
     },
-
+    
+    /*
     async createOrderWithStripe(paymentIntentId, paymentChoice = 'stripe', status = 'pending') {
+        console.log('createOrderWithStripe called with: <<<<<<', { paymentIntentId, paymentChoice, status });
       const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances
       const authStore = useStoreAuth();
 
@@ -432,6 +435,10 @@ export const useStoreUser = defineStore('storeUser', {
       try {
         await setDoc(orderDocRef, orderData);
         console.log("Stripe Order saved:", orderData);
+
+        await this.manageLastOrder('set', paymentIntentId, new Date().toISOString());
+        console.log('Last order set:', { orderId, orderTime: new Date().toISOString() });
+
         // Clear cart and checkout session after successful order creation
         this.clearCart(); // Use the dedicated action
         return documentId; // Return the Firestore document ID used
@@ -439,8 +446,53 @@ export const useStoreUser = defineStore('storeUser', {
         console.error("Error saving Stripe order:", error.message);
         return null;
       }
-    }
+    },
+    */
 
+    /* async manageLastOrder(action, orderId = null, orderTime = null) {
+      const { $firestore } = useNuxtApp();
+      const authStore = useStoreAuth();
+
+      if (!$firestore || !authStore.authInfo?.uid) {
+        console.error("Firestore/Auth not available or user not logged in.");
+        return null;
+      }
+
+      const userDocRef = doc($firestore, 'users', authStore.authInfo.uid);
+
+      try {
+        if (action === 'load') {
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            console.log('Loaded last order:', data);
+            return {
+              lastOrderId: data.lastOrderId || null,
+              lastOrderTime: data.lastOrderTime || null,
+            };
+          } else {
+            console.warn('No user document found.');
+            return null;
+          }
+        } else if (action === 'set') {
+          await updateDoc(userDocRef, {
+            lastOrderId: orderId,
+            lastOrderTime: orderTime,
+          });
+          console.log('Last order updated:', { orderId, orderTime });
+        } else if (action === 'clear') {
+          await updateDoc(userDocRef, {
+            lastOrderId: null,
+            lastOrderTime: null,
+          });
+          console.log('Last order cleared.');
+        }
+      } catch (error) {
+        console.error(`Error managing last order (${action}):`, error.message);
+        return null;
+      }
+    }
+   */
     // Keep commented out cart actions if you plan to use them later
     /* addToCart(item) {
       this.userSession.cart.push(item)
@@ -453,29 +505,32 @@ export const useStoreUser = defineStore('storeUser', {
 
 
 function initDefaultSession() {
-        return {
-          email: '',
-          alias: '',
-          avatar: '',
-          createdAt: '',
-          access_rights: {
-            graphic_novels: []
-          },
-          cart: [],
-          selectedArray: [],
-          cart_added: '',
-          checkout: [],
-          consents: [],
-          orders: [],
-          last_order: '',
-          favorite_arts: [],
-          favorite_products: [],
-          last_login: '',
-          unsubscribe_demands: [],
-          unsubscribe_status: 'inactive',
-          defaultLanguage: 'en',
-          choosedLanguage:  'fr'
-        }
+  return {
+    email: '',
+    alias: '',
+    avatar: '',
+    userId: null,
+    lastOrderId: null, // Add this
+    lastOrderTime: null, // Add this
+    createdAt: '',
+    access_rights: {
+      graphic_novels: []
+    },
+    cart: [],
+    selectedArray: [],
+    cart_added: '',
+    checkout: [],
+    consents: [],
+    orders: [],
+    last_order: '',
+    favorite_arts: [],
+    favorite_products: [],
+    last_login: '',
+    unsubscribe_demands: [],
+    unsubscribe_status: 'inactive',
+    defaultLanguage: 'en',
+    choosedLanguage: 'fr'
+  };
 }
 
 
