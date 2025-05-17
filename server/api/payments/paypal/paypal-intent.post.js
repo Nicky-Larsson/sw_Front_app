@@ -138,10 +138,10 @@ export default defineEventHandler(async (event) => {
       alias,
       sw_email,
       payment_infos: {
-        paymentProvider: 'paypal',
-        paypalOrderId,
+        payment_provider: 'paypal',
+        paypal_order_id: paypalOrderId,
         sent_metadata: body.metadata || {},
-        paymentMethod: paymentMethodCode, // e.g., 'PP'
+        payment_method: paymentMethodCode, // e.g., 'PP'
       },
     });
 

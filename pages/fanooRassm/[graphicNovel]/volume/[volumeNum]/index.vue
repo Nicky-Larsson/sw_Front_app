@@ -178,6 +178,8 @@ const previewArray = ref([]);
 const currentImage = ref(0);
 const currentIndex = ref(0);
 
+const graphicNovelUid = route.params.graphicNovel
+
 // const language = ref(userStore.userSession.defaultLanguage);
 // const language = computed(() => userStore.userSession.defaultLanguage);  readonly
 
@@ -255,6 +257,30 @@ const updateCurrentImage = (image, index) => {
   currentImage.value = image;
   currentIndex.value = index; // Update the current index
 };
+
+
+
+onMounted(async () => {
+  // First ensure access rights are loaded
+  await userStore.fetchNovelAccessRight(graphicNovelUid, true); // fetchAccessRights() 
+  
+  // Then check if user has access to this content
+  const hasAccess = userStore.hasAccessTo(
+    urlParams.graphicNovel,
+    urlParams.volumeNum,
+    selectedLanguage.value
+  );
+  
+  if (hasAccess) {
+    console.log('User has access to this content!');
+    // Show content, enable features, etc.
+  } else {
+    console.log('User does not have access to this content.');
+    // Show purchase options, restrict features, etc.
+  }
+  // Now check if user has access to the content
+});
+
 
 
 // console.log(storeProducts.products[urlParams.graphicNovel][urlParams.volumeNum])

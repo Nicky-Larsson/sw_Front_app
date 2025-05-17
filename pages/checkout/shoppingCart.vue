@@ -139,18 +139,28 @@ if (!userStore.userSession.selectedArray) {
 
 
 onMounted(() => {
-
   console.log('Initial selectedArray:', userStore.userSession.selectedArray);
+  console.log('Initial cart:', userStore.userSession.cart);
+  // userStore.userSession.selectedArray = deduplicate(userStore.userSession.selectedArray);
 
   // Ensure userStore.userSession.selectedArray is initialized
+  console.log('userStore.userSession.selectedArray:', !userStore.userSession.selectedArray);
+  console.log('userStore.userSession.selectedArray:', userStore.userSession.selectedArray.length);
+
+    /* userStore.userSession.selectedArray.forEach((item) => {
+      selectedRadioFunc(item);
+    }); */
+
   if (!userStore.userSession.selectedArray || userStore.userSession.selectedArray.length === 0) {
     // Add only items with new_in_cart: true to selectedArray
     userStore.userSession.cart.forEach((item) => {
+      console.log( 'isAlreadySelected : ', isAlreadySelected(userStore.userSession.selectedArray, item));
       if (item.new_in_cart === true && !isAlreadySelected(userStore.userSession.selectedArray, item)) {
         userStore.userSession.selectedArray.push(item);
       }
     });
   }
+  
   console.log('Final selectedArray:', userStore.userSession.selectedArray);
 
 });
@@ -215,17 +225,36 @@ const isItemSelected = (item) => {
   // Check if the item is already in selectedArray
   const isSelected = selectedArray.some(
     (selected) =>
-      selected.graphic_novel_uid === item.graphic_novel_uid &&
+/*       selected.graphic_novel_uid === item.graphic_novel_uid &&
       selected.volume_uid === item.volume_uid &&
       selected.volume_name === item.volume_name &&
-      selected.product_uid === item.product_uid
+      selected.product_uid === item.product_uid */
+      selected.product_uid.graphic_novel_uid === item.product_uid.graphic_novel_uid &&
+      selected.product_uid.volume_uid === item.product_uid.volume_uid &&
+      selected.product_uid.lang === item.product_uid.lang
+
+
   );
 
   // If the item is not selected but has new_in_cart === true, add it to selectedArray
+  // console.log('isItemSelected selectedArray:', isSelected);
+  // console.log('item.new_in_cart:', item.new_in_cart);
+
   if (!isSelected && item.new_in_cart === true) {
-    userStore.userSession.selectedArray.push(item);
-    console.log('Automatically selected item with new_in_cart === true:', item);
-    return true; // Consider it selected
+    const alreadyExists = userStore.userSession.selectedArray.some(
+      (selected) =>
+        selected.product_uid.graphic_novel_uid === item.product_uid.graphic_novel_uid &&
+        selected.product_uid.volume_uid === item.product_uid.volume_uid &&
+        selected.product_uid.lang === item.product_uid.lang
+    );
+
+    if (!alreadyExists) {
+      userStore.userSession.selectedArray.push(item);
+      console.log('Automatically selected item with new_in_cart === true:', item);
+      return true; // Consider it selected
+    } else {
+      console.log('Item already exists in selectedArray, skipping:', item);
+    }
   }
 
   return isSelected; // Return the actual selection state
@@ -233,6 +262,7 @@ const isItemSelected = (item) => {
 
 // Function to toggle selection of items
 const selectedRadioFunc = (item) => {
+   
   const selectedArray = userStore.userSession.selectedArray;
   const index = selectedArray.findIndex(
     (selected) =>
@@ -260,6 +290,7 @@ const selectedRadioFunc = (item) => {
   if (cartItem) {
     cartItem.new_in_cart = false; // Update the new_in_cart property in the cart
   }
+  console.log('selectedRadioFunc selectedArray:', userStore.userSession.selectedArray);
 };
 
 
@@ -274,6 +305,8 @@ const deduplicate = (array) => {
 };
 
 const isAlreadySelected = (selectedArray, item) => {
+  console.log('isAlreadySelected selectedArray:', selectedArray);
+  console.log('isAlreadySelected item:', item);
   return selectedArray.some(
     (selected) =>
       selected.product_uid.graphic_novel_uid === item.product_uid.graphic_novel_uid &&

@@ -1,5 +1,5 @@
-<!-- filepath: /home/vagrant/App_folder/SimoWarch-app-v1/pages/checkout/cmiPaymentPage.vue -->
 <template>
+ <client-only>  
   <div class="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full bg-white rounded-lg shadow-lg overflow-hidden">
       <!-- Header with CMI logo -->
@@ -30,7 +30,8 @@
           </div>
           <div class="flex justify-between mb-2">
             <span class="text-gray-600">Amount:</span>
-            <span class="font-semibold">{{ amount }} MAD</span>
+            <span class="font-semibold">{{ amountMAD }} MAD</span>
+            <span class="font-semibold">{{ amountEuros }} Euros</span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-600">Date:</span>
@@ -56,11 +57,11 @@
         </div>
         <!-- Action Buttons -->
         <div class="space-y-3">
-          <button @click="simulateSuccess" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors">
-            Simulate Successful Payment
+          <button @click="simulateSuccess" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors" :disabled="isProcessing">
+            {{ isProcessing ? 'Processing...' : 'Simulate Successful Payment' }}
           </button>
-          <button @click="simulateFailure" class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg transition-colors">
-            Simulate Failed Payment
+          <button @click="simulateFailure" class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg transition-colors" :disabled="isProcessing">
+            {{ isProcessing ? 'Processing...' : 'Simulate Failed Payment' }}
           </button>
           <button @click="goBack" class="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors">
             Cancel Payment
@@ -69,15 +70,28 @@
       </div>
     </div>
   </div>
+ </client-only> 
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, navigateTo } from '#imports';
 
+
+const userStore = useStoreUser();
+const authStore = useStoreAuth();
+
+const userHasActed = ref(false);
+const isProcessing = ref(false);
+
+// 
+// userStore.userSession.checkout
+// authStore.authInfo.uid
+
 const route = useRoute();
 const orderId = ref('');
-const amount = ref(0);
+const amountEuros = ref('0.00');
+const amountMAD = ref('0.00');
 const originUrl = ref('');
 
 const currentDate = computed(() => {
@@ -85,9 +99,10 @@ const currentDate = computed(() => {
 });
 
 onMounted(() => {
-  const { oid, amount: amountParam, okUrl, failUrl } = route.query;
+  const { oid, amountEuros: euros, amountMAD: mad, okUrl, failUrl } = route.query;
   orderId.value = oid || 'TEST-ORDER';
-  amount.value = amountParam || '100.00';
+  amountEuros.value = euros || '0.00';
+  amountMAD.value = mad || '0.00';
   originUrl.value = (okUrl && okUrl !== 'undefined' && okUrl !== undefined) ? okUrl : '/checkout/purchaseSuccess';
   if (failUrl && failUrl !== 'undefined' && failUrl !== undefined) {
     localStorage.setItem('cmi_fail_url', failUrl);
@@ -96,10 +111,11 @@ onMounted(() => {
   }
 });
 
-// --- Add these methods ---
 const postToCallback = async (success = true) => {
   const payload = {
     oid: orderId.value,
+    userId: authStore.authInfo?.uid || userStore.userSession.userId,
+    chekoutItems: userStore.userSession.checkout,
     ProcReturnCode: success ? '00' : '99',
     Response: success ? 'Approved' : 'Declined',
     TransId: success ? 'TEST-TRANS-ID' : undefined
@@ -111,7 +127,7 @@ const postToCallback = async (success = true) => {
   });
 };
 
-const simulateSuccess = async () => {
+/* const simulateSuccess = async () => {
   await postToCallback(true);
   setTimeout(() => {
     const url = (originUrl.value && originUrl.value !== 'undefined' && originUrl.value !== undefined)
@@ -119,6 +135,43 @@ const simulateSuccess = async () => {
       : '/checkout/purchaseSuccess';
     navigateTo(url);
   }, 1500);
+}; */
+
+
+const simulateSuccess = async () => {
+  isProcessing.value = true;
+  try {
+    // 1. FIRST create the order with cmi-intent
+    const intentResponse = await $fetch('/api/payments/cmi/cmi-intent', {
+      method: 'POST',
+      body: {
+        userId: authStore.authInfo.uid,
+        email: route.query.email || '',
+        alias: route.query.alias || '',
+        amount: Math.round(parseFloat(route.query.amount || 0) * 100),
+        checkoutItems: toRaw(userStore.userSession.checkout || [])
+      }
+    });
+    
+    if (!intentResponse.success) {
+      throw new Error('Failed to create order');
+    }
+    
+    orderId.value = intentResponse.orderId;
+    
+    // 2. THEN process the successful payment
+    await postToCallback(true);
+    
+    // 3. Redirect to processing page
+    setTimeout(() => {
+      navigateTo(`/checkout/processing?orderId=${orderId.value}&source=cmi`);
+    }, 1500);
+  } catch (error) {
+    console.error("Payment failed:", error);
+    alert('Payment failed: ' + error.message);
+  } finally {
+    isProcessing.value = false;
+  }
 };
 
 const simulateFailure = async () => {

@@ -14,21 +14,35 @@ export default defineEventHandler(async (event) => {
     console.log('CMI callback received:', body);
     
     // Extract order info from CMI response
-    const { oid: orderId, ProcReturnCode, Response, TransId } = body;
+    // const { orderDoc: orderId, userId: userId , checkoutItems :chekoutItems, ProcReturnCode, Response, TransId } = body;
+
+    const { oid: orderId, userId, chekoutItems, ProcReturnCode, Response, TransId } = body;
     
     if (!orderId) {
       console.error('No orderId in CMI callback');
       return { success: false, message: 'Missing orderId' };
     }
     
-    // Find the order in Firestore
-    // Example: "SW-230501-1423-45-CM" (need to search by document ID)
-    const ordersSnapshot = await db.collectionGroup('orders')
-      .where('paymentMethod', '==', 'cmi')
-      .where('status', '==', 'pending')
-      .get();
-    
-    const orderDoc = ordersSnapshot.docs.find(doc => doc.id === orderId);
+    // Find the order by searching all users (if userId is not in callback)
+    // let orderDoc = null, userId = null, checkoutItems = [];
+
+
+    // If you store userId in the orderId or callback, use it directly!
+    // Otherwise, fallback to searching users (slower, but no composite index needed)
+/*     const usersSnapshot = await db.collection('users').get();
+    for (const user of usersSnapshot.docs) {
+      const docRef = db.collection('users').doc(user.id).collection('orders').doc(orderId);
+      const doc = await docRef.get();
+      if (doc.exists) {
+        orderDoc = doc;
+        userId = user.id;
+        checkoutItems = doc.data().checkoutItems || [];
+        break;
+      }
+    } */
+
+    const orderDocRef = db.collection('users').doc(userId).collection('orders').doc(orderId);
+    const orderDoc = await orderDocRef.get();      
     
     if (!orderDoc) {
       console.error(`Order not found: ${orderId}`);
@@ -37,15 +51,15 @@ export default defineEventHandler(async (event) => {
     
     // Update order status based on CMI response
     if (ProcReturnCode === '00' && Response === 'Approved') {
-      await orderDoc.ref.update({
+      await orderDocRef.update({
         status: 'paid',
         paidAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         webhook_answer: {
           payment_method: 'cmi',
-          transactionId: body.TransId,
-          authCode: body.AuthCode, // if available
-          response: body.Response,
+          transactionId: TransId,
+          authCode: body.AuthCode || '',
+          response: body.Response || '',
           cardBrand: body.CardType || '', // if available
           cardLast4: body.PAN || '',      // if available
           // ...other fields as needed
@@ -54,11 +68,23 @@ export default defineEventHandler(async (event) => {
 
 
       // **Update products_access for the user**
-      const userId = orderDoc.data().userId; // Assuming userId is stored in the order document
+      // const userId = orderDoc.data()?.userId; // Assuming userId is stored in the order document
       const checkoutItems = orderDoc.data().checkoutItems || []; // Assuming checkoutItems are stored in the order document
-      await updateProductsAccess(userId, checkoutItems);
+      await updateProductsAccess(userId, orderDoc.data().checkoutItems || []);
 
       console.log(`Products access updated for user: ${userId}`);
+
+      // STEP 4: Clear checkout data (add this block)
+      await db.collection('users').doc(userId).update({
+        checkout: [],
+        checkoutTotal: 0,
+        checkoutTotalFormatted: '0.00 EUR',
+        checkoutCreatedAt: '',
+        cart: [],
+        selectedArray: [],
+      });
+
+      console.log(`Cart cleared for user: ${userId}`);
 
 
     } else {

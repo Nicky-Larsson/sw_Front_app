@@ -6,8 +6,8 @@
       </nuxt-link>
       <div class="flex flex-col text-amber-50 text-center text-4xl block"> 
 
-        <NuxtLink :to="`/Fanoorassm`" no-prefetch>
-          {{ librarySet_1.grapicNovel }}
+        <NuxtLink :to="`/Fanoorassm/${librarySet_1.grapic_novel_id}` " no-prefetch>
+          {{ librarySet_1.grapic_novel_name }}
         </NuxtLink>
       </div>
     </div>
@@ -18,7 +18,8 @@
 import { ref } from 'vue'
 
 const librarySet_1 = reactive({
-    grapicNovel: "sunsetLand",
+    grapic_novel_id: "sunset_land",
+    grapic_novel_name: "Sunset Land",
     volume_num: 3,
     chapter_num: 4,
     figurine_name: "tbourida",

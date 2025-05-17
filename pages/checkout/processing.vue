@@ -66,6 +66,14 @@ const checkOrderStatus = async () => {
       clearAllTimers();
       status.value = 'success';
       userStore.clearCart();
+
+      // Get the items that were just purchased
+      const purchasedItems = response.orderItems || cartBackup;
+      
+      // Only refresh access for the novels that were purchased
+      await userStore.refreshPurchasedNovelAccess(purchasedItems);
+      console.log('Access rights refreshed for purchased items');
+      
       return true;
     }
 
@@ -140,6 +148,8 @@ onMounted(async () => {
     const done = await checkOrderStatus();
     if (done) return;
     
+
+
   }, checkDelay[attempts] || 2000);
   
   // Set absolute max timeout regardless of checks

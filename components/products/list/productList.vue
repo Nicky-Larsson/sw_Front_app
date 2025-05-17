@@ -22,14 +22,14 @@
 
             <div id="ProductDetails">
             
-                <p class="px-1 pt-0.5 text-xl text- text-[#252525]">
+                <p class="px-1 pt-0.5 text-2xl text- text-[#252525]">
                     {{ volume.volume_name.substring(0,60) }}
                 </p>
 
 
-                <span class="flex items-center justify-center gap-3 px-1  pt-1 pl-5">
-                    <span class="text-[#FF6674] text-2xl font-semibold">{{ priceComputed }}€</span>
-                    <span class="text-gray-500 text-sm text-light line-through">{{ oldPriceComputed }} €</span>
+                <span class="flex items-center justify-center gap-3 px-1  pt-1 ">
+                    <span class="text-red-700 text-2xl font-semibold">{{ priceComputed }}€</span>
+
                 </span>
 
                 <!-- <span class="px-1 relative -top-1.5 text-[#FF6674] text-xs font-semibold">
@@ -46,18 +46,23 @@
                 </p> -->
 
 
-                <p class="px-1 pb-1">
-                <button
-                    class="text-[#009A66] text-xl font-semibold"
-                    @click.stop="$emit('add-to-cart', volume)"
-                    type="button"
-                >
-                    Add to Cart
-                </button>
-                </p>
+
 
             </div>
         </NuxtLink>
+
+        <p class="px-1 pb-1  bg-yellow-400">
+        <button
+            class="text-[#009A66] text-xl font-semibold"
+            @click.stop="$emit('add-to-cart', volume)"
+            type="button"
+        >
+        <!-- <Icon name="ri:earth-line"  size="150%" /> 
+        <Icon name="tabler:shopping-bag-plus"  size="150%" />-->
+            Add to Cart
+        </button>
+        </p>
+
     </div>
 </template>
 

@@ -52,11 +52,19 @@ export default defineEventHandler(async (event) => {
     // CMI specific parameters
     const storeKey = config.cmiStoreKey;
     const storeName = config.cmiStoreName;
-    const amount = Math.round(body.amount / 100).toString(); // Convert cents to MAD
+
+    // const amount = Math.round(body.amount / 100).toString(); // Convert cents to MAD
+
+    const amountEuros = Number((body.amount / 100).toFixed(2)); // e.g. 5.98
+    const amountMAD = Number((amountEuros * 10.41).toFixed(2)); // e.g. 62.27
+
+    console.log("CMI amount in MAD:", amountMAD);
+    console.log("CMI amount in Euros:", amountEuros);
+    console.log("CMI orderId:", orderId);
 
     // Create hash for CMI security
     const currencyCode = '504'; // 504 is MAD
-    const hashString = `${storeKey}${orderId}${amount}${currencyCode}${storeKey}`;
+    const hashString = `${storeKey}${orderId}${amountEuros}${currencyCode}${storeKey}`;
     const hash = crypto.createHash('sha512').update(hashString).digest('hex');
 
     // Store order in Firestore
@@ -65,13 +73,16 @@ export default defineEventHandler(async (event) => {
     await orderDocRef.set(
       createOrderData(body, 'cmi', {
         orderId,
-        currency: 'mad',
-        totalPrice: body.amount / 100,
+        currency: 'Euros',
+        totalPrice: amountEuros,
         payment_infos: {
           payment_method: 'cmi',
           cmiOrderId: orderId,
           payment_email_id: body.email,
           sent_metadata: body.metadata || {},
+        },
+        extraFields: {
+          totalPriceDhirhams: amountMAD
         }
         // Add other provider-specific fields if needed
       })
@@ -83,9 +94,11 @@ export default defineEventHandler(async (event) => {
         success: true,
         cmiUrl: '/checkout/cmiPaymentPage',
         formData: {
-          amount: amount,
+          // amount: amountMAD, // send MAD to CMI
+          amountMAD: amountMAD, 
+          amountEuros: amountEuros, 
           oid: orderId,
-          okUrl: `/checkout/purchaseSuccess`,
+          okUrl: `/checkout/processing?orderId=${orderId}&source=cmi`,
           failUrl: `/checkout/checkout`,
         },
         orderId: orderId
@@ -124,10 +137,11 @@ export default defineEventHandler(async (event) => {
       cmiUrl: config.cmiPaymentUrl, // From your .env
       formData: {
         clientid: storeName,
-        amount: amount,
+        amountMAD: amountMAD, 
+        amountEuros: amountEuros,      
         currency: currencyCode,
         oid: orderId,
-        okUrl: `/checkout/purchaseSuccess`,
+        okUrl: `/checkout/processing?orderId=${orderId}&source=cmi`,
         failUrl: `/checkout/purchaseFailed`,   // ${config.public.siteUrl}
         lang: 'fr',
         hash: hash,

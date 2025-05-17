@@ -45,6 +45,7 @@ export const useStoreAuth = defineStore('storeAuth', {
             this.authInfo.email = authUserData.email;
             // Initialize user store AFTER confirming auth state
             userStore.getUserInfoDb(); // Fetch user data now that we know they are logged in
+            // userStore.fetchAccessRights(true)
           }
         } else {
           // User is signed out
@@ -59,6 +60,7 @@ export const useStoreAuth = defineStore('storeAuth', {
 
     async registerUser(credentials, additionalInfo) {
       const { $firebaseAuth, $firestore } = useNuxtApp(); // Get injected instances
+
 
       // Check if services are available
       if (!$firebaseAuth || !$firestore) {
@@ -142,6 +144,8 @@ export const useStoreAuth = defineStore('storeAuth', {
   
         const userStore = useStoreUser();
         await userStore.getUserInfoDb();
+
+        // await userStore.fetchAccessRights(true)
         // const userStore = useStoreUser();
         // await userStore.set UserInfo(); // Load user data into the store
         // We don't need to manually set authInfo here as onAuthStateChanged will trigger

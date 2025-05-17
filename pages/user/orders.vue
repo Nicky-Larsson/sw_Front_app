@@ -21,9 +21,14 @@
             <div>
               <p class="font-bold text-xl">Order #{{ order.id }}</p>
               <p class="text-xl text-gray-500">Placed on {{ formatDate(order.createdAt) }}</p>
-              <p class="text-xl text-gray-500">
-                Payment : {{ order.paymentProvider || 'Not Specified' }}
-              </p>
+                <p class="text-xl text-gray-500">
+                  <strong>Payment:</strong>
+                  {{
+                    order.payment_infos?.payment_method
+                      || order.webhook_answer?.payment_method
+                      || '-'
+                  }}
+                </p>
               <p class="text-xl text-gray-500">
                 <strong>Total:</strong> {{ order.totalPrice }} {{ order.currency }}
               </p>
@@ -91,15 +96,19 @@ const fetchOrders = async () => {
   }
 };
 
-// Format date for display
+
 const formatDate = (timestamp) => {
   const date = new Date(timestamp);
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true, // Use 12-hour format (AM/PM). Remove this line for 24-hour format.
   });
 };
+
 
 // Navigate to order details page
 const viewOrderDetails = (orderId) => {

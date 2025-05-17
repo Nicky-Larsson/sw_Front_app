@@ -105,7 +105,7 @@ export default defineEventHandler(async (event) => {
     // Then create document with custom ID
     const orderRef = await db.collection('users').doc(userId).collection('orders').doc(orderId);
      
-    const safeAmount = Number(amount);
+    const safeAmount = Number(amount) / 100;
     
     console.log('amount:', amount, 'safeAmount:', safeAmount, 'type:', typeof amount);
     
@@ -120,9 +120,9 @@ export default defineEventHandler(async (event) => {
       currency: 'eur',
       totalPrice: safeAmount,
       payment_infos: {
-        paymentProvider: 'googlepay',
-        paymentIntentId: '', // to be filled after intent creation
-        paymentMethod: paymentMethodCode,
+        payment_provider:'googlepay',
+        payment_intentId: '', // to be filled after intent creation
+        payment_method: 'googlepay',
         payment_email_id: email,
         sent_metadata: body.metadata || {},
       },
@@ -130,6 +130,7 @@ export default defineEventHandler(async (event) => {
       accessLevel: 'provisional',
       provisionalExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     });
+
     console.log('orderData before Firestore set:', orderData); // <--- Add this line
     await orderRef.set(orderData);
 
@@ -151,7 +152,16 @@ export default defineEventHandler(async (event) => {
       } 
     });
 
-    // Check if payment succeeded
+    await orderRef.update({
+      status: 'processing',
+      'payment_infos.payment_intentId': paymentIntent.id,
+      'payment_infos.payment_intentStatus': paymentIntent.status,
+      updatedAt: new Date().toISOString()
+    });
+
+    console.log('Order updated with payment intent ID:', paymentIntent.id);   
+
+    /* // Check if payment succeeded       <<<<<<<<<<<<<<<<<<<<
     if (paymentIntent.status === 'succeeded') {
       // Update order status to paid
       await orderRef.update({
@@ -159,10 +169,10 @@ export default defineEventHandler(async (event) => {
         paidAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         payment_infos: {
-          payment_provider: 'googlepay',
+          payment_method: 'googlepay',
           payment_intentId: paymentIntent.id,
           payment_intentStatus: paymentIntent.status,
-          payment_method: paymentIntent.payment_method_types?.[0] || '', // e.g. 'card'
+          payment_provider: 'googlepay',
           payment_email_id: email,
           payment_brand: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.brand || '',
           payment_country: paymentIntent.charges?.data?.[0]?.country || '',
@@ -212,9 +222,36 @@ export default defineEventHandler(async (event) => {
         statusCode: 400, 
         statusMessage: `Payment failed with status: ${paymentIntent.status}` 
       });
-    }
+    } */
+
+    return {
+      success: true,
+      orderId,
+      clientSecret: paymentIntent.client_secret,
+      status: paymentIntent.status,
+      handledByWebhook: true
+    };
+
+
   } catch (error) {
     console.error('Error processing Google Pay payment:', error);
+    
+    // Add error logging to Firestore
+    try {
+      await db.collection('logs')
+        .doc('paymentErrors')
+        .collection('googlePay')
+        .add({
+          userId,
+          orderId,
+          error: error.message,
+          timestamp: new Date().toISOString(),
+          paymentMethodId
+        });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
+    
     throw createError({ 
       statusCode: 500, 
       statusMessage: error.message || 'Error processing payment' 

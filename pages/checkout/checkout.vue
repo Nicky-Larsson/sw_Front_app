@@ -35,8 +35,8 @@
           </div>
           
           <div class="bg-white rounded-lg p-4 mt-4">
-            <div class="text-lg font-semibold mb-2">Payment methods</div>
-            <div class="flex flex-col gap-4">
+            <div class="text-2xl font-bold mb-4">Payment methods :</div>
+            <div class="flex flex-col gap-2">
 
               <div
                 v-for="option in paymentOptions"
@@ -47,21 +47,21 @@
                   type="button"
                   class="w-full flex items-center justify-between focus:outline-none transition-all duration-200"
                   :class="selectedPayment === option.value
-                    ? 'px-4 py-3 text-xl bg-blue-50 border-blue-500'
-                    : 'px-2 py-1 text-base bg-white opacity-80'"
+                    ? 'px-6 py-4 text-xl bg-blue-50 border-blue-550 scale-100'
+                    : 'px-4 py-2 text-base bg-white opacity-80 scale-95'"
                   @click="selectedPayment = option.value"
                 >
                   <div class="flex items-center">
                     <img
                       :src="option.icon"
                       :alt="option.label"
-                      class="h-6 mr-3 transition-all duration-200"
-                      :class="selectedPayment === option.value ? '' : 'h-5 opacity-70'"
+                      class="transition-all duration-200 mr-3"
+                      :class="selectedPayment === option.value ? 'h-8' : 'h-6 opacity-70'"
                     />
                     <span
-                      class="font-semibold transition-all duration-200"
-                      :class="selectedPayment === option.value ? '' : 'font-normal'"
-                    >{{ option.label }}</span>
+                      class="transition-all duration-200 whitespace-nowrap"
+                      :class="selectedPayment === option.value ? 'font-semibold text-xl' : 'font-normal text-lg'"
+                    > {{ option.label }}</span>
                   </div>
                   <span
                     v-if="selectedPayment === option.value"
@@ -70,20 +70,25 @@
                 </button>
 
 
-                <div v-show="selectedPayment === option.value" class="p-4 border-t">
+                <div v-show="selectedPayment === option.value" class="p-3 border-t">
                   <!-- Stripe -->
                   <form
                     v-if="option.value === 'stripe'"
                     @submit.prevent="payWithStripe"
-                    class="mt-1 bg-white p-6 rounded-lg shadow-lg border border-gray-200"
-                  >
-                    <div class="flex items-center justify-center mb-4">
+                    class="mt-1 bg-white p-2 rounded-lg shadow-lg border border-gray-200"
+                  > 
+                    <!-- <div class="flex items-center justify-center mb-4">
                       <img src="/payment/stripe.jpg" alt="Powered by Stripe" class="h-9 mr-2" />
-                    </div>
+                    </div> -->
+                    
                     <div class="mb-4">
-                      <div id="card-element" class="border border-gray-300 rounded-md p-3 bg-gray-50 shadow-sm"></div>
+                          <div 
+                            id="card-element" 
+                            class="border border-gray-300 rounded-md p-4 bg-gray-50 shadow-sm focus-within:ring-2 focus-within:ring-blue-500"
+                          ></div>
                       <p id="card-error" class="text-red-500 text-sm mt-2"></p>
                     </div>
+
                     <div class="flex items-center mb-4">
                       <img src="/payment/visa.png" alt="visa" class="h-6 mr-2" />
                       <img src="/payment/mastercard.png" alt="mastercard" class="h-6 mr-2" />
@@ -187,7 +192,7 @@ const selectedPayment = ref('stripe');
 
 const paymentOptions = [
   { value: 'paypal', label: 'PayPal', icon: '/payment/paypal.png' },
-  { value: 'stripe', label: 'Credit Card (Stripe)', icon: '/payment/stripe.jpg' },
+  { value: 'stripe', label: 'Credit Card', icon: '/payment/stripe.jpg' },
   { value: 'cmi', label: 'Credit Card (CMI)', icon: '/payment/cmi-logo.png' },
   { value: 'googlepay', label: 'Google Pay', icon: '/payment/googlepay.png' }, // Add this line
 ];
@@ -256,11 +261,16 @@ const testGooglePayFlow = async () => {
     
     console.log("Google Pay test flow response:", response);
     
-    if (response.success) {
-      // Redirect to processing page instead of success
-      navigateTo(`/checkout/processing?orderId=${response.orderId}`);
+    if (response && response.success) {
+      // If payment needs additional steps, handle it
+      if (response.requiresAction) {
+        // Handle the authentication if needed
+      } else {
+        // Navigate to processing page where webhook will update the status
+        navigateTo(`/checkout/processing?orderId=${response.orderId}`);
+      }
     } else {
-      alert('Payment failed: ' + (response.message || 'Unknown error'));
+      alert('Payment failed: ' + (response?.message || 'Unknown error'));
     }
   } catch (error) {
     console.error("Google Pay test flow failed:", error);
@@ -290,6 +300,7 @@ onMounted(async () => {
       }
       if (paypalContainer && window.paypal) {
         window.paypal.Buttons({
+          fundingSource: window.paypal.FUNDING.PAYPAL, // Force PayPal funding source
           createOrder: async (data, actions) => {
             const checkoutItems = toRaw(userStore.userSession.checkout || []);
             console.log('checkoutItems in createOrder:', checkoutItems);
@@ -344,7 +355,13 @@ onMounted(async () => {
               throw new Error(response.message || 'Server reported an issue finalizing the order.');
             }
           },
-          // ...onError, onCancel, etc.
+          onError: (err) => {
+            console.error('PayPal error:', err);
+            alert('An error occurred during the PayPal payment process.');
+          },
+          onCancel: () => {
+            console.log('PayPal payment canceled by user.');
+          },
         }).render("#paypal-button-container");
       }
     }
@@ -479,8 +496,22 @@ const payWithStripe = async () => {
 };
 
 
-// Add this function to your existing <script setup> section
 const payWithCMI = async () => {
+  // Skip the cmi-intent API call completely
+  navigateTo({
+    path: '/checkout/cmiPaymentPage',
+    query: {
+      amount: totalPriceComputed.value.toFixed(2),
+      // Pass any needed data through query params
+      userId: authStore.authInfo.uid,
+      email: email.value,
+      alias: alias.value
+    }
+  });
+};
+
+// Add this function to your existing <script setup> section
+/* const payWithCMI = async () => {
   isProcessing.value = true;
   try {
     const response = await $fetch('/api/payments/cmi/cmi-intent', {
@@ -497,13 +528,16 @@ const payWithCMI = async () => {
     if (response.success) {
       // If the URL is your Nuxt page, use navigateTo (SPA navigation)
       if (response.cmiUrl === '/checkout/cmiPaymentPage') {
+        console.log("formData : ",  response.formData)
         navigateTo({
           path: response.cmiUrl,
           query: {
             oid: response.formData.oid,
-            amount: response.formData.amount,
+            amountMAD: response.formData.amountMAD,
+            amountEuros: response.formData.amountEuros,
             okUrl: response.formData.okUrl,
-            failUrl: response.formData.failUrl
+            failUrl: response.formData.failUrl,
+            source: 'cmi' 
           }
         });
         return;
@@ -532,6 +566,8 @@ const payWithCMI = async () => {
     isProcessing.value = false;
   }
 };
+ */
+
 
 // Show error messages
 const showError = (errorMsgText) => {

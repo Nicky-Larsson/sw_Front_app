@@ -83,7 +83,7 @@ import { useStoreUser } from '@/stores/storeUser'
 import { ref, computed, reactive, toRefs } from 'vue'
 
 
-const userStore = reactive(useStoreUser())
+const userStore = useStoreUser()
 
 // const props = defineProps(['product', 'selectedArray'])
 

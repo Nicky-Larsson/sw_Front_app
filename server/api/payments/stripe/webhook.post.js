@@ -11,7 +11,6 @@ const db = getFirebaseDb();
 
 
 export default defineEventHandler(async (event) => {
-  // Stripe requires the raw body to verify the signature
   console.log('Stripe webhook received!');
   const sig = event.node.req.headers['stripe-signature'];
   const rawBody = await readRawBody(event);
@@ -34,20 +33,23 @@ export default defineEventHandler(async (event) => {
     const { metadata, id, status } = paymentIntent;
     const userId = metadata?.userId;
     const orderId = metadata?.orderId;
+    const paymentMethod = metadata?.paymentMethod || 'stripe'; // Determine payment method (Stripe card, Google Pay, etc.)
 
     if (userId && orderId) {
+      const userDocRef = db.collection('users').doc(userId);
+      const orderDocRef = db.collection('users').doc(userId).collection('orders').doc(orderId);
+
       try {
         // Get checkout items from the user document
-        const userDocRef = db.collection('users').doc(userId);
         const userDoc = await userDocRef.get();
-        
-        // Default to empty array if checkout not found or document doesn't exist
         const userData = userDoc.exists ? userDoc.data() : {};
         const checkoutItems = userData.checkout || [];
+        
+
+        const formattedAmount = paymentIntent.amount / 100;
+        console.log('\nAmount before saving:', formattedAmount, typeof formattedAmount);
 
         if (stripeEvent.type === 'payment_intent.succeeded') {
-          const orderDocRef = db.collection('users').doc(userId).collection('orders').doc(orderId);
-          
           try {
             // STEP 1: Create the order with provisional access
             const orderData = createOrderData(
@@ -56,19 +58,19 @@ export default defineEventHandler(async (event) => {
                 email: metadata.email,
                 alias: metadata.alias,
                 checkoutItems,
-                amount: paymentIntent.amount,
+                amount: parseFloat((paymentIntent.amount / 100).toFixed(2)),
                 status: 'paid',
                 accessLevel: 'provisional', // Start with provisional access
-                provisionalExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+                provisionalExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
               },
-              'stripe',
+              paymentMethod,
               {
                 orderId,
                 currency: paymentIntent.currency,
-                totalPrice: paymentIntent.amount, 
+                totalPrice: parseFloat((paymentIntent.amount / 100).toFixed(2)),
                 payment_infos: {
-                  payment_method: 'stripe',
-                  paymentIntentId: paymentIntent.id,
+                  payment_method: paymentMethod,
+                  payment_intent_id: paymentIntent.id,
                   payment_method_type: paymentIntent.payment_method_types?.[0] || '',
                   payment_brand: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.brand || '',
                   payment_last: paymentIntent.charges?.data?.[0]?.payment_method_details?.card?.last4 || '',
@@ -76,26 +78,26 @@ export default defineEventHandler(async (event) => {
                 },
                 extraFields: {
                   stripe_webhook_answer: {
-                    paidAt: new Date().toISOString()
-                  }
-                }
+                    paidAt: new Date().toISOString(),
+                  },
+                },
               }
             );
-            
+
             // Create or update the order document
             await orderDocRef.set(orderData, { merge: true });
-            
+
             try {
               // STEP 2: Update products access
               await updateProductsAccess(userId, checkoutItems);
-              
+
               // STEP 3: Mark as fully processed with access granted
               await orderDocRef.update({
                 accessGranted: true,
                 accessLevel: 'full',
-                webhookProcessedAt: new Date().toISOString()
+                webhookProcessedAt: new Date().toISOString(),
               });
-              
+
               // STEP 4: Clear checkout data
               await userDocRef.update({
                 checkout: [],
@@ -103,18 +105,18 @@ export default defineEventHandler(async (event) => {
                 checkoutTotalFormatted: '0.00 EUR',
                 checkoutCreatedAt: '',
                 cart: [],
-                selectedArray: []
+                selectedArray: [],
               });
-              
-              console.log(`Order created and products access updated for user: ${userId}`);
+
+              console.log(`Order ${orderId} processed successfully for user ${userId} using ${paymentMethod}`);
             } catch (accessError) {
               // If product access fails, mark the error
               await orderDocRef.update({
                 accessError: accessError.message,
                 status: 'error',
-                errorTime: new Date().toISOString()
+                errorTime: new Date().toISOString(),
               });
-              
+
               throw accessError;
             }
           } catch (orderError) {
@@ -127,9 +129,9 @@ export default defineEventHandler(async (event) => {
               paymentIntentId: paymentIntent.id,
               userId,
               orderId,
-              webhookReceived: true
+              webhookReceived: true,
             });
-            
+
             throw orderError; // Re-throw to be caught by the outer catch
           }
         } else {
@@ -139,7 +141,7 @@ export default defineEventHandler(async (event) => {
             status: 'failed',
             failedAt: new Date().toISOString(),
             error: paymentIntent.last_payment_error?.message || 'Payment failed',
-            checkoutItems
+            checkoutItems,
           });
         }
       } catch (err) {
@@ -159,7 +161,7 @@ export default defineEventHandler(async (event) => {
             error: err.message,
             status: 'unresolved',
             error_time: new Date().toISOString(),
-            resolved_time: ''
+            resolved_time: '',
           });
       }
     }

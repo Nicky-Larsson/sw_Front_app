@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { useStoreAuth } from '@/stores/storeAuth';
 import {
   collection,
-  doc, deleteDoc, updateDoc, addDoc,
+  doc, deleteDoc, updateDoc, addDoc, getDocs,
   query, orderBy, setDoc, getDoc, writeBatch
 } from 'firebase/firestore';
 import { toRaw } from 'vue';
@@ -67,10 +67,16 @@ export const useStoreUser = defineStore('storeUser', {
           defaultCart.forEach((product) => {
             console.log('Processing product from defaultCart:', product);
             const existsInMergedCart = mergedCart.some((item) =>
-              item.graphic_novel_uid === product.graphic_novel_uid &&
+              /* item.graphic_novel_uid === product.graphic_novel_uid &&
               item.volume_uid === product.volume_uid &&
               item.volume_name === product.volume_name &&
-              item.product_uid === product.product_uid
+              item.product_uid === product.product_uid */
+              
+              item.product_uid.graphic_novel_uid === product.product_uid.graphic_novel_uid &&
+              item.product_uid.volume_uid === product.product_uid.volume_uid &&
+              item.product_uid.lang === product.product_uid.lang 
+
+
             );
             console.log(`Does product exist in mergedCart?`, existsInMergedCart);
             if (!existsInMergedCart) {
@@ -96,12 +102,9 @@ export const useStoreUser = defineStore('storeUser', {
           // Save the potentially updated merged cart back to Firebase if defaultCart had items
           if (defaultCart.length > 0 && JSON.stringify(loggedInCart) !== JSON.stringify(mergedCart)) {
              console.log('Saving merged cart changes back to Firebase...');
-             // Call set_UserInfo, but maybe only save the cart part?
-             // Be careful not to overwrite other fields unintentionally if set_UserInfo saves everything.
-             // Let's refine set UserInfo to be more specific or create a dedicated saveCart function.
-             // For now, calling the existing set_UserInfo which saves cart, selectedArray, last_login
              // await this.setUserInfo();
              await this.setCartInfoDb();
+             // this.userSession.cart = [];
           }
 
         } else {
@@ -115,6 +118,170 @@ export const useStoreUser = defineStore('storeUser', {
         this.userSession = initDefaultSession();
       }
     },
+
+
+    async fetchAccessRights(forceRefresh = false) {
+      const { $firestore } = useNuxtApp();
+      const authStore = useStoreAuth();
+
+      // Check if we already have access rights in the store and forceRefresh is false
+      if (!forceRefresh && 
+          this.userSession.access_rights && 
+          Object.keys(this.userSession.access_rights).length > 0) {
+        console.log('Using cached access rights from userSession');
+        return this.userSession.access_rights;
+      }
+
+      // Otherwise fetch from Firestore
+      if (!$firestore || !authStore.authInfo?.uid) {
+        console.error("Firestore/Auth not available or user not logged in for fetchAccessRights.");
+        return {};
+      }
+
+      try {
+        console.log('Fetching access rights from Firestore');
+        const accessRightsRef = collection($firestore, `users/${authStore.authInfo.uid}/access_rights`);
+        const accessRightsSnapshot = await getDocs(accessRightsRef);
+        const accessRights = {};
+        
+        accessRightsSnapshot.forEach((doc) => {
+          accessRights[doc.id] = doc.data();
+        });
+
+        // Update the userSession with the fetched access rights
+        this.userSession.access_rights = accessRights;
+        
+        console.log('Updated userSession with access rights:', accessRights);
+        return accessRights;
+      } catch (error) {
+        console.error('Error fetching access rights:', error.message);
+        return {};
+      }
+    },
+
+
+    // Replace your existing fetchAccessRights with this more efficient approach
+    async fetchNovelAccessRight(graphicNovelUid, forceRefresh = false) {
+      const { $firestore } = useNuxtApp();
+      const authStore = useStoreAuth();
+
+      // Initialize access_rights object if it doesn't exist
+      if (!this.userSession.access_rights) {
+        this.userSession.access_rights = {};
+      }
+
+      // Return cached right if available and not forcing refresh
+      if (!forceRefresh && this.userSession.access_rights[graphicNovelUid]) {
+        console.log(`Using cached access right for novel: ${graphicNovelUid}`);
+        return this.userSession.access_rights[graphicNovelUid];
+      }
+
+      // Check auth
+      if (!$firestore || !authStore.authInfo?.uid) {
+        console.error("Firestore/Auth not available or user not logged in");
+        return null;
+      }
+
+      try {
+        console.log(`Fetching access right for novel: ${graphicNovelUid}`);
+        
+        // Only fetch the specific document we need
+        const novelDocRef = doc($firestore, 
+          `users/${authStore.authInfo.uid}/access_rights/${graphicNovelUid}`);
+        
+        const novelDoc = await getDoc(novelDocRef);
+        
+        if (novelDoc.exists()) {
+          // Cache this right in the session
+          this.userSession.access_rights[graphicNovelUid] = novelDoc.data();
+          console.log(`Cached access right for novel: ${graphicNovelUid}`);
+          return novelDoc.data();
+        } else {
+          console.log(`No access right found for novel: ${graphicNovelUid}`);
+          return null;
+        }
+      } catch (error) {
+        console.error(`Error fetching access right for ${graphicNovelUid}:`, error.message);
+        return null;
+      }
+    },
+
+
+    async hasAccessTo(graphicNovelUid, volumeUid = null, lang = null) {
+      try {
+        // Check if we need to fetch this novel's access rights
+        if (!this.userSession.access_rights || 
+            !this.userSession.access_rights[graphicNovelUid]) {
+          
+          console.log(`Access rights for ${graphicNovelUid} not loaded, fetching now...`);
+          
+          // Attempt to fetch the novel's access rights
+          const novelAccess = await this.fetchNovelAccessRight(graphicNovelUid);
+          
+          // If we couldn't fetch the rights or the novel isn't found
+          if (!novelAccess) {
+            console.log(`No access to graphic novel: ${graphicNovelUid}`);
+            return false;
+          }
+        }
+        
+        // Now we should have the access rights cached in the session
+        const novelAccess = this.userSession.access_rights[graphicNovelUid];
+        
+        // If no specific volume is requested, just check for graphic novel access
+        if (!volumeUid) {
+          console.log(`User has access to graphic novel: ${graphicNovelUid}`);
+          return true;
+        }
+        
+        // Check volume access
+        if (!novelAccess.volumes || !novelAccess.volumes[volumeUid]) {
+          console.log(`No access to volume: ${volumeUid}`);
+          return false;
+        }
+        
+        // If no specific language is requested, just check for volume access
+        if (!lang) {
+          console.log(`User has access to volume: ${volumeUid}`);
+          return true;
+        }
+        
+        // Check language access
+        const volumeAccess = novelAccess.volumes[volumeUid];
+        const hasAccess = volumeAccess.all_languages || 
+                        (volumeAccess.languages && volumeAccess.languages.includes(lang));
+        
+        console.log(`Access check for ${graphicNovelUid}/${volumeUid}/${lang}: ${hasAccess}`);
+        return hasAccess;
+      } catch (error) {
+        console.error(`Error checking access for ${graphicNovelUid}:`, error);
+        return false;
+      }
+    },
+
+
+    async refreshPurchasedNovelAccess(purchasedItems) {
+      if (!purchasedItems || purchasedItems.length === 0) return;
+      
+      console.log('Refreshing access rights for purchased items');
+      
+      // Extract unique graphic novel IDs from purchased items
+      const novelIds = [...new Set(purchasedItems.map(item => 
+        item.product_uid?.graphic_novel_uid
+      ).filter(id => id))];
+      
+      // Fetch each novel's access rights individually
+      const promises = novelIds.map(novelId => 
+        this.fetchNovelAccessRight(novelId, true) // Force refresh
+      );
+      
+      // Wait for all fetches to complete
+      await Promise.all(promises);
+      
+      console.log(`Updated access rights for ${novelIds.length} novels`);
+    },
+
+
 
     async initUserDocument() {
       const { $firestore, $firebaseAuth } = useNuxtApp();
@@ -395,104 +562,7 @@ export const useStoreUser = defineStore('storeUser', {
       }
     },
     
-    /*
-    async createOrderWithStripe(paymentIntentId, paymentChoice = 'stripe', status = 'pending') {
-        console.log('createOrderWithStripe called with: <<<<<<', { paymentIntentId, paymentChoice, status });
-      const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances
-      const authStore = useStoreAuth();
 
-      if (!$firestore || !$firebaseAuth || !authStore.authInfo?.uid) {
-         console.error("Firestore/Auth not available or user not logged in for createOrderWithStripe.");
-         return null; // Indicate failure
-      }
-
-      // Keep your Stripe order creation logic
-      const plainCheckout = toRaw(this.userSession.checkout || []).map(item => toRaw(item));
-      const filteredCheckout = plainCheckout.filter(item => item !== undefined);
-      const totalPrice = filteredCheckout.reduce((sum, item) => sum + parseInt(item.price || 0, 10), 0);
-      const currentDateTime = new Date();
-      const formattedDateTime = currentDateTime.toISOString().replace(/[:.]/g, '-');
-
-      // Generate a unique document name for Stripe orders if needed, or use paymentIntentId
-      // Using paymentIntentId ensures uniqueness if it's suitable as a Firestore doc ID
-      const documentId = paymentIntentId; // Use Stripe's ID
-
-      // Use the injected $firestore instance
-      const orderDocRef = doc($firestore, 'users', authStore.authInfo.uid, 'orders', documentId);
-
-      const orderData = {
-        userId: authStore.authInfo.uid,
-        paymentChoice: paymentChoice,
-        orderId: paymentIntentId, // Store Stripe's Payment Intent ID
-        products: filteredCheckout,
-        total: totalPrice,
-        totalFormated: `${(totalPrice / 100).toFixed(2)} EUR`,
-        createdFormated: formattedDateTime,
-        createdAt: new Date().toISOString(),
-        status: status,
-      };
-
-      try {
-        await setDoc(orderDocRef, orderData);
-        console.log("Stripe Order saved:", orderData);
-
-        await this.manageLastOrder('set', paymentIntentId, new Date().toISOString());
-        console.log('Last order set:', { orderId, orderTime: new Date().toISOString() });
-
-        // Clear cart and checkout session after successful order creation
-        this.clearCart(); // Use the dedicated action
-        return documentId; // Return the Firestore document ID used
-      } catch (error) {
-        console.error("Error saving Stripe order:", error.message);
-        return null;
-      }
-    },
-    */
-
-    /* async manageLastOrder(action, orderId = null, orderTime = null) {
-      const { $firestore } = useNuxtApp();
-      const authStore = useStoreAuth();
-
-      if (!$firestore || !authStore.authInfo?.uid) {
-        console.error("Firestore/Auth not available or user not logged in.");
-        return null;
-      }
-
-      const userDocRef = doc($firestore, 'users', authStore.authInfo.uid);
-
-      try {
-        if (action === 'load') {
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            console.log('Loaded last order:', data);
-            return {
-              lastOrderId: data.lastOrderId || null,
-              lastOrderTime: data.lastOrderTime || null,
-            };
-          } else {
-            console.warn('No user document found.');
-            return null;
-          }
-        } else if (action === 'set') {
-          await updateDoc(userDocRef, {
-            lastOrderId: orderId,
-            lastOrderTime: orderTime,
-          });
-          console.log('Last order updated:', { orderId, orderTime });
-        } else if (action === 'clear') {
-          await updateDoc(userDocRef, {
-            lastOrderId: null,
-            lastOrderTime: null,
-          });
-          console.log('Last order cleared.');
-        }
-      } catch (error) {
-        console.error(`Error managing last order (${action}):`, error.message);
-        return null;
-      }
-    }
-   */
     // Keep commented out cart actions if you plan to use them later
     /* addToCart(item) {
       this.userSession.cart.push(item)

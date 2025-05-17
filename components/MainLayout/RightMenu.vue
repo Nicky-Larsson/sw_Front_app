@@ -71,6 +71,13 @@
                     <Icon name="solar:help-linear"  size="150%" />
                     </div>
                     <span class="pl-2"> Aide </span>
+                    
+
+                    
+
+
+
+
                   </nuxt-link>               
                 </li>
 
@@ -126,7 +133,7 @@ const authStore = useStoreAuth()
 const userStore = useStoreUser();
 
 
-console.log(userStore.userSession)
+// console.log(userStore.userSession)
 // authStore.authInfo.email
 
 const props = defineProps({
