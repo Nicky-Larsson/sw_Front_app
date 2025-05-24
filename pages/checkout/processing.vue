@@ -51,6 +51,8 @@ let progressTimer;
 let attempts = 0;
 const maxAttempts = 4;
 
+let cartBackup = [];
+
 // Smart timeout system that balances UX vs reliability
 // const userId = userStore.userId; // Retrieve userId from the store
 
@@ -61,6 +63,9 @@ const checkOrderStatus = async () => {
     const response = await $fetch(`/api/orders/${orderId.value}/status`, {
       params: { userId, orderId: orderId.value } // Pass both userId and orderId
     });
+
+     console.log('\n ------\nOrder status:', response.status, ', Access granted:', response.accessGranted);
+
 
     if (response.status === 'paid' && response.accessGranted) {
       clearAllTimers();
@@ -114,8 +119,15 @@ const goToAccount = () => {
 
 onMounted(async () => {
   // Clear cart immediately for good UX - will restore if error
-  const cartBackup = JSON.parse(JSON.stringify(userStore.userSession.checkout || []));
-  userStore.clearCart();
+  const paymentType = route.query.paymentType || 'stripe'; // Or however you track payment type
+
+  if (paymentType !== 'stripe') {
+    console.warn('Non-Stripe payment detected, clearing cart immediately');
+    userStore.clearCart();
+  }
+  
+  cartBackup = JSON.parse(JSON.stringify(userStore.userSession.checkout || []));
+  
   
   // Start progress timer
   progressTimer = setInterval(() => {

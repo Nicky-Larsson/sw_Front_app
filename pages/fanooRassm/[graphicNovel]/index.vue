@@ -5,17 +5,20 @@
          <!-- {{storeProducts.products[0].name}} -->
 
          <h1 v-if="storeProducts.products.length > 0" class="text-8xl "> </h1>
-        <div  class="mt-4 max-w-[1200px] mx-auto px-2">
-            <div v-if="storeProducts.products.sunset_land" class="grid xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-2 grid-cols-1 gap-23">
-                <div v-for="volume in storeProducts.products.sunset_land" :key="volume">
+          <div class="mt-2 max-w-[1200px] mx-auto px-1 leading-tight">
+            <div v-if="storeProducts.products[graphicNovelUid]" class="grid xl:grid-cols-4 lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-2 grid-cols-1 gap-y-15 gap-x-20">
+              <div v-for="volume in novelVolumes" :key="volume.fr.product_uid.volume_uid" class="mb-2">
                 <productList
-                    :volume="volume.fr"
-                    @add-to-cart="addToCart"
+                  :volume="volume.fr"
+                  :hasAccess="checkAccess(volume.fr)"
+                  :isInCart="isVolumeInCart(volume.fr)"
+                  @add-to-cart="addToCart"
                 />
-                </div>
+              </div>
             </div>
-        </div>
-
+          </div>
+        
+        <!-- {{storeProducts.products[graphicNovelUid]}} -->
         
         <br>
         <button class="flex items-center gap-2 p-0" @click="storeAdminProducts.addProducts()">
@@ -65,17 +68,20 @@
             </NuxtLink>
         </div>
 
+
       </div>
     </div>
     </client-only>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useStoreProducts } from '@/stores/storeProducts'
 import { useStoreAdminProducts } from '@/stores/storeAdminProducts'
 import { useStoreUser } from '@/stores/storeUser'
+import { toRaw } from 'vue';
+
 
 const route = useRoute()
 const userStore = useStoreUser()
@@ -83,14 +89,37 @@ const storeProducts = useStoreProducts()
 const storeAdminProducts = useStoreAdminProducts()
 
 
+console.log('user session : ', userStore.userSession)
+
+// Add this near your other reactive variables
+const graphicNovelUid = ref(route.params.graphicNovel)
+const accessMap = reactive({});
+
+let debounceTimerSaveCart;
 const debouncedSaveCart = () => {
-  // You can implement debouncing with setTimeout
-  // Or simply call the save method directly
-  userStore.setCartInfoDb()
-}
+  clearTimeout(debounceTimerSaveCart);
+  debounceTimerSaveCart = setTimeout(() => {
+    console.log('Debounced: Saving cart to DB...');
+    userStore.setCartInfoDb(); // Ensure this Pinia action exists and correctly saves the cart
+  }, 1500); // Adjust debounce time (e.g., 1.5 seconds)
+};
 
 
-const addToCart = (product) => {
+const isVolumeInCart = (volume) => {
+  for (const prod of userStore.userSession.cart) {
+    if (
+      volume.product_uid.graphic_novel_uid === prod.graphic_novel_uid &&
+      volume.product_uid.volume_uid === prod.volume_uid 
+      // && userStore.userSession.choosedLanguage === prod.language
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+
+/* const addToCart = (product) => {
   if (
     !product ||
     !product.graphic_novel_uid ||
@@ -100,42 +129,168 @@ const addToCart = (product) => {
     console.warn('Attempted to add invalid product to cart:', product);
     return;
   }
-  userStore.userSession.cart.push(product);
+  console.log('Adding product to cart:', product);
+  // userStore.userSession.cart.push(product);
   // debouncedSaveCart();
+}; */
+
+const addToCart = (volumeData) => {
+  // Validate the incoming volumeData
+  if (
+    !volumeData ||
+    !volumeData.product_uid ||
+    !volumeData.product_uid.graphic_novel_uid ||
+    !volumeData.product_uid.volume_uid
+  ) {
+    console.warn('addToCart on list page: Invalid volumeData received:', volumeData);
+    return;
+  }
+
+  const cartProduct = {
+    graphic_novel_name: volumeData.graphic_novel_title || '',
+    graphic_novel_uid: volumeData.product_uid.graphic_novel_uid,
+    volume_uid: volumeData.product_uid.volume_uid,
+    volume_name: volumeData.volume_name,
+    volume_title: volumeData.volume_title || '',
+    language: userStore.userSession.choosedLanguage,
+    thumbnail: volumeData.thumbnail,
+    price: volumeData.price,
+    product_uid: volumeData.product_uid,
+    new_in_cart: true
+  };
+
+  // Check if the product is already in the cart (including language for uniqueness)
+  const existingCartItem = userStore.userSession.cart.find(
+    item =>
+      item.graphic_novel_uid === cartProduct.graphic_novel_uid &&
+      item.volume_uid === cartProduct.volume_uid &&
+      item.language === cartProduct.language // language is important for uniqueness!
+  );
+
+  if (existingCartItem) {
+    console.log('Product is already in the cart (from list page):', cartProduct);
+    // Optionally, handle quantity updates or other logic for existing items
+  } else {
+    userStore.userSession.cart.push(cartProduct);
+    console.log('Product added to cart (from list page): ', cartProduct);
+    debouncedSaveCart();
+  }
 };
 
-// console.log('storeProducts.products : ')
+
+
+const isProductInCart = (product) => {
+  for (const prod of userStore.userSession.cart) {
+    if (
+      product.product_uid.graphic_novel_uid === prod.product_uid.graphic_novel_uid &&
+      product.product_uid.volume_uid === prod.product_uid.volume_uid &&
+      product.language === prod.language
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+
+
+// console.log('storeProducts.products :  ')
 // console.log(storeProducts.products)
 
 // storeProducts.getProducts()
 
+// Replace your checkAccess function with this
+const checkAccess = (volume) => {
+  const volumeUid = volume.product_uid.volume_uid;
+  const graphicNovelUid = volume.product_uid.graphic_novel_uid;
+
+  // Check access rights
+  return userStore.userSession.access_rights?.[graphicNovelUid]?.[volumeUid] || false;
+};
+
+const novelVolumes = computed(() => {
+  const products = storeProducts.products[graphicNovelUid.value];
+  if (!products || typeof products !== 'object') {
+    console.warn(`Invalid products for graphicNovelUid: ${graphicNovelUid.value}`, products);
+    return [];
+  }
+
+  // Convert to array and sort by volume_uid
+  return Object.values(products).sort((a, b) => {
+    const uidA = a.fr.product_uid.volume_uid.toLowerCase();
+    const uidB = b.fr.product_uid.volume_uid.toLowerCase();
+    return uidA.localeCompare(uidB); // Sort alphabetically
+  });
+});
+
+
+
+
+
+
+
+
+
 onMounted(async () => {
+  await storeProducts.getProducts()
   
-  const graphicNovelUid = route.params.graphicNovel
   
   console.log(`Checking access for novel: ${graphicNovelUid}`)
-  
   // console.log(userStore.userSession)
+
+  console.log("Data structure:", storeProducts.products)
+  console.log("Looking for:", graphicNovelUid.value)
+  console.log('storeProducts.products:', storeProducts.products[graphicNovelUid.value]);
+
+  
+  const now = Date.now();
+  const lastUpdate = userStore.userSession.access_rights.lastUpdate || 0;
+  const oneMinute =  60 * 1000;
+
+  if (now - lastUpdate > oneMinute || !userStore.userSession.access_rights[graphicNovelUid.value]) {
+    await userStore.fetchNovelAccessRight(graphicNovelUid.value, true);
+  }
+
+
+  const accessRights = await userStore.fetchNovelAccessRight(graphicNovelUid.value, true);
+  console.log("Fetched access rights:", accessRights);
+
+
 
   // Check if the user is logged in
   if (!userStore.userSession.email || !userStore.userSession.alias) {
     console.log('for visitors Skipping access rights check.')
     return
   }
+  // fetchAccessRights() 
+  // const hasAccess = await userStore.hasAccessTo(graphicNovelUid, 'volume_05')
   
 
-  await storeProducts.getProducts()
-  
-  const accessRights = await userStore.fetchNovelAccessRight(graphicNovelUid, true);  // fetchAccessRights() 
+  // Third fix - use the dynamic graphicNovelUid.value instead of hardcoded "sunset_land"
+  if (storeProducts.products[graphicNovelUid.value]) {
+
+    const products = storeProducts.products[graphicNovelUid.value]
+    const volumes = Object.values(products)
+
+    for (const volume of volumes) {
+      const volUid = volume.fr.product_uid.volume_uid;
+      const hasAccess = await userStore.hasAccessTo(graphicNovelUid.value, volUid);
+      console.log(`Access for volume ${volUid}: ${hasAccess}`);
+      accessMap[volUid] = hasAccess;
+    }
+    console.log('accessMap:', accessMap)
+  }
 
 
-  console.log('accessRights ', accessRights)
+    console.log('accessRights : ', accessRights)
+    console.log('has access : ', userStore.hasAccessTo(graphicNovelUid, 'volume_05'))
   
   // console.log('cart',toRaw(userStore.userSession.cart.product_uid));
-  
-  console.log('userStore.userSession', toRaw(userStore.userSession.cart[0].product_uid) )
+  if (userStore.userSession.cart && userStore.userSession.cart.length > 0) 
+  {
+    console.log('userStore.userSession Cart : ', toRaw(userStore.userSession.cart[0].product_uid) )
+  }
 
-  const hasAccess = await userStore.hasAccessTo(graphicNovelUid)
   // console.log(`User has access to ${graphicNovelUid}: ${hasAccess}`)
   
   // console.log('Products and access rights loaded')

@@ -2,30 +2,26 @@
   <client-only>
     <div class="text-4xl text-white  text-center p-0">
 
-
         <div class="mt-4 max-w-[1000px] mx-auto px-0">
             <div class="md:flex gap-4 justify-between mx-auto w-full">
                 <div class="w-xl2 md:w-[35%]">
-                    <img 
-                        v-if="currentImage"
-                        class="rounded-lg object-fit"
-                        :src="currentImage"
-                    >
-                <div  class="flex items-center justify-center mt-0 p-2">
-                      <div v-for="(image, index) in previewArray" :key="index">
-                            <img 
-                                @mouseover="updateCurrentImage(image, index)"
-                                
-                                width="70"
-                                class="rounded-md object-fit border-[3px] cursor-pointer"
-                                :class="currentImage === image ? 'border-[#FF5353]' : ''"
-                                :src="image"
-                            >
-                      </div>
-                </div>   
+                  <img 
+                    v-if="currentImage"
+                    class="rounded-lg object-cover w-full h-[86%]" 
+                    :src="currentImage"
+                  >
+                  <div class="flex items-center justify-center mt-0 p-2 gap-1">
+                    <div v-for="(image, index) in previewArray" :key="index">
+                      <img 
+                        @mouseover="updateCurrentImage(image, index)"
+                        class="rounded-md object-cover border-[3px] cursor-pointer w-[70px] h-[70px]"
+                        :class="currentImage === image ? 'border-[#FF5353]' : ''"
+                        :src="image"
+                      >
+                    </div>
+                  </div>   
                 </div>
              
-                
                 <div class="md:w-[60%] bg-white p-3 rounded-lg text-amber-950">
                     <div class="relative group" v-if="volumePromoData.volume_uid && volumePromoData.volume_num">
                         <p class="mb-2">{{ volumePromoData.product_uid.graphic_novel_uid }}</p>
@@ -40,7 +36,7 @@
                         </p>                
                         <!-- Description Text -->
                         <p 
-                          class="font-light text-[22px] mb-2 max-h-45 overflow-y-auto pr-2 pb-10 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 peer"
+                          class="font-light text-[22px] mb-2 h-[180px] overflow-y-auto pr-2 pb-10 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200"
                         >
                           {{ volumePromoData.description }}
                         </p>
@@ -50,42 +46,36 @@
                           class="absolute bottom-0 left-0 w-full h-6 bg-gradient-to-t from-white to-transparent pointer-events-none transition-opacity duration-300 opacity-100 peer-scroll:opacity-0"
                         ></div>
 
-                        <!-- Scroll Down Indicator -->
-                        <!-- <div 
-                          class="absolute -bottom-6 left-0 w-full flex justify-center items-center text-gray-500 text-sm pointer-events-none"
-                          v-if="volumePromoData.description && volumePromoData.description.length > 100"
-                        >
-                          <span class="animate-bounce">▼ Scroll Down</span>
-                        </div> -->
-
-
                     </div>
                    
                     <div class="flex items-center justify-center gap-4 my-1">
+                      <!-- Show the Read button when user has access -->
                       <button 
+                        v-if="hasAccess"
+                        @click="readContent()"
+                        class="px-6 py-2 rounded-lg text-white text-lg font-semibold bg-green-600"
+                      >
+                        <div class="flex items-center justify-center">
+                          <Icon name="streamline:book-reading" size="120%" />
+                          <span class="ml-2">Read</span>
+                        </div>
+                      </button>
+
+                      <!-- Existing Add to Cart button (only show if no access) -->
+                      <button 
+                        v-if="!hasAccess"
                         @click="addToCart()"
                         :disabled="isInCart"
-                        class="
-                          px-6 
-                          py-2 
-                          rounded-lg 
-                          text-white 
-                          text-lg 
-                          font-semibold 
-                          bg-gradient-to-r 
-                          from-[#FF851A] 
-                          to-[#FFAC2C]
-                        "
+                        class="px-6 py-2 rounded-lg text-white text-lg font-semibold bg-gradient-to-r from-[#FF851A] to-[#FFAC2C]"
                       >
                         <div v-if="isInCart">Is Added</div>
                         <div v-else>Add to Cart</div>
                       </button>
 
-                      <div class="text-xl font-bold">
+                      <div v-if="!hasAccess" class="text-xl font-bold">
                         {{ priceComputed }} €
                       </div>
                     </div>
-
 
 
                     <div class="overflow-hidden max-w-full text-center">
@@ -112,17 +102,7 @@
                       <div class="flex items-center justify-center gap-4 my-1">
                         <button 
                           @click="buyPackages()"
-                          class="
-                            px-6 
-                            py-2 
-                            rounded-lg 
-                            text-white 
-                            text-lg 
-                            font-semibold 
-                            bg-gradient-to-r 
-                            from-[#1D4ED8] 
-                            to-[#3B82F6]
-                          "
+                          class=" px-6  py-2  rounded-lg  text-white  text-lg  font-semibold  bg-gradient-to-r  from-[#1D4ED8]  to-[#3B82F6]"
                         >
                           Buy Packages  
                         </button>
@@ -133,7 +113,6 @@
                      
                       </div>
 
-
                     </div>
                       
                     <div class="pt-5" >
@@ -142,13 +121,9 @@
                       </button>
                     </div>
                 </div>
-
-
             </div>
-          <!-- {{previewArray}} -->
           
           <br>
-          <!-- {{volumePromoData}}-->          
           <br>
           
         </div>
@@ -170,35 +145,20 @@ const router = useRouter()
 const userStore = useStoreUser()
 const storeProducts = useStoreProducts()
 
-// const volumeParams = route.query
-
 const urlParams = route.params
-const volumePromoData = ref(null)
+
 const previewArray = ref([]);
 const currentImage = ref(0);
 const currentIndex = ref(0);
 
 const graphicNovelUid = route.params.graphicNovel
-
-// const language = ref(userStore.userSession.defaultLanguage);
-// const language = computed(() => userStore.userSession.defaultLanguage);  readonly
-
-/* const descriptionContainer = ref(null);
-const isAtBottom = ref(false);
-
-const onScroll = () => {
-  const container = descriptionContainer.value;
-  if (container) {
-    // Check if the user has scrolled to the bottom
-    isAtBottom.value = container.scrollTop + container.clientHeight >= container.scrollHeight;
-  }
-} */
+const volumePromoData = ref(null)
 
 
 const language = computed({
-  get: () => userStore.userSession.defaultLanguage,
+  get: () => userStore.userSession.choosedLanguage,
   set: (value) => {
-    userStore.userSession.defaultLanguage = value;
+    userStore.userSession.choosedLanguage = value;
   },
 });
 
@@ -223,22 +183,15 @@ const languages = ref([
   { id: 'fr', image: '/flags/fr_flag.jpg', alt: 'French',   text: 'French' },
 ])
 
-const selectedLanguage = ref(userStore.userSession.defaultLanguage);
+const selectedLanguage = ref(userStore.userSession.choosedLanguage);
 
-language.value = userStore.userSession.defaultLanguage
+language.value = userStore.userSession.choosedLanguage
 
 const chooseLanguage = (lang) => {
-   // storeProducts
+
    selectedLanguage.value = lang.id; // Update the selected language
-   // console.log(currentImage)
-   // console.log(userStore.userSession.defaultLanguage)
    language.value = lang.id  // Update the language in the store
    console.log('Selected language:', selectedLanguage.value);
-
-   // volumePromoData.value =
-   //   storeProducts.products[urlParams.graphicNovel][urlParams.volumeNum][lang.id]
-      // console.log(storeProducts.products[urlParams.graphicNovel][urlParams.volumeNum])
-      // console.log(volumePromoData.value)
 
   watchEffect(() => {
     if (previewArray.value.length > 0 && currentIndex.value < previewArray.value.length) {
@@ -247,9 +200,16 @@ const chooseLanguage = (lang) => {
       currentImage.value = previewArray.value[0] || null; // Fallback to the first image
     }
   });
-
-
 }
+
+
+const readContent = () => {
+  // Add any logic here that you need when the Read button is clicked
+  console.log('Reading content for volume:', toRaw(productInfosForCart.value) );
+  // If you need to navigate to a specific reading page, add that code here
+  // For example:
+  // router.push(`/read/${urlParams.graphicNovel}/${urlParams.volumeNum}`);
+};
 
 
 const updateCurrentImage = (image, index) => {
@@ -260,73 +220,84 @@ const updateCurrentImage = (image, index) => {
 
 
 
-onMounted(async () => {
-  // First ensure access rights are loaded
-  await userStore.fetchNovelAccessRight(graphicNovelUid, true); // fetchAccessRights() 
-  
-  // Then check if user has access to this content
-  const hasAccess = userStore.hasAccessTo(
-    urlParams.graphicNovel,
-    urlParams.volumeNum,
-    selectedLanguage.value
-  );
-  
-  if (hasAccess) {
-    console.log('User has access to this content!');
-    // Show content, enable features, etc.
-  } else {
-    console.log('User does not have access to this content.');
-    // Show purchase options, restrict features, etc.
-  }
-  // Now check if user has access to the content
+const hasAccess = computed(() => {
+  const accessRights = userStore.userSession.access_rights;
+  const graphicNovelAccess = accessRights?.[urlParams.graphicNovel];
+  const volumeAccess = graphicNovelAccess?.[urlParams.volumeNum];
+
+  if (!volumeAccess) return false; // No access to this volume
+
+  // Check if the selected language exists as a key in the access rights
+  return selectedLanguage.value in volumeAccess;
 });
 
 
 
-// console.log(storeProducts.products[urlParams.graphicNovel][urlParams.volumeNum])
 
-
-// console.log(volumeParams);
-// console.log(userStore.userSession.cart);
-// let product = ref(null)
-
-
-/* onBeforeMount( () => {
-    storeProducts.getProducts()
-}) */
-
-
-/* const isInCart = computed(() => {
-  if (
-    !productInfosForCart.value ||
-    !productInfosForCart.value.graphic_novel_uid
-  ) {
-    return false; /
+onMounted(async () => {
+  // Ensure access rights are loaded
+  console.log(userStore.userSession.access_rights[urlParams.graphicNovel][urlParams.volumeNum])
+  try {
+    //if (!userStore.userSession.access_rights[urlParams.graphicNovel]) {
+    await userStore.fetchNovelAccessRight(graphicNovelUid, true);
+    //}
+  } catch (err) {
+    console.warn('Could not fetch access rights:', err);
   }
 
-  console.log('productInfosForCart.value : ',productInfosForCart.value.graphic_novel_uid)
-  console.log('userStore.userSession.cart : ', userStore.userSession.cart)
-  return userStore.userSession.cart.some(prod => 
-    productInfosForCart.value.graphic_novel_uid === prod.graphic_novel_uid &&
-    productInfosForCart.value.volume_uid === prod.volume_uid &&
-    productInfosForCart.value.product_uid === prod.product_uid
-  );
-  
-}); */
+  console.log('Access Rights:', userStore.userSession.access_rights);
+
+  const accessRights = userStore.userSession.access_rights;
+  const graphicNovelAccess = accessRights?.[urlParams.graphicNovel];
+  const volumeAccess = graphicNovelAccess?.[urlParams.volumeNum];
+
+  if (volumeAccess) {
+    const defaultLanguage = userStore.userSession.defaultLanguage;
+    if (defaultLanguage in volumeAccess) {
+      selectedLanguage.value = defaultLanguage;
+      language.value = defaultLanguage; // Update the store
+      console.log(`Automatically selected default language: ${defaultLanguage}`);
+    } else {
+      // Fallback to the first accessible language
+      const accessibleLanguage = Object.keys(volumeAccess)[0];
+      selectedLanguage.value = accessibleLanguage;
+      language.value = accessibleLanguage; // Update the store
+      console.log(`Automatically selected fallback language: ${accessibleLanguage}`);
+    }
+  }
+});
 
 
 const isInCart = computed(() => {
-  for (const prod of userStore.userSession.cart) {
-    if (
-      productInfosForCart.value.product_uid.graphic_novel_uid === prod.product_uid.graphic_novel_uid &&
-      productInfosForCart.value.product_uid.volume_uid === prod.product_uid.volume_uid 
-      // && productInfosForCart.value.product_uid.lang === prod.product_uid.lang
-    ) {
-      return true; // Product is in the cart
-    }
-  }
-  return false; // Product is not in the cart
+  return userStore.userSession.cart.some(
+    (prod) =>
+      productInfosForCart.value.graphic_novel_uid === prod.graphic_novel_uid &&
+      productInfosForCart.value.volume_uid === prod.volume_uid 
+      // &&
+      // productInfosForCart.value.language === prod.language
+  );
 });
+
+const priceComputed = computed(() => {
+    if (productInfosForCart.value.price ) {
+        return productInfosForCart.value.price / 100
+    }
+    return '0.00'
+})
+
+
+const debouncedSaveCart = debounce(function() {
+  // Debug: Check for undefineds before saving
+  if (userStore.userSession.cart.some(item => item === undefined)) {
+    console.warn('Undefined detected in cart before save:', userStore.userSession.cart);
+  }
+  if (userStore.userSession.selectedArray.some(item => item === undefined)) {
+    console.warn('Undefined detected in selectedArray before save:', userStore.userSession.selectedArray);
+  }
+  userStore.setCartInfoDb();
+}, 2000);
+
+
 
 
 watchEffect(() => {
@@ -356,7 +327,6 @@ watchEffect(() => {
 
     console.log('Updated Volume Promo Data:', volumePromoData.value);
     
-    // previewArray = volumePromoData.value.preview
     previewArray.value = volumePromoData.value.preview || [];
 
     if (
@@ -370,7 +340,6 @@ watchEffect(() => {
 
     // userStore.isLoading = false
 
-    console.log('Updated Product Infos for Cart:', productInfosForCart.value);
 
 
   } else {
@@ -379,15 +348,31 @@ watchEffect(() => {
   }
 });
 
-// currentImage.value = volumePromoData.cover
 
-const priceComputed = computed(() => {
-    if (productInfosForCart.value.price ) {
-        return productInfosForCart.value.price / 100
-    }
-    return '0.00'
-})
+const addToCart = () => {
+  const product = productInfosForCart.value;
+  userStore.addToCart(product);
+  debouncedSaveCart.call(this);
+};
 
+
+const buyPackages = () => {
+  console.log('Buy Packages button clicked');
+  // Add your logic for buying packages here
+};
+
+
+const goBack = () => {
+  router.back();
+};
+
+watch(
+  () => selectedLanguage.value,
+  (newLanguage) => {
+    console.log(`Language changed to: ${newLanguage}`);
+    console.log(`Has Access: ${hasAccess.value}`);
+  }
+);
 
 
 watch(
@@ -410,57 +395,5 @@ watch(
   { deep: true }
 );
 
-const debouncedSaveCart = debounce(function() {
-  // Debug: Check for undefineds before saving
-  if (userStore.userSession.cart.some(item => item === undefined)) {
-    console.warn('Undefined detected in cart before save:', userStore.userSession.cart);
-  }
-  if (userStore.userSession.selectedArray.some(item => item === undefined)) {
-    console.warn('Undefined detected in selectedArray before save:', userStore.userSession.selectedArray);
-  }
-  userStore.setCartInfoDb();
-}, 2000);
-
-const addToCart = () => {
-  // Check for undefined/null or incomplete product
-  const product = productInfosForCart.value;
-  console.log('Product to add:', product);
-  console.log('product.graphic_novel_uid :', product.graphic_novel_uid);
-  console.log('product.volume_uid :', product.volume_uid);
-  console.log('product.product_uid :', product.product_uid);
-
-  if (
-    !product ||
-    !product.graphic_novel_uid ||
-    !product.volume_uid ||
-    !product.product_uid
-  ) {
-    console.warn('Attempted to add invalid product to cart:', product);
-    return;
-  }
-
-  console.log(product);
-  console.log(userStore.userSession.cart);
-
-  if (!isInCart.value) {
-    userStore.userSession.cart.push(product);
-    console.log('Product added to cart:', product);
-
-    debouncedSaveCart.call(this);
-  } else {
-    console.log('Product is already in the cart');
-  }
-};
-
-
-const buyPackages = () => {
-  console.log('Buy Packages button clicked');
-  // Add your logic for buying packages here
-};
-
-
-const goBack = () => {
-  router.back();
-};
 
 </script>

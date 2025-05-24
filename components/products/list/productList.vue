@@ -1,13 +1,10 @@
 <template>
     <div 
-        :id="`productList${volume.id}`"
-        class="
-            bg-white 
-            inline-block 
-            rounded 
-            hover:shadow-[0_0_10px_3px_rgba(0,0,0,0.15)] 
-            cursor-pointer
-        "
+        :id="`${volume.product_uid.volume_uid}`"
+        :class="[
+            'bg-white inline-block rounded cursor-pointer hover:shadow-[0_0_10px_3px_rgba(0,0,0,0.15)]',
+            hasAccess ? 'border-2 border-green-600' : ''
+        ]"
     >
 
         <NuxtLink :to="{
@@ -16,7 +13,7 @@
                         }">   
 
             <img 
-                class="rounded-t h-60 w-50 object-cover"
+                class="rounded-t h-70 w-52 object-cover"
                 :src="volume.thumbnail"
             >
 
@@ -27,7 +24,7 @@
                 </p>
 
 
-                <span class="flex items-center justify-center gap-3 px-1  pt-1 ">
+                <span class="flex items-center justify-center gap-3 px-1  pt-1 pb-2 ">
                     <span class="text-red-700 text-2xl font-semibold">{{ priceComputed }}€</span>
 
                 </span>
@@ -45,41 +42,64 @@
                     5,000+ sold <Icon name="material-symbols:star-rate" color="#757575" class="ml-1.5"/> 4.7
                 </p> -->
 
-
-
-
             </div>
         </NuxtLink>
 
-        <p class="px-1 pb-1  bg-yellow-400">
-        <button
-            class="text-[#009A66] text-xl font-semibold"
-            @click.stop="$emit('add-to-cart', volume)"
-            type="button"
-        >
-        <!-- <Icon name="ri:earth-line"  size="150%" /> 
-        <Icon name="tabler:shopping-bag-plus"  size="150%" />-->
-            Add to Cart
-        </button>
-        </p>
+            <div :class="hasAccess ? 'bg-green-200' : isInCart ? 'bg-gray-100' : 'bg-yellow-300'" class="px-1 pb-1">
+                <button
+                    v-if="!hasAccess && !isInCart"
+                    class="flex items-center justify-center text-[#052e20] text-xl font-semibold w-full py-2 px-5 border-2 border-[#052e20] rounded whitespace-nowrap"
+                    @click.stop="$emit('add-to-cart', volume)"
+                    type="button"
+                >
+                    <Icon name="hugeicons:shopping-basket-add-03" size="150%" />
+                    <span class="ml-2">Add to Cart</span>
+                </button>
+                <NuxtLink
+                    v-else-if="!hasAccess && isInCart"
+                    :to="productLink"
+                    class="flex items-center justify-center text-[#053021] text-xl font-semibold w-full py-2 px-5  border-2 border-[#053021] rounded"
+                >
+                    <Icon name="mdi:cart-check" size="150%" />
+                    <span class="ml-2">Is Added</span>
+                </NuxtLink>
+                <NuxtLink
+                    v-else
+                    :to="productLink"
+                    class="flex items-center justify-center text-[#072e21] text-xl font-semibold w-full py-2 pr-1  border-2 border-[#072e21] rounded"
+                >
+                    <Icon name="streamline:book-reading" size="120%" />
+                    <span class="ml-2">Read</span>
+                </NuxtLink>
+            </div>
+        
+        <div class="px-5 mt-3"></div>
 
+        <!-- <Icon name="ri:earth-line"  size="150%" /> -->
     </div>
 </template>
 
 <script setup>
 import { toRefs, computed } from 'vue';
+import { useStoreUser } from '@/stores/storeUser';
 
-const props = defineProps(['volume']);
-const { volume } = toRefs(props);
+const props = defineProps(['volume', 'hasAccess', 'isInCart']);
 
 const emit = defineEmits(['add-to-cart']);
+
+
+const { volume, hasAccess, isInCart } = toRefs(props);
 
 const priceComputed = computed(() => {
   return volume.value.price / 100;
 });
 
-const oldPriceComputed = computed(() => {
-  let res = (volume.value.price + (volume.value.price / 20)) / 100;
-  return res.toFixed(2);
-});
+
+
+const productLink = computed(() => 
+    `/Fanoorassm/${volume.value.product_uid.graphic_novel_uid}/volume/${volume.value.product_uid.volume_uid}`
+);
+
+
+
 </script>

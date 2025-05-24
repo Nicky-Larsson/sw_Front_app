@@ -34,6 +34,7 @@ export default defineEventHandler(async (event) => {
         status: 'error',
         error: orderData.accessError || orderData.error || 'Unknown error',
         orderId,
+        paymentMethod: orderData.payment_infos?.payment_method || ''
       };
     }
 
@@ -44,6 +45,7 @@ export default defineEventHandler(async (event) => {
         accessGranted: orderData.accessGranted || false,
         accessLevel: orderData.accessLevel || 'none',
         orderId,
+        paymentMethod: orderData.payment_infos?.payment_method || ''
       };
     }
 

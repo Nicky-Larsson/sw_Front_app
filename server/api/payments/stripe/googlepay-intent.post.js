@@ -105,20 +105,18 @@ export default defineEventHandler(async (event) => {
     // Then create document with custom ID
     const orderRef = await db.collection('users').doc(userId).collection('orders').doc(orderId);
      
-    const safeAmount = Number(amount) / 100;
     
-    console.log('amount:', amount, 'safeAmount:', safeAmount, 'type:', typeof amount);
+    console.log('amount:', amount,  'type:', typeof amount);
     
-    if (isNaN(safeAmount) || safeAmount <= 0) {
+    if (isNaN(amount) || amount <= 0) {
       throw createError({ statusCode: 400, statusMessage: 'Invalid or missing amount value' });
     }
-    console.log('safeAmount:', safeAmount, 'type:', typeof safeAmount);
 
     
     const orderData = createOrderData(body, 'googlepay', {
       orderId,
       currency: 'eur',
-      totalPrice: safeAmount,
+      totalPrice: amount,
       payment_infos: {
         payment_provider:'googlepay',
         payment_intentId: '', // to be filled after intent creation

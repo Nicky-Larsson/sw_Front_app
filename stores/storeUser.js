@@ -6,7 +6,7 @@ import {
   query, orderBy, setDoc, getDoc, writeBatch
 } from 'firebase/firestore';
 import { toRaw } from 'vue';
-import { useNuxtApp } from '#app'; // Import useNuxtApp to access injected services
+import { useNuxtApp } from '#app';
 
 
 
@@ -84,12 +84,37 @@ export const useStoreUser = defineStore('storeUser', {
               mergedCart.push(product);
             }
           });
+          
+          await this.fetchAccessRights(true); // force refresh
+
+          const cleanedCart = mergedCart.filter(product => {
+            if (!product.product_uid) return true;
+
+            const novelUid = product.product_uid.graphic_novel_uid;
+            const volumeUid = product.product_uid.volume_uid;
+            // Use lang from product.product_uid.lang if present, else fallback to product.language
+            const lang = product.product_uid.lang || product.language;
+
+            // Defensive: check access_rights structure
+            const novelAccess = this.userSession.access_rights?.[novelUid];
+            const volumeAccess = novelAccess?.[volumeUid];
+
+            // If user has access to this language, filter it out (don't keep in cart)
+            if (volumeAccess && lang && volumeAccess[lang]) {
+              console.log(`Removing from cart (already owned):`, product);
+              return false;
+            }
+            // Otherwise, keep in cart
+            return true;
+          });
+          
+          console.log('Cleaned mergedCart:', cleanedCart);
 
           // Update the user session state
           this.userSession = {
             ...initDefaultSession(), // Ensure all default fields are present
             ...userDoc.data(),      // Overwrite with Firestore data
-            cart: mergedCart,       // Use the merged cart
+            cart: cleanedCart,       // Use the merged cart
             // Explicitly keep potentially non-Firestore fields if needed
             checkout: this.userSession.checkout,
             selectedArray: this.userSession.selectedArray,
@@ -97,10 +122,24 @@ export const useStoreUser = defineStore('storeUser', {
             defaultLanguage: this.userSession.defaultLanguage || 'en',
           };
 
+          // After: this.userSession.cart = cleanedCart;
+
+          const isStillInCart = (item) =>
+            cleanedCart.some(
+              (cartItem) =>
+                cartItem.product_uid?.graphic_novel_uid === item.product_uid?.graphic_novel_uid &&
+                cartItem.product_uid?.volume_uid === item.product_uid?.volume_uid &&
+                (cartItem.product_uid?.lang || cartItem.language) === (item.product_uid?.lang || item.language)
+            );
+
+          // Clean selectedArray and checkout to only keep items still in the cart
+          this.userSession.selectedArray = (this.userSession.selectedArray || []).filter(isStillInCart);
+          this.userSession.checkout = (this.userSession.checkout || []).filter(isStillInCart);
+
           console.log('Updated userSession after merge:', this.userSession);
 
           // Save the potentially updated merged cart back to Firebase if defaultCart had items
-          if (defaultCart.length > 0 && JSON.stringify(loggedInCart) !== JSON.stringify(mergedCart)) {
+          if (defaultCart.length > 0 && JSON.stringify(loggedInCart) !== JSON.stringify(cleanedCart)) {
              console.log('Saving merged cart changes back to Firebase...');
              // await this.setUserInfo();
              await this.setCartInfoDb();
@@ -149,7 +188,15 @@ export const useStoreUser = defineStore('storeUser', {
         });
 
         // Update the userSession with the fetched access rights
-        this.userSession.access_rights = accessRights;
+        // this.userSession.access_rights = accessRights;
+
+        const now = Date.now();
+        this.userSession.access_rights = {
+          ...accessRights,   // all the rights data from Firestore
+          lastUpdate: now    // add/update the timestamp
+        };
+        console.log('Updated userSession with access rights:', this.userSession.access_rights);
+        return this.userSession.access_rights;        
         
         console.log('Updated userSession with access rights:', accessRights);
         return accessRights;
@@ -160,23 +207,19 @@ export const useStoreUser = defineStore('storeUser', {
     },
 
 
-    // Replace your existing fetchAccessRights with this more efficient approach
     async fetchNovelAccessRight(graphicNovelUid, forceRefresh = false) {
       const { $firestore } = useNuxtApp();
       const authStore = useStoreAuth();
 
-      // Initialize access_rights object if it doesn't exist
       if (!this.userSession.access_rights) {
         this.userSession.access_rights = {};
       }
 
-      // Return cached right if available and not forcing refresh
       if (!forceRefresh && this.userSession.access_rights[graphicNovelUid]) {
         console.log(`Using cached access right for novel: ${graphicNovelUid}`);
         return this.userSession.access_rights[graphicNovelUid];
       }
 
-      // Check auth
       if (!$firestore || !authStore.authInfo?.uid) {
         console.error("Firestore/Auth not available or user not logged in");
         return null;
@@ -184,18 +227,17 @@ export const useStoreUser = defineStore('storeUser', {
 
       try {
         console.log(`Fetching access right for novel: ${graphicNovelUid}`);
-        
-        // Only fetch the specific document we need
-        const novelDocRef = doc($firestore, 
-          `users/${authStore.authInfo.uid}/access_rights/${graphicNovelUid}`);
-        
+        const novelDocRef = doc($firestore, `users/${authStore.authInfo.uid}/access_rights/${graphicNovelUid}`);
         const novelDoc = await getDoc(novelDocRef);
-        
+
         if (novelDoc.exists()) {
-          // Cache this right in the session
-          this.userSession.access_rights[graphicNovelUid] = novelDoc.data();
+          const data = novelDoc.data();
+          console.log('Fetched access rights data:', data);
+
+          // Cache the access rights
+          this.userSession.access_rights[graphicNovelUid] = data;
           console.log(`Cached access right for novel: ${graphicNovelUid}`);
-          return novelDoc.data();
+          return data;
         } else {
           console.log(`No access right found for novel: ${graphicNovelUid}`);
           return null;
@@ -209,49 +251,44 @@ export const useStoreUser = defineStore('storeUser', {
 
     async hasAccessTo(graphicNovelUid, volumeUid = null, lang = null) {
       try {
-        // Check if we need to fetch this novel's access rights
-        if (!this.userSession.access_rights || 
-            !this.userSession.access_rights[graphicNovelUid]) {
-          
+        // Check if access rights for the graphic novel are loaded
+        if (!this.userSession.access_rights || !this.userSession.access_rights[graphicNovelUid]) {
           console.log(`Access rights for ${graphicNovelUid} not loaded, fetching now...`);
           
-          // Attempt to fetch the novel's access rights
+          // Fetch access rights
           const novelAccess = await this.fetchNovelAccessRight(graphicNovelUid);
           
-          // If we couldn't fetch the rights or the novel isn't found
           if (!novelAccess) {
-            console.log(`No access to graphic novel: ${graphicNovelUid}`);
+            console.log(`No access rights found for graphic novel: ${graphicNovelUid}`);
             return false;
           }
         }
-        
-        // Now we should have the access rights cached in the session
+
+        // Access rights should now be cached
         const novelAccess = this.userSession.access_rights[graphicNovelUid];
-        
-        // If no specific volume is requested, just check for graphic novel access
+
+        // If no specific volume is requested, check for general graphic novel access
         if (!volumeUid) {
           console.log(`User has access to graphic novel: ${graphicNovelUid}`);
           return true;
         }
-        
-        // Check volume access
-        if (!novelAccess.volumes || !novelAccess.volumes[volumeUid]) {
+
+        // Check access for the specific volume
+        if (!novelAccess[volumeUid]) {
           console.log(`No access to volume: ${volumeUid}`);
           return false;
         }
-        
-        // If no specific language is requested, just check for volume access
+
+        // If no specific language is requested, check for volume access
         if (!lang) {
-          console.log(`User has access to volume: ${volumeUid}`);
+          // console.log(`User has access to volume: ${volumeUid}`);
           return true;
         }
-        
-        // Check language access
-        const volumeAccess = novelAccess.volumes[volumeUid];
-        const hasAccess = volumeAccess.all_languages || 
-                        (volumeAccess.languages && volumeAccess.languages.includes(lang));
-        
-        console.log(`Access check for ${graphicNovelUid}/${volumeUid}/${lang}: ${hasAccess}`);
+
+        // Check access for the specific language
+        const volumeAccess = novelAccess[volumeUid];
+        const hasAccess = !!volumeAccess[lang];
+        // console.log(`Access check for ${graphicNovelUid}/${volumeUid}/${lang}: ${hasAccess}`);
         return hasAccess;
       } catch (error) {
         console.error(`Error checking access for ${graphicNovelUid}:`, error);
@@ -280,7 +317,6 @@ export const useStoreUser = defineStore('storeUser', {
       
       console.log(`Updated access rights for ${novelIds.length} novels`);
     },
-
 
 
     async initUserDocument() {
@@ -323,8 +359,7 @@ export const useStoreUser = defineStore('storeUser', {
       const userDocRef = doc($firestore, 'users', authStore.authInfo.uid);
       const batch = writeBatch($firestore); // Use injected $firestore
 
-      // Keep your sanitization logic
-      // Only save specific fields you intend to manage via set-UserInfo
+
       const dataToSave = {
         cart: this.userSession.cart || [],
         selectedArray: this.userSession.selectedArray || [],
@@ -340,14 +375,6 @@ export const useStoreUser = defineStore('storeUser', {
         // Save the specific userSession data to Firestore using merge
         batch.set(userDocRef, sanitizedDataToSave, { merge: true });
 
-        // Keep your consents/orders batch logic if still needed
-        // const userDocRefConsents = doc($firestore, 'users', authStore.authInfo.uid, 'consents', 'date_consent');
-        // const dataConsents = { date_infos: '2023-10-01' }; // Example data
-        // batch.set(userDocRefConsents, dataConsents, { merge: true });
-
-        // const userDocRefOrders = doc($firestore, 'users', authStore.authInfo.uid, 'orders', 'date_order');
-        // const dataOrders = { date_infos: '2023-10-01' }; // Example data
-        // batch.set(userDocRefOrders, dataOrders, { merge: true });
 
         await batch.commit();
         console.log('User session data saved/merged to Firebase:', sanitizedDataToSave);
@@ -366,7 +393,7 @@ export const useStoreUser = defineStore('storeUser', {
       console.log('User session cleared:', this.userSession);
     },
 
-   async setCartInfoDb() {
+    async setCartInfoDb() {
       const { $firestore, $firebaseAuth } = useNuxtApp();
       const authStore = useStoreAuth();
     
@@ -421,12 +448,19 @@ export const useStoreUser = defineStore('storeUser', {
       }
     },
 
-    // Keep clearCart as is
     clearCart() {
       this.userSession.cart = [];
       this.userSession.checkout = [];
       this.userSession.selectedArray = [];
-      console.log('Cart and Checkout cleared');
+      console.log('-----------------\n \n\n ');
+      console.log('\n  Cart and Checkout cleared');
+      
+      console.log('clearCart called! Stack:', new Error().stack);
+        console.log('clearCart called! Cart is now:', this.userSession.cart, this.userSession.checkout);
+
+      console.log('-----------------\n \n\n ');
+      // this.setCartInfoDb();
+
     },
 
 
@@ -497,7 +531,8 @@ export const useStoreUser = defineStore('storeUser', {
       }
     },
 
-    async createOrder(orderId, paymentChoice = 'paypal', status = 'pending') {
+    /*   TO REMOVE  
+      async createOrder(orderId, paymentChoice = 'paypal', status = 'pending') {
       const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances
       const authStore = useStoreAuth();
 
@@ -535,13 +570,13 @@ export const useStoreUser = defineStore('storeUser', {
         // await this.manageLastOrder('set', orderId, new Date().toISOString());
 
         // Clear cart and checkout session after successful order creation
-        this.clearCart(); // Use the dedicated action
+        // this.clearCart(); // Use the dedicated action
         return orderId;
       } catch (error) {
         console.error("Error saving order:", error.message);
         return null;
       }
-    },
+    }, */
 
     async updateOrderStatus(orderId, status) {
       const { $firestore, $firebaseAuth } = useNuxtApp(); // Get injected instances
@@ -562,6 +597,57 @@ export const useStoreUser = defineStore('storeUser', {
       }
     },
     
+    async saveLanguagePreference() {
+      const { $firestore } = useNuxtApp();
+      const authStore = useStoreAuth();
+      
+      // Only save to Firestore if user is authenticated
+      if (!$firestore || !authStore.authInfo?.uid) {
+        console.log('Not saving language: User not authenticated or Firestore not available');
+        return;
+      }
+      
+      try {
+        const userDocRef = doc($firestore, `users/${authStore.authInfo.uid}`);
+        
+        // Update only the language fields
+        await updateDoc(userDocRef, {
+          'choosedLanguage': this.userSession.choosedLanguage,
+          'defaultLanguage': this.userSession.defaultLanguage
+        });
+        
+        console.log('Language preference saved to Firestore:', this.userSession.choosedLanguage);
+      } catch (error) {
+        console.error('Error saving language preference:', error);
+      }
+    },
+
+    addToCart(product) {
+      // Same validation as in your component
+      if (
+        !product ||
+        !product.graphic_novel_uid ||
+        !product.volume_uid ||
+        !product.product_uid
+      ) {
+        console.warn('Attempted to add invalid product to cart:', product);
+        return;
+      }
+      // Duplicate check
+      const exists = this.userSession.cart.some(
+        (item) =>
+          item.graphic_novel_uid === product.graphic_novel_uid &&
+          item.volume_uid === product.volume_uid &&
+          item.language === product.language
+      );
+      if (!exists) {
+        this.userSession.cart.push(product);
+        console.log('Product added to cart:', product);
+      } else {
+        console.log('Product is already in the cart');
+      }
+    }
+
 
     // Keep commented out cart actions if you plan to use them later
     /* addToCart(item) {
@@ -584,6 +670,7 @@ function initDefaultSession() {
     lastOrderTime: null, // Add this
     createdAt: '',
     access_rights: {
+      lastUpdate: 0,
       graphic_novels: []
     },
     cart: [],
@@ -602,45 +689,3 @@ function initDefaultSession() {
     choosedLanguage: 'fr'
   };
 }
-
-
-
-
-/* function testUserSession() {
-  return {
-            access_rights: { 
-                            graphic_novels : [
-                                                {
-                                                  name: 'Sunset Land',
-                                                  type: 'graphic novel',
-                                                  title: 'volume_01',
-                                                  all_languages: true,
-                                                  purchased_languages: ['en', 'all']
-                                                },
-                                                {
-                                                  name: 'Sunset Land',
-                                                  type: 'graphic novel',
-                                                  title: 'volume_02',
-                                                  all_languages: false,
-                                                  purchased_languages: ['fr']
-                                                }
-                                            ]
-                            },
-            alias: 'Eljid',
-            cart: [],
-            avatar: '',
-            cart_added: '2023-10-01',
-            email: authStore.authInfo.email,
-            favorite_arts: ['art1', 'art2'],
-            favorite_products: [],
-            last_login: '2023-10-01 00:00:00',
-            last_order: '2023-10-01',
-            unsubscribe_demands: [
-              { date: '2025-09-01', reason: 'no reason', dayleft: 30 , status: 'pending', canceldate: '' },
-              { date: '2027-01-11', reason: 'stop email', dayleft: 30 , status: 'pending', canceldate: '' }
-            ],
-            unsubscribe_status: 'inactive'
-
-         }
-
-} */

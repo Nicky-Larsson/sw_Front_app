@@ -83,9 +83,9 @@
             v-if="isWideScreen"
             @click.prevent="goBack"
             type="button"
-            class="absolute right-0 bottom-0 mb-1 mr-6 p-3 rounded-full bg-gray-700 text-white hover:bg-gray-500 shadow-lg flex justify-center items-center"
+            class="absolute right-0 bottom-0 mb-1 mr-20 p-3 rounded-full bg-gray-700 text-white hover:bg-gray-500 shadow-lg flex justify-center items-center"
             >
-            <Icon name="flowbite:redo-outline" size="160%" />
+            <Icon name="flowbite:undo-outline" size="250%" />
             </button>
 
         </div>
@@ -131,7 +131,7 @@ const gridClass = computed(() => (isWideScreen.value ? 'grid-cols-5' : 'grid-col
 
 const updateScreenWidth = () => {
   if (process.client) {
-    isWideScreen.value = window.innerWidth >= 1108; // Update screen width condition
+    isWideScreen.value = window.innerWidth >= 1200; // Update screen width condition
   }
 };
 

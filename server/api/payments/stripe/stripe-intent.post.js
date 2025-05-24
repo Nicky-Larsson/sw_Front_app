@@ -14,20 +14,46 @@ export default defineEventHandler(async (event) => {
   const dbHealth = await checkDatabaseHealth();
   if (!dbHealth.success) {
     console.error('Payment rejected due to database issue:', dbHealth.message);
-    throw new Error(`We're experiencing technical difficulties. Please try again in a few minutes. (Database issue)`);
+    throw createError({
+      statusCode: 503, // Service Unavailable
+      statusMessage: `We're experiencing technical difficulties. Please try again in a few minutes.`,
+    });
   }
 
   const body = await readBody(event);
 
   if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('Stripe Secret Key is missing. Check your .env file.');
+    throw createError({
+      statusCode: 500, // Internal Server Error
+      statusMessage: 'Stripe Secret Key is missing. Please contact support.',
+    });
   }
   if (!body.email || !body.alias || !body.userId) {
-    throw new Error('Email, alias, and userId are required.');
+    throw createError({
+      statusCode: 400, // Bad Request
+      statusMessage: 'Email, alias, and userId are required.',
+    });
   }
-  const amount = parseInt(body.amount, 10);
-  if (isNaN(amount) || amount <= 0) {
-    throw new Error('Invalid amount. Amount must be a positive integer.');
+
+    // Validate and calculate total price on the backend
+  const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
+  const totalPriceCents = checkoutItems.reduce((sum, item) => {
+    const price = Number(item.price);
+    if (isNaN(price) || price <= 0) {
+      throw createError({
+        statusCode: 400, // Bad Request
+        statusMessage: `Invalid price value for item: ${item.name || 'unknown'}`,
+      });
+    }
+    return sum + price;
+  }, 0);
+  
+
+  if (isNaN(totalPriceCents) || totalPriceCents <= 0) {
+      throw createError({
+      statusCode: 400, // Bad Request
+      statusMessage: 'Invalid total price: Must be a positive number.',
+    });
   }
 
 
@@ -56,8 +82,6 @@ export default defineEventHandler(async (event) => {
   const timeCode = now.getHours().toString().padStart(2,'0') + 
                   now.getMinutes().toString().padStart(2,'0');
   const randomPart = Math.floor(Math.random()*100).toString().padStart(2,'0');
-  
-
   // Add payment method code to the order ID
   const paymentMethodCode = getPaymentMethodCode(body.paymentSource || 'stripe');
   
@@ -68,7 +92,7 @@ export default defineEventHandler(async (event) => {
 
     try {
       paymentIntent = await stripe.paymentIntents.create({
-        amount,
+        amount: totalPriceCents, // Use backend-calculated total
         currency: 'eur',
         metadata: {
           email: body.email,
@@ -83,59 +107,38 @@ export default defineEventHandler(async (event) => {
       console.error('Failed to create PaymentIntent:', error);
       throw error;
     }
-
-    
-    
-    // 2. Create Firestore order as 'pending'
-    // const orderDocRef = db.collection('users').doc(body.userId).collection('orders').doc(orderId);
-    
-    /* await orderDocRef.set({
-      userId: body.userId,
-      paymentIntentId: paymentIntent.id,
-      checkoutItems: body.checkoutItems,
-      totalPrice: amount / 100,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      email: body.email,
-      alias: body.alias,
-      orderId: orderId,
-      paymentMethod: paymentMethodCode,
-    }); */
-    
-
-    
-    /* await orderDocRef.set(
-      createOrderData(body, 'stripe', {
-        orderId,
-        payment_infos: {
-          payment_method: 'stripe',
-          paymentIntentId: paymentIntent.id,
-          paymentIntentStatus: paymentIntent.status,
-          paymentMethod: paymentMethodCode,
-          payment_account_id: paymentIntent.account || null,
-          payment_email_id: body.email,
-          payment_brand: body.paymentBrand || '',
-          payment_country: body.paymentCountry || '',
-          sent_metadata: paymentIntent.metadata || {},
-        }
-      })
-    ); */
-
-    // Update products_access for the user
-
-    const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
-    //console.log('Received checkoutItems:', body.checkoutItems);
-
-
     
     console.log('Calling updateProductsAccess with:', body.userId, checkoutItems);
 
-    await updateProductsAccess(body.userId, checkoutItems);
+    // await updateProductsAccess(body.userId, checkoutItems);
 
-    console.log(`Order and products_access updated successfully for user: ${body.userId}`);
+    // console.log(`Order and products_access updated successfully for user: ${body.userId}`);
+
+    
+
+    const orderDocRef = db.collection('users').doc(body.userId).collection('orders').doc(orderId);
+    await orderDocRef.set({
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      checkoutItems: checkoutItems, // <-- Save the items here!
+      totalPrice: totalPriceCents / 100,
+      currency: 'eur', 
+      accessGranted: 'pending',
+      accessLevel: 'pending',
+      payment_infos: {
+        payment_method: body.paymentSource || 'stripe',
+        paymentIntentId: paymentIntent.id,
+        paymentIntentStatus: paymentIntent.status
+      },
+      email: body.email,
+      alias: body.alias,
+      userId: body.userId,
+      orderId,
+    });    
 
 
     return { clientSecret: paymentIntent.client_secret, orderId }; 
+
 
   } catch (error) {
     console.error('<<<<<<<< /n /n Failed to process Stripe payment:', error);

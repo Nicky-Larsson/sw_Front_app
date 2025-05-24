@@ -12,7 +12,8 @@ export async function updateProductsAccess(userId, checkoutItems) {
     return;
   }
 
-  console.log('/n/n<<<<<<<<   updateProductsAccess called with:', checkoutItems[0].product_uid);
+  // console.log('/n/n<<<<<<<<   updateProductsAccess called with:', checkoutItems[0].product_uid);
+  console.log('/n/n<<<<<<<<   updateProductsAccess called with:');
   
   // Separate valid and invalid items, and log invalid ones
   const validItems = [];

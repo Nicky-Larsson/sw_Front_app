@@ -106,13 +106,6 @@ export const useStoreAuth = defineStore('storeAuth', {
         await setDoc(userDocRef, userData);
         console.log('User document created in Firestore.');
 
-        // Update local state AFTER successful registration and DB write
-        // this.authInfo.uid = authUserData.uid;
-        // this.authInfo.email = authUserData.email;
-
-        // Optionally load user data into userStore immediately
-        // const userStore = useStoreUser();
-        // await userStore.getUserInfoDb(); // Load the newly created user data
 
         return { success: true };
 
@@ -145,10 +138,6 @@ export const useStoreAuth = defineStore('storeAuth', {
         const userStore = useStoreUser();
         await userStore.getUserInfoDb();
 
-        // await userStore.fetchAccessRights(true)
-        // const userStore = useStoreUser();
-        // await userStore.set UserInfo(); // Load user data into the store
-        // We don't need to manually set authInfo here as onAuthStateChanged will trigger
         return true; // Return true for successful login attempt
       } catch (error) {
         console.error("Login failed:", error.message);

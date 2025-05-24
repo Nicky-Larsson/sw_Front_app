@@ -21,16 +21,20 @@
             <div>
               <p class="font-bold text-xl">Order #{{ order.id }}</p>
               <p class="text-xl text-gray-500">Placed on {{ formatDate(order.createdAt) }}</p>
-                <p class="text-xl text-gray-500">
-                  <strong>Payment:</strong>
-                  {{
-                    order.payment_infos?.payment_method
-                      || order.webhook_answer?.payment_method
-                      || '-'
-                  }}
-                </p>
               <p class="text-xl text-gray-500">
-                <strong>Total:</strong> {{ order.totalPrice }} {{ order.currency }}
+                <strong>Status: </strong> 
+                <span :class="getStatusClass(order.status)">{{ order.status || 'N/A' }}</span>
+              </p>
+              <p class="text-xl text-gray-500">
+                <strong>Payment:</strong>
+                {{
+                  order.payment_infos?.payment_method
+                    || order.webhook_answer?.payment_method
+                    || '-'
+                }}
+              </p>
+              <p class="text-xl text-gray-500">
+                <strong>Total: </strong> {{ order.totalPrice }} {{ order.currency }}
               </p>
             </div>
             <button
@@ -109,6 +113,14 @@ const formatDate = (timestamp) => {
   });
 };
 
+const getStatusClass = (status) => {
+  if (!status) return 'text-gray-500';
+  status = status.toLowerCase();
+  if (status === 'paid' || status === 'completed') return 'text-green-500 font-semibold';
+  if (status === 'pending') return 'text-yellow-500 font-semibold';
+  if (status.includes('error') || status === 'failed' || status.includes('issue')) return 'text-red-500 font-semibold';
+  return 'text-gray-500'; // Default for other statuses
+};
 
 // Navigate to order details page
 const viewOrderDetails = (orderId) => {

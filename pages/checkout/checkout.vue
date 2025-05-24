@@ -29,7 +29,7 @@
             <div class="flex items-center justify-between my-4">
               <div class="font-semibold">Total</div>
               <div class="text-2xl font-semibold">
-                <span class="font-extrabold">{{ totalPriceComputed }} €</span>
+                <span class="font-extrabold">{{ totalPriceEuros }} €</span>
               </div>
             </div>
           </div>
@@ -219,12 +219,19 @@ const isProd = ref(process.env.NODE_ENV === 'production');
 
 console.log('checkout at checkout page:', userStore.userSession.checkout);
 
-const totalPriceComputed = computed(() => {
-const selectedArray = userStore.userSession.checkout;
+
+// Always work in cents for calculations and API calls
+const totalPriceCents = computed(() => {
+  const selectedArray = userStore.userSession.checkout;
   return selectedArray.reduce((total, prod) => {
-    return total + (parseFloat(prod.price) || 0);
-  }, 0) / 100; // Return the total price as a fixed decimal
+    return total + (parseInt(prod.price, 10) || 0); // prod.price should be in cents
+  }, 0);
 });
+
+
+const totalPriceEuros = computed(() => (totalPriceCents.value / 100).toFixed(2));
+
+
 
 
 const testGooglePayFlow = async () => {
@@ -239,12 +246,6 @@ const testGooglePayFlow = async () => {
     // Instead of creating a payment method directly, use a test payment method ID
     const paymentMethodId = 'pm_card_visa'; // Stripe's test payment method
     
-    console.log("Using Stripe test payment method ID:", paymentMethodId);
-
-    console.log('totalPriceComputed.value:', totalPriceComputed.value);
-    console.log('amount sent to backend:', Math.round(totalPriceComputed.value * 100));
-    console.log('checkoutItems:', toRaw(userStore.userSession.checkout));
-
     // Send the request to your server
     const response = await $fetch('/api/payments/stripe/googlepay-intent', {
       method: 'POST',
@@ -253,7 +254,7 @@ const testGooglePayFlow = async () => {
         userId: authStore.authInfo.uid,
         email: email.value,
         alias: alias.value,
-        amount: Math.round(totalPriceComputed.value * 100),
+        amount: totalPriceCents.value,
         checkoutItems: toRaw(userStore.userSession.checkout || []),
         paymentSource: 'googlepay_test'
       }
@@ -312,7 +313,7 @@ onMounted(async () => {
             const response = await $fetch('/api/payments/paypal/create-order', {
               method: 'POST',
               body: {
-                amount: totalPriceComputed.value.toFixed(2),
+                amount: totalPriceCents.value,
                 currency: 'EUR',
                 checkoutItems,
                 userId: authStore.authInfo.uid,
@@ -344,7 +345,7 @@ onMounted(async () => {
                 userId: authStore.authInfo.uid,
                 email: userStore.userSession.email,
                 alias: userStore.userSession.alias,
-                totalPrice: totalPriceComputed.value,
+                totalPrice: totalPriceCents.value,
                 currency: 'EUR',
               },
             });
@@ -381,7 +382,7 @@ onMounted(async () => {
         currency: 'eur',
         total: {
           label: 'Total',
-          amount: Math.round(totalPriceComputed.value * 100),
+          amount: totalPriceCents.value,
         },
         requestPayerName: true,
         requestPayerEmail: true,
@@ -408,7 +409,7 @@ onMounted(async () => {
               userId: authStore.authInfo.uid,
               email: email.value,
               alias: alias.value,
-              amount: Math.round(totalPriceComputed.value * 100),
+              amount: totalPriceCents.value,
               checkoutItems: toRaw(userStore.userSession.checkout || [])
             }
           });
@@ -457,16 +458,18 @@ const payWithStripe = async () => {
     // 1. Create payment intent and order
     console.log('Sending checkoutItems:', toRaw(userStore.userSession.checkout));
     
-    const { clientSecret, orderId } = await $fetch('/api/payments/stripe/stripe-intent', {
+    const response = await $fetch('/api/payments/stripe/stripe-intent', {
       method: 'POST',
       body: {
-        amount: Math.round(totalPriceComputed.value * 100),
+        userId: authStore.authInfo.uid,
         email: email.value,
         alias: alias.value,
-        checkoutItems: toRaw(userStore.userSession.checkout || []),
-        userId: authStore.authInfo.uid
-      }
+        checkoutItems: toRaw(userStore.userSession.checkout || []), // Send items
+        paymentSource: 'stripe',
+      },
     });
+    
+    const { clientSecret, orderId } = response;
 
     if (!clientSecret || !orderId) throw new Error('Server error: missing payment intent or order.');
 
@@ -479,17 +482,15 @@ const payWithStripe = async () => {
       throw new Error(error.message || 'Payment failed');
     }
 
-    if (paymentIntent.status === 'succeeded') {
-      // Important: do NOT clear cart here since the processing page will do it
-      // This ensures good UX while maintaining accurate checkout state
-      
+    if (paymentIntent.status === 'succeeded') {      
       // 3. Redirect to processing page
-      navigateTo(`/checkout/processing?orderId=${orderId}&paymentId=${paymentIntent.id}`);
+      navigateTo(`/checkout/processing?orderId=${orderId}&paymentId=${paymentIntent.id}&paymentType=stripe`);
     } else {
       throw new Error('Payment not successful');
     }
   } catch (error) {
-    alert('Payment failed: ' + error.message);
+    console.error('Payment failed:', error);
+    alert(error.data?.statusMessage || error.message || 'An unexpected error occurred.');
   } finally {
     isProcessing.value = false;
   }
@@ -501,7 +502,7 @@ const payWithCMI = async () => {
   navigateTo({
     path: '/checkout/cmiPaymentPage',
     query: {
-      amount: totalPriceComputed.value.toFixed(2),
+      amount: totalPriceCents.value,
       // Pass any needed data through query params
       userId: authStore.authInfo.uid,
       email: email.value,
@@ -510,63 +511,6 @@ const payWithCMI = async () => {
   });
 };
 
-// Add this function to your existing <script setup> section
-/* const payWithCMI = async () => {
-  isProcessing.value = true;
-  try {
-    const response = await $fetch('/api/payments/cmi/cmi-intent', {
-      method: 'POST',
-      body: {
-        userId: authStore.authInfo.uid,
-        email: email.value,
-        alias: alias.value,
-        amount: Math.round(totalPriceComputed.value * 100),
-        checkoutItems: toRaw(userStore.userSession.checkout || [])
-      }
-    });
-
-    if (response.success) {
-      // If the URL is your Nuxt page, use navigateTo (SPA navigation)
-      if (response.cmiUrl === '/checkout/cmiPaymentPage') {
-        console.log("formData : ",  response.formData)
-        navigateTo({
-          path: response.cmiUrl,
-          query: {
-            oid: response.formData.oid,
-            amountMAD: response.formData.amountMAD,
-            amountEuros: response.formData.amountEuros,
-            okUrl: response.formData.okUrl,
-            failUrl: response.formData.failUrl,
-            source: 'cmi' 
-          }
-        });
-        return;
-      }
-
-      // Otherwise, submit the form to the real CMI gateway
-      const form = document.createElement('form');
-      form.method = 'POST';
-      form.action = response.cmiUrl;
-      Object.entries(response.formData).forEach(([key, value]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = value;
-        form.appendChild(input);
-      });
-      document.body.appendChild(form);
-      form.submit();
-    } else {
-      alert('Payment initialization failed');
-    }
-  } catch (error) {
-    console.error("CMI payment failed:", error);
-    alert('Payment failed: ' + (error.data?.statusMessage || error.message));
-  } finally {
-    isProcessing.value = false;
-  }
-};
- */
 
 
 // Show error messages

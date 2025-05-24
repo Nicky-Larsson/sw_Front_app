@@ -108,11 +108,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted  } from 'vue'
+import { ref, onMounted, computed } from 'vue';
 import { useStoreUser } from '@/stores/storeUser';
+import { debounce } from 'lodash';
 
 const userStore = useStoreUser();
 
+
+
+console.log('user session : ', userStore.userSession.choosedLanguage)
 
 /////////////// @click="toggleMenu"
 const list = ref(null);
@@ -143,24 +147,54 @@ const selectItemById = (id) => {
   }
 };
 
-selectItemById(userStore.userSession.defaultLanguage)
+// selectItemById(userStore.userSession.defaultLanguage)
+
+const debouncedSaveLanguage = debounce(() => {
+  console.log('Saving language preference to Firestore...');
+  userStore.saveLanguagePreference();
+}, 1500);
 
 
-const hideSelected = () => {
+
+onMounted(() => {
+  // Use choosedLanguage if available, otherwise fall back to defaultLanguage
+  const languageId = userStore.userSession.choosedLanguage || userStore.userSession.defaultLanguage;
+  selectItemById(languageId);
+  
+  // Ensure both language properties are synced
+  userStore.userSession.choosedLanguage = languageId;
+  userStore.userSession.defaultLanguage = languageId;
+});
+
+
+
+/* const hideSelected = () => {
   console.log(items.value)
   console.log(selectedItem.value)
-}
+} */
+
+
 
 const handleClick = (item) => {
-  // console.log('Clicked item:', item);
-  console.log(userStore.userSession.defaultLanguage)
+  // Update the UI
   selectedItem.value.image = item.image;
   selectedItem.value.text = item.text;
-  userStore.userSession.defaultLanguage = item.id
-  hideSelected()
-  console.log(userStore.userSession.defaultLanguage)
-  // isHidden.value = !isHidden.value;
+  
+  // Update both language properties in the store
+  userStore.userSession.defaultLanguage = item.id;
+  userStore.userSession.choosedLanguage = item.id; // Add this line
+  
+  console.log('choosedLanguage:', userStore.userSession.choosedLanguage);
+  console.log('choosedLanguage:', userStore.userSession.choosedLanguage);
+
+  // hideSelected();
+  debouncedSaveLanguage();
+  console.log('Language updated:', userStore.userSession.choosedLanguage);
+  isHidden.value = !isHidden.value;
 }
+
+
+
 
 const toggleList = () => {
   // hideSelected()
