@@ -398,7 +398,7 @@ export const useStoreUser = defineStore('storeUser', {
       const authStore = useStoreAuth();
     
       if (!$firestore || !$firebaseAuth || !authStore.authInfo?.uid) {
-        console.error("Firestore/Auth not available or user not logged in for setCartInfo.");
+        console.warning("Firestore/Auth not available or user not logged in for setCartInfo.");
         return;
       }
     

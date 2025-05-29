@@ -64,15 +64,25 @@ export default defineEventHandler(async (event) => {
         
 
     const body = await readBody(event);
-    const { paymentMethodId, userId, email, alias, amount } = body;
+    const { paymentMethodId, userId, email, alias, amount: clientAmountCents } = body; // Renamed amount to clientAmountCents for clarity
     const checkoutItems = Array.isArray(body.checkoutItems) ? body.checkoutItems : [];
 
-    if (!paymentMethodId || !userId || !amount) {
+    if (!paymentMethodId || !userId || typeof clientAmountCents === 'undefined') { // Check for undefined clientAmountCents
       throw createError({ 
         statusCode: 400, 
         statusMessage: 'Missing required parameters: paymentMethodId, userId, or amount' 
       });
     }
+
+    // Assuming clientAmountCents is the total in cents from the client
+    // You will replace this with secure server-side calculation later
+    const totalPriceCents = parseInt(clientAmountCents, 10); 
+
+    // RESTORED AND CORRECTED VALIDATION:
+    if (isNaN(totalPriceCents) || totalPriceCents <= 0) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid or missing amount value' });
+    }
+    const totalPriceEuros = Number((totalPriceCents / 100).toFixed(2));
 
     // Helper function to get the code
     function getPaymentMethodCode(paymentSource) {
@@ -106,19 +116,17 @@ export default defineEventHandler(async (event) => {
     const orderRef = await db.collection('users').doc(userId).collection('orders').doc(orderId);
      
     
-    console.log('amount:', amount,  'type:', typeof amount);
-    
-    if (isNaN(amount) || amount <= 0) {
-      throw createError({ statusCode: 400, statusMessage: 'Invalid or missing amount value' });
-    }
+    console.log('Received clientAmountCents:', clientAmountCents, 'type:', typeof clientAmountCents);
+    console.log('Parsed totalPriceCents:', totalPriceCents, 'totalPriceEuros:', totalPriceEuros);
 
     
     const orderData = createOrderData(body, 'googlepay', {
       orderId,
-      currency: 'eur',
-      totalPrice: amount,
+      currency: 'eur', // Stripe will use 'eur'
+      totalPrice: totalPriceEuros,    // Pass the Euro value
+      totalPriceCents: totalPriceCents, // Pass the Cent value
       payment_infos: {
-        payment_provider:'googlepay',
+        payment_provider:'googlepay', // via Stripe
         payment_intentId: '', // to be filled after intent creation
         payment_method: 'googlepay',
         payment_email_id: email,
@@ -129,12 +137,13 @@ export default defineEventHandler(async (event) => {
       provisionalExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     });
 
-    console.log('orderData before Firestore set:', orderData); // <--- Add this line
+    console.log('orderData before Firestore set:', orderData);
     await orderRef.set(orderData);
 
     // Create a payment intent with the payment method
+    // Stripe expects the amount in the smallest currency unit (cents)
     const paymentIntent = await stripe.paymentIntents.create({
-      amount,
+      amount: totalPriceCents, // Use totalPriceCents for Stripe
       currency: 'eur',
       payment_method: paymentMethodId,
       confirmation_method: 'manual',

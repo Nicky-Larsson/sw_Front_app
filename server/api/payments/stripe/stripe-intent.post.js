@@ -122,6 +122,7 @@ export default defineEventHandler(async (event) => {
       createdAt: new Date().toISOString(),
       checkoutItems: checkoutItems, // <-- Save the items here!
       totalPrice: totalPriceCents / 100,
+      totalPriceCents: totalPriceCents,
       currency: 'eur', 
       accessGranted: 'pending',
       accessLevel: 'pending',

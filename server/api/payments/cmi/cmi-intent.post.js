@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     // Validate inputs
-    if (!body.email || !body.userId || !body.amount) {
+    if (!body.email || !body.userId || !body.amount) { // body.amount is expected to be in cents here
       throw createError({
         statusCode: 400,
         statusMessage: 'Missing required parameters: email, userId, amount'
@@ -53,18 +53,22 @@ export default defineEventHandler(async (event) => {
     const storeKey = config.cmiStoreKey;
     const storeName = config.cmiStoreName;
 
-    // const amount = Math.round(body.amount / 100).toString(); // Convert cents to MAD
-
-    const amountEuros = Number((body.amount / 100).toFixed(2)); // e.g. 5.98
-    const amountMAD = Number((amountEuros * 10.41).toFixed(2)); // e.g. 62.27
+    // Assuming body.amount is the total in cents from the client
+    const totalPriceCents = parseInt(body.amount, 10); 
+    const totalPriceEuros = Number((totalPriceCents / 100).toFixed(2)); // e.g. 5.98
+    
+    // amountMAD is what CMI will actually process
+    const amountMAD = Number((totalPriceEuros * 10.41).toFixed(2)); // e.g. 62.27
 
     console.log("CMI amount in MAD:", amountMAD);
-    console.log("CMI amount in Euros:", amountEuros);
+    console.log("CMI amount in Euros (for DB):", totalPriceEuros);
+    console.log("CMI amount in Cents (for DB):", totalPriceCents);
     console.log("CMI orderId:", orderId);
 
     // Create hash for CMI security
-    const currencyCode = '504'; // 504 is MAD
-    const hashString = `${storeKey}${orderId}${amountEuros}${currencyCode}${storeKey}`;
+    const currencyCode = '504'; // 504 is MAD for CMI
+    // The hash MUST be based on the amount and currency CMI will process (amountMAD and currencyCode '504')
+    const hashString = `${storeKey}${orderId}${amountMAD}${currencyCode}${storeKey}`;
     const hash = crypto.createHash('sha512').update(hashString).digest('hex');
 
     // Store order in Firestore
@@ -73,16 +77,17 @@ export default defineEventHandler(async (event) => {
     await orderDocRef.set(
       createOrderData(body, 'cmi', {
         orderId,
-        currency: 'Euros',
-        totalPrice: amountEuros,
+        currency: 'EUR', // Standardize to 'EUR' for your database records
+        totalPrice: totalPriceEuros,    // Pass the Euro value
+        totalPriceCents: totalPriceCents, // Pass the Cent value
         payment_infos: {
           payment_method: 'cmi',
-          cmiOrderId: orderId,
+          cmiOrderId: orderId, // CMI uses your orderId
           payment_email_id: body.email,
           sent_metadata: body.metadata || {},
         },
         extraFields: {
-          totalPriceDhirhams: amountMAD
+          totalPriceDhirhams: amountMAD // Store the MAD amount for reference if needed
         }
         // Add other provider-specific fields if needed
       })

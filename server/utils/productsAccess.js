@@ -57,7 +57,7 @@ export async function updateProductsAccess(userId, checkoutItems) {
         console.log(
           `Skip: Volume ${item.product_uid.volume_uid} with lang ${item.product_uid.lang} already exists for user ${userId}`
         );
-        continue;
+        continue; // THIS MAKES IT IDEMPOTENT FOR THIS ITEM
       }
 
       // Add the new language entry only if it doesn't already exist

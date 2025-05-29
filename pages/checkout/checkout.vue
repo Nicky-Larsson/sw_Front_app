@@ -313,7 +313,7 @@ onMounted(async () => {
             const response = await $fetch('/api/payments/paypal/create-order', {
               method: 'POST',
               body: {
-                amount: totalPriceCents.value,
+                amount: totalPriceEuros.value,
                 currency: 'EUR',
                 checkoutItems,
                 userId: authStore.authInfo.uid,
@@ -345,7 +345,6 @@ onMounted(async () => {
                 userId: authStore.authInfo.uid,
                 email: userStore.userSession.email,
                 alias: userStore.userSession.alias,
-                totalPrice: totalPriceCents.value,
                 currency: 'EUR',
               },
             });

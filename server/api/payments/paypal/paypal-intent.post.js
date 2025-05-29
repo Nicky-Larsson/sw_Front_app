@@ -77,8 +77,8 @@ export default defineEventHandler(async (event) => {
       throw new Error('checkoutItems is missing or not an array!');
     }
 
-    // Validate and calculate totalPrice
-    const totalPrice = checkoutItems.reduce((sum, item) => {
+    // Validate and calculate totalPriceCents
+    const totalPriceCents = checkoutItems.reduce((sum, item) => {
       let price = Number(item.price);
       console.log('Item price:', item.price, 'Parsed price:', price , 'type price:', typeof price)
 
@@ -91,10 +91,10 @@ export default defineEventHandler(async (event) => {
     }, 0);
 
     console.log('checkoutItems:', checkoutItems);
-    console.log('Calculated totalPrice:', totalPrice);
+    console.log('Calculated totalPriceCents:', totalPriceCents);
 
-    if (isNaN(totalPrice) || totalPrice <= 0) {
-      throw new Error('Invalid totalPrice: Must be a positive number.');
+    if (isNaN(totalPriceCents) || totalPriceCents <= 0) {
+      throw new Error('Invalid totalPriceCents: Must be a positive number.');
     }
 
     // Helper function to get the payment method code
@@ -126,14 +126,15 @@ export default defineEventHandler(async (event) => {
      
 
      
-    console.log("total price : ", totalPrice);
-    const totalPriceEuros = totalPrice / 100;
+    console.log("total price : ", totalPriceCents);
+    const totalPriceEuros = totalPriceCents / 100;
 
     // Create order data
     const orderData = createOrderData(body, 'paypal', {
       orderId,
       currency,
       totalPrice: totalPriceEuros,
+      totalPriceCents: totalPriceCents, 
       userId,
       alias,
       sw_email,
@@ -147,7 +148,7 @@ export default defineEventHandler(async (event) => {
 
     // Save order to Firestore
     const orderDocRef = db.collection('users').doc(userId).collection('orders').doc(orderId);
-    console.log("Creating pending order in Firestore:", orderData.totalPrice);
+    console.log("Creating pending order in Firestore:", orderData.totalPriceCents);
     await orderDocRef.set(orderData);
 
     // Capture PayPal payment
