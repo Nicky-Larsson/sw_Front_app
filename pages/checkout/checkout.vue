@@ -497,17 +497,24 @@ const payWithStripe = async () => {
 
 
 const payWithCMI = async () => {
-  // Skip the cmi-intent API call completely
-  navigateTo({
-    path: '/checkout/cmiPaymentPage',
-    query: {
-      amount: totalPriceCents.value,
-      // Pass any needed data through query params
-      userId: authStore.authInfo.uid,
-      email: email.value,
-      alias: alias.value
-    }
-  });
+  isProcessing.value = true;
+  try {
+    // Just navigate to CMI page with minimal data needed
+    navigateTo({
+      path: '/checkout/cmiPaymentPage',
+      query: {
+        amount: totalPriceCents.value,  // Pass amount in cents (standard)
+        userId: authStore.authInfo.uid,
+        email: email.value,
+        alias: alias.value
+      }
+    });
+  } catch (error) {
+    console.error('Navigation error:', error);
+    alert('Could not proceed to payment page.');
+  } finally {
+    isProcessing.value = false;
+  }
 };
 
 

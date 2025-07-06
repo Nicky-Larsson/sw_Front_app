@@ -126,9 +126,9 @@ export default defineEventHandler(async (event) => {
       totalPrice: totalPriceEuros,    // Pass the Euro value
       totalPriceCents: totalPriceCents, // Pass the Cent value
       payment_infos: {
-        payment_provider:'googlepay', // via Stripe
+        payment_provider: 'stripe',    // via Stripe
         payment_intentId: '', // to be filled after intent creation
-        payment_method: 'googlepay',
+        payment_method: 'GOOGLE_PAY',
         payment_email_id: email,
         sent_metadata: body.metadata || {},
       },

@@ -27,15 +27,20 @@
               </p>
               <p class="text-xl text-gray-500">
                 <strong>Payment:</strong>
-                {{
-                  order.payment_infos?.payment_method
-                    || order.webhook_answer?.payment_method
-                    || '-'
-                }}
+                {{ formatPaymentMethod(order.payment_infos?.payment_method || order.webhook_answer?.payment_method) }}
               </p>
               <p class="text-xl text-gray-500">
                 <strong>Total: </strong> {{ order.totalPrice }} {{ order.currency }}
               </p>
+              <!-- ADD THIS BLOCK TO SHOW PRODUCTS -->
+              <div v-if="order.checkout_infos?.items && order.checkout_infos.items.length > 0" class="mt-2">
+                <div v-for="(prod, idx) in order.checkout_infos.items" :key="idx" class="flex items-center gap-2 mb-1">
+                  <img :src="prod.thumbnail || '/placeholder.png'" alt="Product" class="w-8 h-8 object-cover rounded" />
+                  <span class="truncate">{{ prod.graphic_novel_name || prod.name || prod.title || 'Product' }}</span>
+                  <span class="text-gray-500 text-sm ml-2">{{ (prod.price / 100).toFixed(2) }} €</span>
+                </div>
+              </div>
+              <!-- END PRODUCTS BLOCK -->
             </div>
             <button
               @click="viewOrderDetails(order.id)"
@@ -125,6 +130,21 @@ const getStatusClass = (status) => {
 // Navigate to order details page
 const viewOrderDetails = (orderId) => {
   navigateTo(`/user/orders/${orderId}`);
+};
+
+// Format payment method
+const formatPaymentMethod = (method) => {
+  if (!method) return '-';
+  
+  switch (method) {
+    case 'GOOGLE_PAY': 
+    case 'GOOGLE PAY': return 'Google Pay';
+    case 'APPLE_PAY': return 'Apple Pay';
+    case 'PAYPAL': return 'PayPal';
+    case 'CMI': return 'CMI Card';
+    case 'STRIPE': return 'Stripe';
+    default: return method;
+  }
 };
 
 // Fetch orders on page load

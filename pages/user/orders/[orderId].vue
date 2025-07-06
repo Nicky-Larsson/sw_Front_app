@@ -15,7 +15,10 @@
           <strong>Status: </strong> 
           <span :class="getStatusClass(order.status)">{{ order.status || 'N/A' }}</span>
         </p>
-        <p class="mb-2 text-gray-700"><strong>Payment: </strong> {{ order.payment_infos?.payment_method || order.webhook_answer?.payment_method || '-' }}</p>
+        <p class="mb-2 text-gray-700">
+          <strong>Payment: </strong> 
+          {{ formatPaymentMethod(order.payment_infos?.payment_method || order.webhook_answer?.payment_method) }}
+        </p>
         <p class="mb-4 text-gray-700"><strong>Total:</strong> {{ formatEuro(order.totalPrice) }}</p>
         <h2 class="text-xl font-semibold mb-2">Products</h2>
         <div v-if="order.checkoutItems && order.checkoutItems.length > 0">
@@ -108,7 +111,7 @@ const fetchOrderDetails = async () => {
     if (response.success) {
         order.value = {
           ...response.order,
-          checkoutItems: Array.isArray(response.order.checkoutItems) ? response.order.checkoutItems : [],
+          checkoutItems: Array.isArray(response.order.checkout_infos?.items) ? response.order.checkout_infos.items : [],
         };
       console.log(order.value );
     } else {
@@ -141,6 +144,20 @@ const getStatusClass = (status) => {
   if (status === 'pending') return 'text-yellow-500 font-semibold';
   if (status.includes('error') || status === 'failed' || status.includes('issue')) return 'text-red-500 font-semibold';
   return 'text-gray-500'; // Default for other statuses
+};
+
+const formatPaymentMethod = (method) => {
+  if (!method) return '-';
+  
+  switch (method) {
+    case 'GOOGLE_PAY': 
+    case 'GOOGLE PAY': return 'Google Pay';
+    case 'APPLE_PAY': return 'Apple Pay';
+    case 'PAYPAL': return 'PayPal';
+    case 'CMI': return 'CMI Card';
+    case 'STRIPE': return 'Stripe';
+    default: return method;
+  }
 };
 
 onMounted(() => {

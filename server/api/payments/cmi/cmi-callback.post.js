@@ -69,8 +69,8 @@ export default defineEventHandler(async (event) => {
 
       // **Update products_access for the user**
       // const userId = orderDoc.data()?.userId; // Assuming userId is stored in the order document
-      const checkoutItems = orderDoc.data().checkoutItems || []; // Assuming checkoutItems are stored in the order document
-      await updateProductsAccess(userId, orderDoc.data().checkoutItems || []);
+      const checkoutItems = orderDoc.data().checkout_infos?.items || []; // Assuming checkoutItems are stored in the order document
+      await updateProductsAccess(userId, checkoutItems);
 
       console.log(`Products access updated for user: ${userId}`);
 

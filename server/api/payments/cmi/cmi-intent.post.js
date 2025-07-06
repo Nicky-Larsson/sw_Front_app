@@ -81,7 +81,8 @@ export default defineEventHandler(async (event) => {
         totalPrice: totalPriceEuros,    // Pass the Euro value
         totalPriceCents: totalPriceCents, // Pass the Cent value
         payment_infos: {
-          payment_method: 'cmi',
+          payment_provider:'cmi',
+          payment_method: 'CMI',
           cmiOrderId: orderId, // CMI uses your orderId
           payment_email_id: body.email,
           sent_metadata: body.metadata || {},
@@ -101,7 +102,7 @@ export default defineEventHandler(async (event) => {
         formData: {
           // amount: amountMAD, // send MAD to CMI
           amountMAD: amountMAD, 
-          amountEuros: amountEuros, 
+          amountEuros: totalPriceEuros, // ✅ FIXED - Use the existing variable
           oid: orderId,
           okUrl: `/checkout/processing?orderId=${orderId}&source=cmi`,
           failUrl: `/checkout/checkout`,
@@ -143,7 +144,7 @@ export default defineEventHandler(async (event) => {
       formData: {
         clientid: storeName,
         amountMAD: amountMAD, 
-        amountEuros: amountEuros,      
+        amountEuros: totalPriceEuros, // ✅ FIXED - Use the existing variable
         currency: currencyCode,
         oid: orderId,
         okUrl: `/checkout/processing?orderId=${orderId}&source=cmi`,

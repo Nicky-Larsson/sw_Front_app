@@ -26,7 +26,7 @@
         <div class="bg-gray-50 p-4 rounded-lg mb-6">
           <div class="flex justify-between mb-2">
             <span class="text-gray-600">Order ID:</span>
-            <span class="font-semibold">{{ orderId }}</span>
+            <span class="font-semibold">{{ orderId || 'Pending' }}</span>
           </div>
           <div class="flex justify-between mb-2">
             <span class="text-gray-600">Amount:</span>
@@ -74,116 +74,162 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, toRaw } from 'vue';
 import { useRoute, navigateTo } from '#imports';
-
-
-const userStore = useStoreUser();
-const authStore = useStoreAuth();
-
-const userHasActed = ref(false);
-const isProcessing = ref(false);
-
-// 
-// userStore.userSession.checkout
-// authStore.authInfo.uid
+import { useStoreUser } from '@/stores/storeUser';
+import { useStoreAuth } from '@/stores/storeAuth';
 
 const route = useRoute();
 const orderId = ref('');
-const amountEuros = ref('0.00');
-const amountMAD = ref('0.00');
-const originUrl = ref('');
+const amountCents = ref(parseInt(route.query.amount) || 0);
+const amountEuros = ref((amountCents.value / 100).toFixed(2));
+const amountMAD = ref((amountCents.value / 100 * 11).toFixed(2)); // Example conversion
+const isProcessing = ref(false);
+const userStore = useStoreUser();
+const authStore = useStoreAuth();
+const successUrl = ref('/checkout/processing'); // Default success URL
+const failUrl = ref('/checkout/checkout'); // Default fail URL
 
 const currentDate = computed(() => {
   return new Date().toLocaleDateString();
 });
 
 onMounted(() => {
-  const { oid, amountEuros: euros, amountMAD: mad, okUrl, failUrl } = route.query;
-  orderId.value = oid || 'TEST-ORDER';
-  amountEuros.value = euros || '0.00';
-  amountMAD.value = mad || '0.00';
-  originUrl.value = (okUrl && okUrl !== 'undefined' && okUrl !== undefined) ? okUrl : '/checkout/purchaseSuccess';
-  if (failUrl && failUrl !== 'undefined' && failUrl !== undefined) {
-    localStorage.setItem('cmi_fail_url', failUrl);
+  const { oid, amountEuros: euros, amountMAD: mad, okUrl, failUrl: fail } = route.query;
+  orderId.value = oid || '';
+  amountEuros.value = euros || amountEuros.value;
+  amountMAD.value = mad || amountMAD.value;
+  
+  // Set success URL if provided
+  if (okUrl && okUrl !== 'undefined') {
+    successUrl.value = okUrl;
+  }
+  
+  // Set fail URL if provided
+  if (fail && fail !== 'undefined') {
+    failUrl.value = fail;
+    localStorage.setItem('cmi_fail_url', fail);
   } else {
-    localStorage.removeItem('cmi_fail_url');
+    localStorage.setItem('cmi_fail_url', failUrl.value);
   }
 });
 
-const postToCallback = async (success = true) => {
-  const payload = {
-    oid: orderId.value,
-    userId: authStore.authInfo?.uid || userStore.userSession.userId,
-    chekoutItems: userStore.userSession.checkout,
-    ProcReturnCode: success ? '00' : '99',
-    Response: success ? 'Approved' : 'Declined',
-    TransId: success ? 'TEST-TRANS-ID' : undefined
-  };
-  await fetch('/api/payments/cmi/cmi-callback', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-};
-
-/* const simulateSuccess = async () => {
-  await postToCallback(true);
-  setTimeout(() => {
-    const url = (originUrl.value && originUrl.value !== 'undefined' && originUrl.value !== undefined)
-      ? originUrl.value
-      : '/checkout/purchaseSuccess';
-    navigateTo(url);
-  }, 1500);
-}; */
-
-
+// Create or get an order then simulate successful payment
 const simulateSuccess = async () => {
   isProcessing.value = true;
   try {
-    // 1. FIRST create the order with cmi-intent
-    const intentResponse = await $fetch('/api/payments/cmi/cmi-intent', {
-      method: 'POST',
-      body: {
-        userId: authStore.authInfo.uid,
-        email: route.query.email || '',
-        alias: route.query.alias || '',
-        amount: Math.round(parseFloat(route.query.amount || 0) * 100),
-        checkoutItems: toRaw(userStore.userSession.checkout || [])
+    // Only create order if we don't have one yet
+    if (!orderId.value) {
+      // 1. Create the order first
+      const response = await $fetch('/api/payments/cmi/cmi-intent', {
+        method: 'POST',
+        body: {
+          userId: route.query.userId || authStore.authInfo?.uid,
+          email: route.query.email,
+          alias: route.query.alias,
+          amount: amountCents.value,
+          checkoutItems: toRaw(userStore.userSession.checkout || []),
+          paymentSource: 'cmi'
+        }
+      });
+
+      if (!response.success && !response.orderId) {
+        throw new Error('Failed to create order');
       }
-    });
-    
-    if (!intentResponse.success) {
-      throw new Error('Failed to create order');
+
+      // 2. Save orderId
+      orderId.value = response.orderId;
     }
-    
-    orderId.value = intentResponse.orderId;
-    
-    // 2. THEN process the successful payment
+
+    // 3. Simulate payment success (call your callback endpoint)
     await postToCallback(true);
     
-    // 3. Redirect to processing page
+    // 4. Redirect to processing page
     setTimeout(() => {
-      navigateTo(`/checkout/processing?orderId=${orderId.value}&source=cmi`);
+      navigateTo(`${successUrl.value}?orderId=${orderId.value}&source=cmi`);
     }, 1500);
   } catch (error) {
-    console.error("Payment failed:", error);
-    alert('Payment failed: ' + error.message);
+    console.error('Payment failed:', error);
+    alert('Payment failed: ' + (error.message || 'Unknown error'));
   } finally {
     isProcessing.value = false;
   }
 };
 
+// Helper function to post to your callback endpoint
+const postToCallback = async (success = true) => {
+  if (!orderId.value) return; // Skip if no order ID
+  
+  const payload = {
+    oid: orderId.value,
+    userId: route.query.userId || authStore.authInfo?.uid,
+    ProcReturnCode: success ? '00' : '99',
+    Response: success ? 'Approved' : 'Declined',
+    TransId: success ? 'TEST-TRANS-ID' : undefined
+  };
+  
+  try {
+    return await $fetch('/api/payments/cmi/cmi-callback', {
+      method: 'POST', 
+      body: payload
+    });
+  } catch (e) {
+    console.error('Callback error:', e);
+  }
+};
+
+// Simulate payment failure, creating order first if needed
 const simulateFailure = async () => {
-  await postToCallback(false);
-  setTimeout(() => {
-    const failUrl = localStorage.getItem('cmi_fail_url');
-    navigateTo((failUrl && failUrl !== 'undefined' && failUrl !== undefined) ? failUrl : '/checkout/checkout');
-  }, 1500);
+  isProcessing.value = true;
+  try {
+    // Only create order if we don't have one yet
+    if (!orderId.value) {
+      // 1. Create the order first
+      const response = await $fetch('/api/payments/cmi/cmi-intent', {
+        method: 'POST',
+        body: {
+          userId: route.query.userId || authStore.authInfo?.uid,
+          email: route.query.email,
+          alias: route.query.alias,
+          amount: amountCents.value,
+          checkoutItems: toRaw(userStore.userSession.checkout || []),
+          paymentSource: 'cmi'
+        }
+      });
+
+      if (!response.success && !response.orderId) {
+        throw new Error('Failed to create order');
+      }
+
+      // 2. Save orderId
+      orderId.value = response.orderId;
+    }
+
+    // Call callback with failure
+    await postToCallback(false);
+    
+    setTimeout(() => {
+      const savedFailUrl = localStorage.getItem('cmi_fail_url');
+      navigateTo(savedFailUrl || failUrl.value);
+    }, 1500);
+  } catch (error) {
+    console.error('Process failed:', error);
+    alert('Payment process failed: ' + (error.message || 'Unknown error'));
+    navigateTo(failUrl.value);
+  } finally {
+    isProcessing.value = false;
+  }
 };
 
 const goBack = async () => {
-  await postToCallback(false);
+  if (orderId.value) {
+    try {
+      // Only call callback if we have an order
+      await postToCallback(false);
+    } catch (e) {
+      console.error('Error calling callback:', e);
+    }
+  }
   navigateTo('/checkout/checkout');
 };
 </script>

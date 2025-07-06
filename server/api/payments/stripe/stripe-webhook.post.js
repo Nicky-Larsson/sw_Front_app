@@ -30,7 +30,13 @@ export default defineEventHandler(async (event) => {
     const { metadata, id, status: paymentIntentStatus } = paymentIntent; // Renamed status
     const userId = metadata?.userId;
     const orderId = metadata?.orderId;
-    const paymentMethod = metadata?.paymentMethod || 'stripe';
+    let paymentMethod = metadata?.paymentMethod || 'stripe';
+
+    if (paymentMethod === 'GOOGLE_PAY') {
+      paymentMethod = 'GOOGLE PAY';
+    }
+
+    // const paymentMethod = 'STRIPE';
 
     console.log(`[WEBHOOK] 3. Processing event: ${stripeEvent.type}, OrderID: ${orderId}, UserID: ${userId}, PI_Status: ${paymentIntentStatus}`);
 
@@ -42,7 +48,14 @@ export default defineEventHandler(async (event) => {
         console.log(`[WEBHOOK] 5. Attempting to get order document: ${orderDocRef.path}`);
         const orderDoc = await orderDocRef.get();
         const orderDataFromDb = orderDoc.exists ? orderDoc.data() : {};
-        const checkoutItems = orderDataFromDb.checkoutItems || [];
+        // const checkoutItems = orderDataFromDb.checkoutItems || [];
+
+
+        const checkoutItems = orderDataFromDb.checkout_infos?.items || [];
+        if (checkoutItems.length === 0) {
+          console.warn(`[API_ORDER_STATUS] No items found in checkout_infos.items for order ${orderId}.`);
+        }
+
         console.log(`[WEBHOOK] 6. Order doc exists: ${orderDoc.exists}. Current DB status: ${orderDataFromDb.status}. FulfillmentCompletedAt: ${orderDataFromDb.fulfillmentCompletedAt || 'N/A'}. CheckoutItems count: ${checkoutItems.length}`);
 
         if (stripeEvent.type === 'payment_intent.succeeded') {
@@ -72,6 +85,7 @@ export default defineEventHandler(async (event) => {
                 orderId,
                 currency: paymentIntent.currency,
                 totalPrice: parseFloat((paymentIntent.amount / 100).toFixed(2)),
+                totalPriceCents: paymentIntent.amount, // <-- ADD THIS LINE
                 payment_infos: {
                   payment_method: paymentMethod,
                   payment_intent_id: paymentIntent.id,

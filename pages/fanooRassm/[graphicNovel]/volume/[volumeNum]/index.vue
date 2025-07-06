@@ -50,16 +50,14 @@
                    
                     <div class="flex items-center justify-center gap-4 my-1">
                       <!-- Show the Read button when user has access -->
-                      <button 
+                      <NuxtLink
                         v-if="hasAccess"
-                        @click="readContent()"
-                        class="px-6 py-2 rounded-lg text-white text-lg font-semibold bg-green-600"
+                        :to="`/Flipbook/${route.params.graphicNovel}/volume/${route.params.volumeNum}`"
+                        class="px-6 py-2 rounded-lg text-white text-lg font-semibold bg-green-600 flex items-center justify-center"
                       >
-                        <div class="flex items-center justify-center">
-                          <Icon name="streamline:book-reading" size="120%" />
-                          <span class="ml-2">Read</span>
-                        </div>
-                      </button>
+                        <Icon name="streamline:book-reading" size="120%" />
+                        <span class="ml-2">Read</span>
+                      </NuxtLink>
 
                       <!-- Existing Add to Cart button (only show if no access) -->
                       <button 

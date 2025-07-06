@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
         accessGranted: orderData.accessGranted || false, 
         accessLevel: orderData.accessLevel || 'none',   
         orderId,
-        orderItems: orderData.checkoutItems,
+        orderItems: orderData.checkout_infos?.items || [],
         paymentMethod: orderData.payment_infos?.payment_method || ''
       };
     }
@@ -67,11 +67,12 @@ export default defineEventHandler(async (event) => {
           await orderDocRef.update(updatePayload);
           console.log(`[API_ORDER_STATUS_UPDATE] Order ${orderId} updated to 'paid' by API. Granting access.`);
 
-          if (orderData.checkoutItems && orderData.checkoutItems.length > 0) {
-            await updateProductsAccess(userId, orderData.checkoutItems);
+          const checkoutItems = orderData.checkout_infos?.items || [];
+          if (checkoutItems.length > 0) {
+            await updateProductsAccess(userId, checkoutItems);
             console.log(`[API_ORDER_STATUS_UPDATE] Product access updated for order ${orderId} by API.`);
           } else {
-            console.warn(`[API_ORDER_STATUS] No checkoutItems found on order ${orderId} to grant access for.`);
+            console.warn(`[API_ORDER_STATUS] No items found in checkout_infos.items for order ${orderId}.`);
           }
           
           // Clear cart (optional here, as processing.vue also does it, but good for consistency)
@@ -87,7 +88,7 @@ export default defineEventHandler(async (event) => {
             accessGranted: true,
             accessLevel: orderData.accessLevel,
             orderId,
-            orderItems: orderData.checkoutItems, 
+            orderItems: orderData.checkout_infos?.items || [], // Change from orderData.checkoutItems
             paymentMethod: orderData.payment_infos?.payment_method || ''
           };
         } else if (paymentIntent.status === 'processing') {
@@ -137,14 +138,38 @@ export default defineEventHandler(async (event) => {
     }
 
     if (orderData.status === 'paid') {
-      // This log helps understand if the API is returning a 'paid' status that might have been set by the webhook. // YOUR COMMENT PRESERVED
+      // This log helps understand if the API is returning a 'paid' status that might have been set by the webhook.
       console.log(`[API_ORDER_STATUS_INFO] Order ${orderId} is 'paid'. FulfillmentCompletedAt: ${orderData.fulfillmentCompletedAt || 'N/A'}. API returning current paid status.`);
+
+      // --- START: UNIVERSAL ACCESS FALLBACK ---
+      // If accessGranted is missing or false, but status is paid, and this is NOT a Stripe order (no paymentIntentId)
+      if (
+        (!orderData.accessGranted || orderData.accessGranted === false) &&
+        !orderData.payment_infos?.paymentIntentId // Not a Stripe order
+      ) {
+        // Set accessGranted and fulfillmentCompletedAt for non-Stripe paid orders
+        await orderDocRef.update({
+          accessGranted: true,
+          accessLevel: orderData.accessLevel || 'full',
+          fulfillmentCompletedAt: orderData.fulfillmentCompletedAt || new Date().toISOString(),
+        });
+        // Update local orderData for response
+        orderData = {
+          ...orderData,
+          accessGranted: true,
+          accessLevel: orderData.accessLevel || 'full',
+          fulfillmentCompletedAt: orderData.fulfillmentCompletedAt || new Date().toISOString(),
+        };
+        console.log(`[API_ORDER_STATUS_FIX] Set accessGranted: true for non-Stripe paid order ${orderId}.`);
+      }
+      // --- END: UNIVERSAL ACCESS FALLBACK ---
+
       return {
         status: 'paid',
         accessGranted: orderData.accessGranted || false,
         accessLevel: orderData.accessLevel || 'none',
         orderId,
-        orderItems: orderData.checkoutItems, 
+        orderItems: orderData.checkout_infos?.items || [], 
         paymentMethod: orderData.payment_infos?.payment_method || ''
       };
     }

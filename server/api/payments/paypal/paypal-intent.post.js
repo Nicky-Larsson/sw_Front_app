@@ -122,6 +122,7 @@ export default defineEventHandler(async (event) => {
       now.getMinutes().toString().padStart(2, '0');
     const randomPart = Math.floor(Math.random() * 100).toString().padStart(2, '0');
     const paymentMethodCode = getPaymentMethodCode(body.paymentSource || 'paypal');
+    const paymentMethod = body.paymentSource || 'paypal';
     const orderId = `SW-${dateCode}-${timeCode}-${randomPart}-${paymentMethodCode}`;
      
 
@@ -142,7 +143,7 @@ export default defineEventHandler(async (event) => {
         payment_provider: 'paypal',
         paypal_order_id: paypalOrderId,
         sent_metadata: body.metadata || {},
-        payment_method: paymentMethodCode, // e.g., 'PP'
+        payment_method: 'PAYPAL'
       },
     });
 
@@ -172,7 +173,8 @@ export default defineEventHandler(async (event) => {
         status: 'paid',
         paidAt: new Date().toISOString(),
         webhook_answer: {
-          payment_method: 'paypal',
+          payment_provider: 'paypal',
+          payment_method: 'PAYPAL',
           captureId: capture.result.id,
           status: capture.result.status,
           payerEmail: capture.result.payer?.email_address || '',
@@ -184,7 +186,13 @@ export default defineEventHandler(async (event) => {
 
       await updateProductsAccess(userId, checkoutItems);
 
-      return { success: true, orderId: paypalOrderId };
+      // Clear the user's cart
+      await db.collection('users').doc(userId).update({
+        'userSession.checkout': []
+      });
+
+      // After successful payment and Firestore update
+      return { success: true, orderId: orderId, paymentId: paypalOrderId };
     } catch (err) {
       console.error("Server: Payment succeeded but failed to update order to paid:", err.message);
 
@@ -214,6 +222,7 @@ export default defineEventHandler(async (event) => {
       // Still return success so user gets access, but log for manual fix
       return {
         success: true,
+        orderId: orderId,
         orderId: paypalOrderId,
         warning: 'Payment succeeded, but failed to update order in Firestore. Please contact support if you have issues.',
       };

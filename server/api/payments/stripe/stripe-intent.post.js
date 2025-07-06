@@ -120,14 +120,16 @@ export default defineEventHandler(async (event) => {
     await orderDocRef.set({
       status: 'pending',
       createdAt: new Date().toISOString(),
-      checkoutItems: checkoutItems, // <-- Save the items here!
+      // checkoutItems: checkoutItems,
+      checkout_infos: { items: checkoutItems },
       totalPrice: totalPriceCents / 100,
       totalPriceCents: totalPriceCents,
       currency: 'eur', 
       accessGranted: 'pending',
       accessLevel: 'pending',
       payment_infos: {
-        payment_method: body.paymentSource || 'stripe',
+        payment_method: body.paymentSource || 'STRIPE',
+        payment_provider: 'stripe',
         paymentIntentId: paymentIntent.id,
         paymentIntentStatus: paymentIntent.status
       },
