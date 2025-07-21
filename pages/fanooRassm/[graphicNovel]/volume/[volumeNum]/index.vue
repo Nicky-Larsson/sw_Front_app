@@ -52,7 +52,10 @@
                       <!-- Show the Read button when user has access -->
                       <NuxtLink
                         v-if="hasAccess"
-                        :to="`/Flipbook/${route.params.graphicNovel}/volume/${route.params.volumeNum}`"
+                        :to="{
+                          path: `/Flipbook/${route.params.graphicNovel}/volume/${route.params.volumeNum}`,
+                          query: { lang: selectedLanguage }
+                        }"
                         class="px-6 py-2 rounded-lg text-white text-lg font-semibold bg-green-600 flex items-center justify-center"
                       >
                         <Icon name="streamline:book-reading" size="120%" />

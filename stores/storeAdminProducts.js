@@ -124,6 +124,63 @@ export const useStoreAdminProducts = defineStore('storeAdminProducts', {
       }
     },
 
+    async addProductToFirestore(productData, volumeId = 'volume_01', version = 'fr_version') {
+      const { $firestore } = useNuxtApp();
+      if (!$firestore) {
+        console.error('Firestore not available');
+        return false;
+      }
+
+      try {
+        const docRef = doc(
+          $firestore,
+          'graphic_nov2',
+          'sunset_land',
+          'volumes',
+          volumeId,
+          'product',
+          version
+        );
+        await setDoc(docRef, productData, { merge: true });
+        console.log(`Product added to Firestore at ${docRef.path}`);
+        return true;
+      } catch (error) {
+        console.error('Error adding product to Firestore:', error);
+        return false;
+      }
+    },
+
+    async addProductToSalesFirestore({ importPath, docPath }) {
+      const { $firestore } = useNuxtApp();
+      if (!$firestore) {
+        console.error('Firestore not available');
+        return false;
+      }
+
+      let productData;
+      try {
+        const data = await import(/* @vite-ignore */ importPath);
+        productData = data.graphicNovelStore && data.graphicNovelStore[0];
+        if (!productData) {
+          console.error('No product data found in imported file');
+          return false;
+        }
+      } catch (error) {
+        console.error('Failed to import product data:', error);
+        return false;
+      }
+
+      try {
+        const docRef = doc($firestore, ...docPath);
+        await setDoc(docRef, productData, { merge: true });
+        console.log(`Product added to Firestore at ${docRef.path}`);
+        return true;
+      } catch (error) {
+        console.error('Error adding product to Firestore:', error);
+        return false;
+      }
+    },
+
     init() {
       // Keep this as is
       this.getProducts();

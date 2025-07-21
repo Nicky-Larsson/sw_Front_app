@@ -35,6 +35,43 @@
         <span class="pl-2">gets Products to add</span>
         </button>
        
+      <br>
+      <button class="flex items-center gap-2 p-0" @click="storeAdminProducts.addProductToSalesFirestore({
+          importPath: '/products/tomes/tome_01.js',
+          docPath: [
+            'graphic_nov2',
+            'sunset_land',
+            'volumes',
+            'volume_01',
+            'product',
+            'fr_version'
+          ]
+        })">
+        <div class="flex justify-center items-center">
+          <Icon name="ri:database-2-line" size="150%" />
+        </div>
+        <span class="pl-2">Add Product from tome.js</span>
+      </button>
+
+
+      <button class="flex items-center gap-2 p-0" @click="storeAdminProducts.addProductToSalesFirestore({
+          importPath: '/products/chapters/chapter_01.js',
+          docPath: [
+            'graphic_nov2',
+            'sunset_land',
+            'free_content',
+            'volumes',
+            'volume_01_chapter_01',
+            'fr_version'
+          ]
+        })">
+        <div class="flex justify-center items-center">
+          <Icon name="ri:database-2-line" size="150%" />
+        </div>
+        <span class="pl-2">Add free content from chapter.js</span>
+      </button>
+
+
         <!-- {{storeProducts.products.sunset_land}} -->
 
        <div> 

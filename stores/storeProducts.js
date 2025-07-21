@@ -7,13 +7,11 @@ import { useNuxtApp } from '#app'; // Import useNuxtApp
 
 
 export const useStoreProducts = defineStore('storeProducts', {
-  state: () => {
-    return {
-      products: {},
-      productsLoaded: false,
-      lastUpdated: null
-    };
-  },
+  state: () => ({
+    products: {},
+    productsLoaded: false,
+    lastUpdated: null
+  }),
   persist: {
     // Remove explicit storage, rely on global config from nuxt.config.ts
     // storage: piniaPluginPersistedstate.localStorage(),
@@ -149,6 +147,46 @@ export const useStoreProducts = defineStore('storeProducts', {
     // Keep other commented out actions/getters as they are
     // They would also need $firestore/$firebaseAuth if uncommented
 
+    // Add this method:
+    async getProduct(novel, volumeId, lang) {
+      // Add "_version" suffix if it's not already there
+      const langVersion = lang.endsWith('_version') ? lang : `${lang}_version`;
+      
+      console.log(`Fetching product: novel=${novel}, volumeId=${volumeId}, lang=${langVersion}`);
+      
+      const { $firestore } = useNuxtApp();
+      if (!$firestore) {
+        console.error("Firestore not available");
+        return null;
+      }
+
+      try {
+        const docRef = doc(
+          $firestore, 
+          'graphic_nov2',
+          novel,
+          'volumes',
+          volumeId,
+          'product',
+          langVersion  // Use the modified language parameter
+        );
+
+        console.log(`Fetching from path: /graphic_nov2/${novel}/volumes/${volumeId}/product/${langVersion}`);
+        
+        const docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists()) {
+          console.log(`Document not found at: /graphic_nov2/${novel}/volumes/${volumeId}/product/${langVersion}`);
+          return null;
+        }
+
+        const productData = docSnap.data();
+        return productData;
+      } catch (error) {
+        console.error('Error fetching product:', error);
+        return null;
+      }
+    }
   },
   getters: {
 

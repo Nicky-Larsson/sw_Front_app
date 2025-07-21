@@ -37,7 +37,9 @@
     <slot/>
 
 
-    <bottomNav2 @orderLeftMenu="triggerLeftMenu" 
+    <!-- Hide bottomNav2 on flipbook pages -->
+    <bottomNav2 v-if="!isFlipbookPage" 
+                @orderLeftMenu="triggerLeftMenu" 
                 @orderRightMenu="triggerRightMenu"
                 @orderCloseMenu="triggerCloseMenu"/>
     
@@ -52,7 +54,17 @@
 
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+// Computed property to check if we're on a flipbook page
+const isFlipbookPage = computed(() => {
+  console.log('Current route path:', route.path);
+  // Use toLowerCase() to make the comparison case-insensitive
+  return route.path.toLowerCase().startsWith('/flipbook')
+})
 
 
 onMounted(() => {
