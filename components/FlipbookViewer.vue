@@ -49,9 +49,9 @@
       </div>
     </div>
     
-    <!-- Thumbnail Navigation -->
+    <!-- Thumbnail Navigation with CONSISTENT SPREADS -->
     <div 
-      class="absolute left-0 right-0 z-10 bg-gray-200/95 p-2 border-t-2 border-gray-400 shadow-lg transition-all duration-300"
+      class="absolute left-0 right-0 z-10 bg-gray-200/30 backdrop-blur-sm p-2 border-t-2 border-gray-400 shadow-lg transition-all duration-300"
       :class="showThumbnails ? 'bottom-[44px]' : '-bottom-[150px]'"
       v-show="showThumbnails"
     >
@@ -60,42 +60,68 @@
         :class="{'flex-row-reverse': isRTL}"
         ref="thumbnailContainer"
       >
-        <!-- Group thumbnails in pairs for flipbook mode, keep covers alone -->
-        <template v-for="(page, index) in filteredPages" :key="index">
-          <!-- For cover pages (first and last) or in sweep mode, show single thumbnail -->
+        <!-- FIRST: Front cover (always alone) -->
+        <div 
+          v-if="filteredPages.length > 0"
+          @click.stop="handleThumbnailClick(0, $event)"
+          @dblclick.stop="scrollThumbnailIntoView($event.currentTarget)"
+          class="min-w-[60px] cursor-pointer rounded overflow-hidden hover:opacity-100 opacity-90"
+          :class="{ 'ring-2 ring-blue-500': currentPage === 0 }"
+          data-page-indices="0"
+        >
+          <img :src="filteredPages[0].image_url" class="w-full h-auto object-contain" />
+          <div class="text-xs text-center bg-gray-800 text-white">1</div>
+        </div>
+        
+        <!-- MIDDLE: All inner pages as pairs (1-2, 3-4, 5-6, etc) -->
+        <template v-for="(_, i) in Array(Math.floor((filteredPages.length - 1) / 2))" :key="i">
+        
           <div 
-            v-if="isSpecialPage(index) || viewMode === 'sweep' || index % 2 !== (isRTL ? 0 : 1)"
-            @click.stop="goToPage(index)"
-            class="min-w-[60px] cursor-pointer rounded overflow-hidden"
-            :class="{ 'ring-2 ring-blue-500': currentPage === index }"
-          >
-            <img :src="page.image_url" class="w-full h-auto object-contain" />
-            <div class="text-xs text-center bg-gray-800 text-white">{{ index + 1 }}</div>
-          </div>
-          
-          <!-- For non-cover pages in flipbook mode, show double-spread thumbnails -->
-          <div 
-            v-if="viewMode === 'book' && !isSpecialPage(index) && !isSpecialPage(index-1) && !isSpecialPage(index+1) && index % 2 === (isRTL ? 0 : 1) && index < filteredPages.length - 1"
-            @click.stop="goToPage(index)"
-            class="min-w-[120px] cursor-pointer rounded overflow-hidden flex"
-            :class="{ 'ring-2 ring-blue-500': currentPage === index || currentPage === index + (isRTL ? -1 : 1) }"
-          >
-            <!-- Left page of spread -->
-            <div class="w-1/2">
-              <img 
-                :src="filteredPages[isRTL ? index + 1 : index - 1]?.image_url" 
-                class="w-full h-auto object-contain" 
-                v-if="(isRTL ? index + 1 : index - 1) >= 0 && (isRTL ? index + 1 : index - 1) < filteredPages.length"
-              />
-              <div class="text-xs text-center bg-gray-800 text-white">{{ (isRTL ? index + 1 : index - 1) + 1 }}</div>
+            @click.stop="handleThumbnailClick(i*2+1, $event)"
+            @dblclick.stop="scrollThumbnailIntoView($event.currentTarget)"
+            class="min-w-[120px] cursor-pointer rounded overflow-hidden flex hover:opacity-100 opacity-90 border border-gray-500"
+            :class="{ 'ring-4 ring-blue-500': (currentPage === i*2+1 || currentPage === i*2+2) && currentPage !== 0 && currentPage !== filteredPages.length-1 }"
+            :data-page-indices="`${i*2+1},${i*2+2}`"
+          >  
+            
+            <!-- Right page -->
+            <div class="w-1/2 bg-blue-100">
+              <div v-if="filteredPages[i*2+2 ]">
+                <img 
+                  :src="filteredPages[i*2+2 ].image_url" 
+                  class="w-full h-auto object-contain" 
+                />
+                <div class="text-xs text-center bg-gray-800 text-white">{{ i*2+2 }}</div>
+              </div>
             </div>
-            <!-- Right page of spread -->
-            <div class="w-1/2">
-              <img :src="page.image_url" class="w-full h-auto object-contain" />
-              <div class="text-xs text-center bg-gray-800 text-white">{{ index + 1 }}</div>
+            
+            <!-- Left page -->
+            <div class="w-1/2 bg-red-100">
+              <div v-if="filteredPages[i*2 +1 ]">
+                <img 
+                  :src="filteredPages[i*2 +1 ].image_url" 
+                  class="w-full h-auto object-contain" 
+                />
+                <div class="text-xs text-center bg-gray-800 text-white">{{ i*2+1 }}</div>
+              </div>
+
             </div>
+
           </div>
         </template>
+        
+        <!-- LAST: Back cover (always alone) -->
+        <div 
+          v-if="filteredPages.length > 1"
+          @click.stop="handleThumbnailClick(filteredPages.length - 1, $event)"
+          @dblclick.stop="scrollThumbnailIntoView($event.currentTarget)"
+          class="min-w-[60px] cursor-pointer rounded overflow-hidden hover:opacity-100 opacity-90"
+          :class="{ 'ring-2 ring-blue-500': currentPage === filteredPages.length - 1 }"
+          :data-page-indices="filteredPages.length - 1"
+        >
+          <img :src="filteredPages[filteredPages.length - 1].image_url" class="w-full h-auto object-contain" />
+          <div class="text-xs text-center bg-gray-800 text-white">{{ filteredPages.length-1 }}</div>
+        </div>
       </div>
     </div>
     
@@ -145,63 +171,43 @@
       <!-- Book Mode -->
       <div v-else class="h-full flex items-center justify-center">
         <!-- Book spread with proper page handling -->
-        <div class="h-full flex items-center justify-center" :class="{'flex-row-reverse': !isRTL}">
-          <!-- Special case for covers that should be alone -->
-          <template v-if="isSpecialPage(currentPage)">
-            <!-- Only show current page (no secondary page) -->
-            <div class="relative h-full w-full">
-              <img
-                v-if="getCurrentPage()"
-                :src="getCurrentPage()?.image_url"
-                :alt="`Page ${currentPage + 1}`"
-                class="max-h-full w-full object-contain"
-              />
-              <img
-                v-if="getCurrentPage()?.overlay_url"
-                :src="getCurrentPage().overlay_url"
-                class="absolute top-0 left-0 w-full h-full object-contain"
-              />
-            </div>
-          </template>
+        <div class="h-full flex items-center justify-center" :class="{'flex-row-reverse': isRTL}">
+          <!-- Display pages using the new deterministic computed properties -->
           
-          <!-- Regular spread display for normal pages -->
-          <template v-else>
-            <!-- Left/Right Page (secondary page) -->
-            <div 
-              v-if="isDesktop && getSecondaryPage()"
-              class="relative h-full"
-              :class="isDesktop ? 'w-1/2' : 'w-full'"
-            >
-              <img
-                :src="getSecondaryPage()?.image_url"
-                :alt="`Page ${getSecondaryPageIndex() + 1}`"
-                class="max-h-full w-full object-contain"
-              />
-              <img
-                v-if="getSecondaryPage()?.overlay_url"
-                :src="getSecondaryPage().overlay_url"
-                class="absolute top-0 left-0 w-full h-full object-contain"
-              />
-            </div>
-            
-            <!-- Right/Left Page (current page) -->
-            <div 
-              class="relative h-full" 
-              :class="isDesktop && getSecondaryPage() ? 'w-1/2' : 'w-full'"
-            >
-              <img
-                v-if="getCurrentPage()"
-                :src="getCurrentPage()?.image_url"
-                :alt="`Page ${currentPage + 1}`"
-                class="max-h-full w-full object-contain"
-              />
-              <img
-                v-if="getCurrentPage()?.overlay_url"
-                :src="getCurrentPage().overlay_url"
-                class="absolute top-0 left-0 w-full h-full object-contain"
-              />
-            </div>
-          </template>
+          <!-- LEFT PAGE OF SPREAD -->
+          <div 
+            class="relative h-full"
+            :class="isDesktop && rightPageOfSpread ? 'w-1/2' : 'w-full'"
+          >
+            <img
+              v-if="leftPageOfSpread"
+              :src="leftPageOfSpread.image_url"
+              :alt="`Left Page`"
+              class="max-h-full w-full object-contain"
+            />
+            <img
+              v-if="leftPageOfSpread?.overlay_url"
+              :src="leftPageOfSpread.overlay_url"
+              class="absolute top-0 left-0 w-full h-full object-contain"
+            />
+          </div>
+
+          <!-- RIGHT PAGE OF SPREAD -->
+          <div 
+            v-if="isDesktop && rightPageOfSpread"
+            class="relative h-full w-1/2"
+          >
+            <img
+              :src="rightPageOfSpread.image_url"
+              :alt="`Right Page`"
+              class="max-h-full w-full object-contain"
+            />
+            <img
+              v-if="rightPageOfSpread.overlay_url"
+              :src="rightPageOfSpread.overlay_url"
+              class="absolute top-0 left-0 w-full h-full object-contain"
+            />
+          </div>
         </div>
         
         <!-- Navigation arrows -->
@@ -248,7 +254,24 @@
         </button>
       </div>
     </div>
+
+    <div class="fixed bottom-0 right-0 z-50 w-full md:w-1/2 lg:w-1/3" style="max-height: 70vh;">
+      <div class="bg-gray-800 text-white p-2 rounded-t-lg flex justify-between items-center cursor-pointer"
+          @click="showDebugPanel = !showDebugPanel">
+        <div class="flex items-center gap-2">
+          <Icon name="mdi:code-json" class="text-yellow-400" />
+          <span>filteredPages Data</span>
+        </div>
+        <Icon :name="showDebugPanel ? 'mdi:chevron-down' : 'mdi:chevron-up'" />
+      </div>
+      
+      <div v-if="showDebugPanel" class="bg-gray-900 border border-gray-700 p-2 overflow-auto" style="max-height: 60vh;">
+        <pre class="text-xs whitespace-pre-wrap" v-html="formatJsonColored(filteredPages)"></pre>
+      </div>
+    </div>
+
   </div>
+    
 </template>
 
 <script setup>
@@ -279,6 +302,8 @@ const selectedLanguage = ref(route.query.lang || 'en');
 const isFullscreen = ref(false);
 const flipbookContainer = ref(null);
 const thumbnailContainer = ref(null);
+const showDebugPanel = ref(false);
+
 
 // Available languages
 const availableLanguages = ref(['en', 'fr', 'jp']);
@@ -307,46 +332,30 @@ const isSpecialPage = (index) => {
   const page = filteredPages.value[index];
   if (!page) return false;
   
-  // Front recto or back verso cover in flipbook mode should be alone
+  // Only front_recto and back_recto should be displayed alone
+  // OR the first and last pages (regardless of their metadata)
   return (
-    page.type === 'volume_cover' &&
-    (page.position === 'front_recto' || page.position === 'back_verso') &&
-    page.visible_if === 'flipbook'
+    (page.type === 'volume_cover' && 
+     (page.position === 'front_recto' || page.position === 'back_recto')) ||
+    index === 0 // First page is always special (front cover)
+    || index === totalPages.value - 1 // Last page is always special (back cover)
   );
 };
 
-// Determine page movement calculations based on special page status
+
+// Close thumbnails when clicking on the page content
+const closeThumbnailsOnClick = () => {
+  showThumbnails.value = false;
+};
+
 const getPageStep = (currentPageIndex, direction) => {
-  // Default step size is 1
-  let step = 1;
-  
-  // If in book mode on desktop, increase step to 2 for regular pages
-  if (viewMode.value === 'book' && isDesktop.value && !isSpecialPage(currentPageIndex)) {
-    step = 2;
+  // Special case: when moving forward from cover (page 0)
+  if (currentPageIndex === 0 && direction > 0) {
+    return 1; // Always go to page 1 (index) from cover
   }
   
-  // If moving forward from a special page or to a special page, adjust step
-  const targetIndex = currentPageIndex + (direction * step);
-  
-  // Special case: fix the navigation from cover to page 2
-  if (isSpecialPage(currentPageIndex) && direction > 0) {
-    // Always go to page 2 (index 1) when navigating forward from a cover
-    return 1 - currentPageIndex;
-  }
-  
-  // Check if destination is a special page when coming from a non-special page
-  if (!isSpecialPage(currentPageIndex) && isSpecialPage(targetIndex) && step > 1) {
-    // Reduce step to land directly on the special page
-    step -= 1;
-  }
-  
-  // Check if moving from a special page to a regular page
-  if (isSpecialPage(currentPageIndex) && !isSpecialPage(targetIndex) && step === 1 && isDesktop.value) {
-    // Increase step to land on the proper page in the spread
-    step += 1;
-  }
-  
-  return step * direction;
+  // Default step size
+  return 1 * direction;
 };
 
 // Computed properties
@@ -374,10 +383,17 @@ const toggleViewMode = () => {
 
 const toggleThumbnails = () => {
   showThumbnails.value = !showThumbnails.value;
+  
+  // After toggling, always ensure the main viewer has focus for keyboard navigation.
   if (showThumbnails.value) {
+    // If showing, wait for thumbnails to render and scroll before focusing.
     nextTick(() => {
       scrollThumbnailIntoView();
+      ensureViewerFocus();
     });
+  } else {
+    // If hiding, focus immediately.
+    ensureViewerFocus();
   }
 };
 
@@ -407,54 +423,135 @@ const toggleFullscreen = async () => {
   }
 };
 
-const goToPage = (pageNumber) => {
+const isFromClick = ref(false);
+
+// CORRECTED: goToPage function
+const goToPage = (pageNumber, isClick = false) => {
   if (pageNumber >= 0 && pageNumber < totalPages.value) {
+    // Set the flag to indicate the source of the navigation.
+    isFromClick.value = isClick;
     currentPage.value = pageNumber;
-    // Return focus to viewer container after clicking thumbnails
+  }
+};
+
+// REVISED: Restores edge-scrolling logic with selection
+const handleThumbnailClick = (pageNumber, event) => {
+  const container = thumbnailContainer.value;
+  if (!container || !event.currentTarget) {
+    goToPage(pageNumber, true); // Fallback
+    ensureViewerFocus(); // Add focus on fallback
+    return;
+  }
+
+  const allThumbs = Array.from(container.children);
+  const clickedElement = event.currentTarget;
+
+  // Find which thumbnails are currently visible inside the container
+  const containerRect = container.getBoundingClientRect();
+  const visibleThumbs = allThumbs.filter(thumb => {
+    const thumbRect = thumb.getBoundingClientRect();
+    return thumbRect.left < containerRect.right && thumbRect.right > containerRect.left;
+  });
+
+  // If there are few enough thumbnails that all are effectively "edges", 
+  // then any click should navigate and center.
+  if (visibleThumbs.length <= 4) {
+    goToPage(pageNumber, true);
     nextTick(() => {
-      ensureViewerFocus();
-      if (showThumbnails.value) {
-        scrollThumbnailIntoView();
-      }
+      scrollThumbnailIntoView();
+      ensureViewerFocus(); // Add focus here
+    });
+    return;
+  }
+
+  // Identify the two thumbnails at each edge
+  const edgeThumbs = [
+    visibleThumbs[0],
+    visibleThumbs[1],
+    visibleThumbs[visibleThumbs.length - 2],
+    visibleThumbs[visibleThumbs.length - 1]
+  ];
+
+  // Check if the clicked thumbnail is one of the edge thumbnails
+  if (edgeThumbs.includes(clickedElement)) {
+    // It's an edge thumbnail: NAVIGATE and SCROLL to center it.
+    goToPage(pageNumber, true);
+    nextTick(() => {
+      scrollThumbnailIntoView();
+      ensureViewerFocus(); // Add focus here
+    });
+  } else {
+    // It's a "middle" thumbnail: NAVIGATE ONLY. Do not scroll.
+    goToPage(pageNumber, true);
+    // Use nextTick to ensure focus is set after any potential DOM updates.
+    nextTick(() => {
+      ensureViewerFocus(); // Add focus here
     });
   }
 };
 
-// Simplified thumbnail scrolling function
+
+// NEW, ROBUST SCROLLING FUNCTION (DECOUPLED FROM CSS)
 const scrollThumbnailIntoView = () => {
   if (!showThumbnails.value || !thumbnailContainer.value) return;
-  
-  // Wait for DOM update to ensure the element is properly rendered
-  nextTick(() => {
-    // Get all thumbnails and find the current one
-    const thumbnailElements = document.querySelectorAll('.min-w-\\[60px\\].cursor-pointer');
-    if (thumbnailElements.length > currentPage.value) {
-      const currentThumbnail = thumbnailElements[currentPage.value];
-      
-      // Use the built-in scrollIntoView with behavior and alignment options
-      currentThumbnail.scrollIntoView({
-        behavior: 'smooth',
-        // Center the element horizontally
-        block: 'nearest',
-        inline: 'center'
-      });
+
+  const allThumbs = Array.from(thumbnailContainer.value.children);
+  let targetElement = null;
+
+  // Find the thumbnail that corresponds to the current page
+  for (const thumb of allThumbs) {
+    const pageIndices = (thumb.dataset.pageIndices || '').split(',').map(Number);
+    if (pageIndices.includes(currentPage.value)) {
+      targetElement = thumb;
+      break;
     }
-  });
+  }
+  
+  if (targetElement) {
+    const containerWidth = thumbnailContainer.value.offsetWidth;
+    const thumbnailWidth = targetElement.offsetWidth;
+    const thumbnailLeft = targetElement.offsetLeft;
+    
+    const scrollPosition = thumbnailLeft - (containerWidth / 2) + (thumbnailWidth / 2);
+    
+    thumbnailContainer.value.scrollTo({
+      left: scrollPosition,
+      behavior: 'smooth'
+    });
+  }
 };
 
 // Get secondary page index based on reading direction and special page rules
 const getSecondaryPageIndex = () => {
-  if (isSpecialPage(currentPage.value)) {
-    return -1; // No secondary page for special pages
-  }
+  const current = currentPage.value;
   
-  if (isRTL.value) {
-    // In RTL, the secondary page is the one after the current page (higher index)
-    return currentPage.value + 1;
-  } else {
-    // In LTR, the secondary page is the one before the current page (lower index)
-    return currentPage.value - 1;
+  // Covers and other special pages are always displayed alone.
+  if (isSpecialPage(current)) {
+    return -1;
   }
+
+  // In book mode, spreads are pairs of (odd, even) pages, e.g., (1,2), (3,4).
+  // Page 0 is the front cover and is handled by isSpecialPage.
+  
+  // If the current page is an ODD number, its partner is the NEXT page.
+  if (current % 2 === 1) {
+    const partnerIndex = current + 1;
+    // The partner cannot be the back cover (which is a special page).
+    if (partnerIndex < totalPages.value && !isSpecialPage(partnerIndex)) {
+      return partnerIndex;
+    }
+  } 
+  // If the current page is an EVEN number, its partner is the PREVIOUS page.
+  else { // current % 2 === 0
+    const partnerIndex = current - 1;
+    // The partner cannot be the front cover (page 0).
+    if (partnerIndex > 0) {
+      return partnerIndex;
+    }
+  }
+
+  // If no valid partner is found, the page is displayed alone.
+  return -1;
 };
 
 // Get pages for the book spread
@@ -475,53 +572,103 @@ const getSecondaryPage = () => {
   return null;
 };
 
-// Navigation methods with special page handling
+// NEW: Determine the left and right pages of the current spread
+const leftPageOfSpread = computed(() => {
+  const current = currentPage.value;
+  if (isSpecialPage(current)) return getCurrentPage();
+
+  const secondaryIndex = getSecondaryPageIndex();
+  if (secondaryIndex === -1) return getCurrentPage();
+
+  // In a spread, the page with the lower index is on the left (for LTR)
+  const leftIndex = Math.min(current, secondaryIndex);
+  return filteredPages.value[leftIndex];
+});
+
+const rightPageOfSpread = computed(() => {
+  const current = currentPage.value;
+  if (isSpecialPage(current)) return null; // No right page for special pages
+
+  const secondaryIndex = getSecondaryPageIndex();
+  if (secondaryIndex === -1) return null;
+
+  // The page with the higher index is on the right (for LTR)
+  const rightIndex = Math.max(current, secondaryIndex);
+  return filteredPages.value[rightIndex];
+});
+
+// Simplified navigation methods 
 const moveBack = () => {
   if (isRTL.value) {
-    // In RTL, "back" means next page (higher index)
-    const step = getPageStep(currentPage.value, 1);
-    goToPage(Math.min(currentPage.value + step, totalPages.value - 1));
+    handleRightArrow(); // In RTL, back button calls right arrow handler
   } else {
-    // In LTR, "back" means previous page (lower index)
-    const step = getPageStep(currentPage.value, -1);
-    goToPage(Math.max(currentPage.value + step, 0));
+    handleLeftArrow(); // In LTR, back button calls left arrow handler
   }
 };
 
 const moveForward = () => {
   if (isRTL.value) {
-    // In RTL, "forward" means previous page (lower index)
-    const step = getPageStep(currentPage.value, -1);
-    goToPage(Math.max(currentPage.value + step, 0));
+    handleLeftArrow(); // In RTL, forward button calls left arrow handler
   } else {
-    // In RTL, "forward" means next page (higher index)
-    const step = getPageStep(currentPage.value, 1);
-    goToPage(Math.min(currentPage.value + step, totalPages.value - 1));
+    handleRightArrow(); // In LTR, forward button calls right arrow handler
   }
 };
-
-// Handle keyboard navigation with improved focus handling
+// CORRECTED and SIMPLIFIED navigation by pairs in book mode
 const handleLeftArrow = (event) => {
-  // Prevent the event from affecting other elements
-  event.preventDefault();
+  if (event) event.preventDefault();
   
-  // Left key always moves left regardless of RTL setting
-  if (!isRTL.value) {
-    moveForward(); // In LTR, moving left means going to previous page
-  } else {
-    moveBack(); // In RTL, moving left means going to next page
+  if (viewMode.value === 'sweep') {
+    if (!isRTL.value && currentPage.value > 0) goToPage(currentPage.value - 1);
+    else if (isRTL.value && currentPage.value < totalPages.value - 1) goToPage(currentPage.value + 1);
+    return;
+  }
+  
+  // BOOK MODE
+  if (!isRTL.value) { // LTR: Left arrow means PREVIOUS
+    if (currentPage.value > 0) {
+      if (currentPage.value === 1) {
+        goToPage(0); // From page 1 to cover
+      } else {
+        goToPage(currentPage.value - 2); // Go back a spread
+      }
+    }
+  } else { // RTL: Left arrow means NEXT
+    if (currentPage.value < totalPages.value - 1) {
+      if (currentPage.value === 0) {
+        goToPage(1); // From cover to page 1
+      } else {
+        goToPage(currentPage.value + 2); // Go forward a spread
+      }
+    }
   }
 };
 
 const handleRightArrow = (event) => {
-  // Prevent the event from affecting other elements
-  event.preventDefault();
+  if (event) event.preventDefault();
   
-  // Right key always moves right regardless of RTL setting
-  if (!isRTL.value) {
-    moveBack(); // In LTR, moving right means going to next page
-  } else {
-    moveForward(); // In RTL, moving right means going to previous page
+  if (viewMode.value === 'sweep') {
+    if (!isRTL.value && currentPage.value < totalPages.value - 1) goToPage(currentPage.value + 1);
+    else if (isRTL.value && currentPage.value > 0) goToPage(currentPage.value - 1);
+    return;
+  }
+  
+  // BOOK MODE
+  if (!isRTL.value) { // LTR: Right arrow means NEXT
+    if (currentPage.value < totalPages.value - 1) {
+      if (currentPage.value === 0) {
+        goToPage(1); // From cover to page 1
+      } else {
+        goToPage(currentPage.value + 2); // Go forward a spread
+      }
+    }
+  } else { // RTL: Right arrow means PREVIOUS
+    if (currentPage.value > 0) {
+      if (currentPage.value === 1) {
+        goToPage(0); // From page 1 to cover
+      } else {
+        goToPage(currentPage.value - 2); // Go back a spread
+      }
+    }
   }
 };
 
@@ -569,10 +716,23 @@ const handleTouchStart = (e) => {
 };
 
 const handleTouchMove = (e) => {
+  // Only prevent default in sweep mode to allow scrolling in book mode with thumbnails open
   if (viewMode.value === 'sweep') {
     e.preventDefault();
+  } else {
+    // For book mode, only prevent default if it would cause page navigation in browser
+    const touchY = e.touches[0].clientY;
+    const touchX = e.touches[0].clientX;
+    const diffY = touchY - touchStartY.value;
+    const diffX = touchX - touchStartX.value;
+    
+    // If horizontal swipe is significant, prevent browser navigation
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+      e.preventDefault();
+    }
   }
 };
+
 
 // Fixed touch handling for sweep mode in smartphones
 const handleTouchEnd = (e) => {
@@ -622,6 +782,27 @@ const handleResize = () => {
   isDesktop.value = window.innerWidth >= 768;
 };
 
+// Add this function to your script section
+const formatJsonColored = (json) => {
+  const jsonString = JSON.stringify(json, null, 2);
+  
+  // Replace with HTML and color classes
+  return jsonString
+    // Strings (green)
+    .replace(/"([^"]+)":/g, '<span class="text-yellow-300">"$1"</span>:')
+    // String values (green)
+    .replace(/: "([^"]+)"/g, ': <span class="text-green-400">"$1"</span>')
+    // Numbers (blue)
+    .replace(/: ([0-9]+)/g, ': <span class="text-blue-400">$1</span>')
+    // Booleans (purple)
+    .replace(/: (true|false)/g, ': <span class="text-purple-400">$1</span>')
+    // null (red)
+    .replace(/: (null)/g, ': <span class="text-red-400">$1</span>')
+    // Brackets and braces (gray)
+    .replace(/[[\]{}]/g, '<span class="text-gray-400">$&</span>');
+};
+
+
 // Lifecycle hooks
 onMounted(() => {
   window.addEventListener('resize', handleResize);
@@ -642,13 +823,22 @@ onMounted(() => {
     });
   });
 
-  // Ensure focus returns to viewer after any navigation
-  watch(currentPage, () => {
+  // CORRECTED: Watcher for currentPage
+  watch(currentPage, (newPage, oldPage) => {
+    // This check prevents the watcher from running on initial component load
+    if (newPage === oldPage) return;
+
     nextTick(() => {
       ensureViewerFocus();
-      if (showThumbnails.value) {
+      
+      // If navigation was NOT from a click, scroll the active thumbnail into view.
+      // This is the logic for keyboard navigation.
+      if (showThumbnails.value && !isFromClick.value) {
         scrollThumbnailIntoView();
       }
+      
+      // Always reset the flag after the operation so the next navigation is handled correctly.
+      isFromClick.value = false;
     });
   });
 });
