@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-gray-100">
+  <div>
     <div v-if="loading" class="text-xl text-gray-500">Loading flipbook...</div>
     <div v-else-if="error" class="text-xl text-red-500">{{ error }}</div>
     <!-- <div v-else-if="!hasAccess" class="text-xl text-yellow-600">
@@ -10,7 +10,7 @@
       <!-- Your Flipbook component goes here -->
       <!-- <FlipbookViewer :product="product" /> -->
     <!-- </div> -->
-
+    
     <FlipbookViewer 
       v-if="!loading && !error && product" 
       :product="product" 

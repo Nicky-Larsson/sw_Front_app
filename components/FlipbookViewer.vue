@@ -1,53 +1,9 @@
 <template>
-  <div class="w-full max-w-screen relative" ref="flipbookContainer">
+  <div class="w-full max-w-screen relative flex flex-col h-screen bg-gray-900" 
+  ref="flipbookContainer"
+  @contextmenu.prevent> <!-- Add this to prevent right-click menu -->
     <!-- Top Control Bar -->
-    <div class="bg-gray-800 text-white p-2 rounded-t-lg flex justify-between items-center">
-      <!-- Left side controls -->
-      <div class="flex items-center gap-2">
-        <button @click="toggleViewMode" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600">
-          <span v-if="viewMode === 'sweep'">
-            <Icon name="mdi:book-open-variant" class="mr-1" />Switch to Book
-          </span>
-          <span v-else>
-            <Icon name="mdi:gesture-swipe-vertical" class="mr-1" />Switch to Sweep
-          </span>
-        </button>
-        
-        <span class="text-sm px-2">{{ currentPage + 1 }} / {{ filteredPages.length }}</span>
-      </div>
-      
-      <!-- Right side controls -->
-      <div class="flex items-center gap-2">
-        <!-- Fullscreen toggle button -->
-        <button @click="toggleFullscreen" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600">
-          <Icon :name="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" class="mr-1" />
-          {{ isFullscreen ? 'Exit Full' : 'Full Screen' }}
-        </button>
-        
-        <!-- Reading direction indicator -->
-        <div class="px-3 py-1 bg-gray-700 rounded">
-          <span v-if="isRTL">
-            <Icon name="mdi:format-horizontal-align-right" class="mr-1" />
-            RTL Mode
-          </span>
-          <span v-else>
-            <Icon name="mdi:format-horizontal-align-left" class="mr-1" />
-            LTR Mode
-          </span>
-        </div>
-        
-        <!-- Language selector -->
-        <select 
-          v-model="selectedLanguage" 
-          @change="changeLanguage"
-          class="bg-gray-700 rounded px-2 py-1 text-sm"
-        >
-          <option v-for="lang in availableLanguages" :key="lang" :value="lang">
-            {{ lang.toUpperCase() }}
-          </option>
-        </select>
-      </div>
-    </div>
+
     
     <!-- Thumbnail Navigation with CONSISTENT SPREADS -->
     <div 
@@ -60,75 +16,46 @@
         :class="{'flex-row-reverse': isRTL}"
         ref="thumbnailContainer"
       >
-        <!-- FIRST: Front cover (always alone) -->
-        <div 
-          v-if="filteredPages.length > 0"
-          @click.stop="handleThumbnailClick(0, $event)"
-          @dblclick.stop="scrollThumbnailIntoView($event.currentTarget)"
-          class="min-w-[60px] cursor-pointer rounded overflow-hidden hover:opacity-100 opacity-90"
-          :class="{ 'ring-2 ring-blue-500': currentPage === 0 }"
-          data-page-indices="0"
-        >
-          <img :src="filteredPages[0].image_url" class="w-full h-auto object-contain" />
-          <div class="text-xs text-center bg-gray-800 text-white">1</div>
-        </div>
-        
-        <!-- MIDDLE: All inner pages as pairs (1-2, 3-4, 5-6, etc) -->
-        <template v-for="(_, i) in Array(Math.floor((filteredPages.length - 1) / 2))" :key="i">
-        
-          <div 
-            @click.stop="handleThumbnailClick(i*2+1, $event)"
-            @dblclick.stop="scrollThumbnailIntoView($event.currentTarget)"
-            class="min-w-[120px] cursor-pointer rounded overflow-hidden flex hover:opacity-100 opacity-90 border border-gray-500"
-            :class="{ 'ring-4 ring-blue-500': (currentPage === i*2+1 || currentPage === i*2+2) && currentPage !== 0 && currentPage !== filteredPages.length-1 }"
-            :data-page-indices="`${i*2+1},${i*2+2}`"
-          >  
-            
-            <!-- Right page -->
-            <div class="w-1/2 bg-blue-100">
-              <div v-if="filteredPages[i*2+2 ]">
-                <img 
-                  :src="filteredPages[i*2+2 ].image_url" 
-                  class="w-full h-auto object-contain" 
-                />
-                <div class="text-xs text-center bg-gray-800 text-white">{{ i*2+2 }}</div>
-              </div>
+        <!-- BOOK MODE THUMBNAILS (SPREADS) -->
+        <template v-if="viewMode === 'book'">
+          <!-- Front cover -->
+          <div v-if="filteredPages.length > 0" @click.stop="handleThumbnailClick(0, $event)" class="min-w-[60px] cursor-pointer rounded overflow-hidden hover:opacity-100 opacity-90" :class="{ 'ring-4 ring-blue-500': currentPage === 0 }" data-page-indices="0">
+            <img :src="filteredPages[0].image_url" class="w-full h-auto object-contain" />
+            <div class="text-xs text-center bg-gray-800 text-white">1</div>
+          </div>
+          <!-- Inner Spreads -->
+          <template v-for="(_, i) in Array(Math.floor((filteredPages.length - 2) / 2))" :key="i">
+            <div @click.stop="handleThumbnailClick(i*2+1, $event)" class="min-w-[120px] cursor-pointer rounded overflow-hidden flex hover:opacity-100 opacity-90 border border-gray-500" :class="{ 'ring-4 ring-blue-500': (currentPage === i*2+1 || currentPage === i*2+2) }" :data-page-indices="`${i*2+1},${i*2+2}`">
+              <div class="w-1/2"><img v-if="filteredPages[i*2+2]" :src="filteredPages[i*2+2].image_url" class="w-full h-auto object-contain" /><div v-if="filteredPages[i*2+2]" class="text-xs text-center bg-gray-800 text-white">{{ i*2+3 }}</div></div>
+              <div class="w-1/2"><img v-if="filteredPages[i*2+1]" :src="filteredPages[i*2+1].image_url" class="w-full h-auto object-contain" /><div v-if="filteredPages[i*2+1]" class="text-xs text-center bg-gray-800 text-white">{{ i*2+2 }}</div></div>
             </div>
-            
-            <!-- Left page -->
-            <div class="w-1/2 bg-red-100">
-              <div v-if="filteredPages[i*2 +1 ]">
-                <img 
-                  :src="filteredPages[i*2 +1 ].image_url" 
-                  class="w-full h-auto object-contain" 
-                />
-                <div class="text-xs text-center bg-gray-800 text-white">{{ i*2+1 }}</div>
-              </div>
-
-            </div>
-
+          </template>
+          <!-- Back cover -->
+          <div v-if="filteredPages.length > 1" @click.stop="handleThumbnailClick(filteredPages.length - 1, $event)" class="min-w-[60px] cursor-pointer rounded overflow-hidden hover:opacity-100 opacity-90" :class="{ 'ring-4 ring-blue-500': currentPage === filteredPages.length - 1 }" :data-page-indices="filteredPages.length - 1">
+            <img :src="filteredPages[filteredPages.length - 1].image_url" class="w-full h-auto object-contain" />
+            <div class="text-xs text-center bg-gray-800 text-white">{{ filteredPages.length }}</div>
           </div>
         </template>
-        
-        <!-- LAST: Back cover (always alone) -->
-        <div 
-          v-if="filteredPages.length > 1"
-          @click.stop="handleThumbnailClick(filteredPages.length - 1, $event)"
-          @dblclick.stop="scrollThumbnailIntoView($event.currentTarget)"
-          class="min-w-[60px] cursor-pointer rounded overflow-hidden hover:opacity-100 opacity-90"
-          :class="{ 'ring-2 ring-blue-500': currentPage === filteredPages.length - 1 }"
-          :data-page-indices="filteredPages.length - 1"
-        >
-          <img :src="filteredPages[filteredPages.length - 1].image_url" class="w-full h-auto object-contain" />
-          <div class="text-xs text-center bg-gray-800 text-white">{{ filteredPages.length-1 }}</div>
-        </div>
+
+        <!-- SWEEP MODE THUMBNAILS (SINGLE PAGES) -->
+        <template v-else>
+          <div 
+            v-for="(page, index) in filteredPages" :key="`sweep-${index}`"
+            @click.stop="handleThumbnailClick(index, $event)"
+            class="min-w-[60px] cursor-pointer rounded overflow-hidden hover:opacity-100 opacity-90"
+            :class="{ 'ring-2 ring-blue-500': currentPage === index }"
+            :data-page-indices="`${index}`"
+          >
+            <img :src="page.image_url" class="w-full h-auto object-contain" />
+            <div class="text-xs text-center bg-gray-800 text-white">{{ index + 1 }}</div>
+          </div>
+        </template>
       </div>
     </div>
     
     <!-- Main Content Area -->
     <div 
-      class="relative bg-gray-900 overflow-hidden p-2 focus:outline-none"
-      :class="{'h-[calc(85vh-4px)]': !isFullscreen, 'h-[calc(100vh-120px)]': isFullscreen}"
+      class="relative overflow-hidden p-2 focus:outline-none flex-grow"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
@@ -211,51 +138,109 @@
         </div>
         
         <!-- Navigation arrows -->
-        <button 
-          @click="moveBack" 
-          class="absolute bg-black/50 text-white p-2 rounded-full hover:bg-black/70"
-          :class="isRTL ? 'left-2' : 'right-2'"
-          v-if="canMoveBack"
-        >
-          <Icon :name="isRTL ? 'mdi:chevron-left' : 'mdi:chevron-right'" size="24" />
-        </button>
-        
-        <button 
-          @click="moveForward" 
-          class="absolute bg-black/50 text-white p-2 rounded-full hover:bg-black/70"
-          :class="isRTL ? 'right-2' : 'left-2'"
+        <div 
+          @click.stop="moveBack" 
+          class="absolute top-0 bottom-0 flex items-center justify-center w-16 hover:bg-black/10"
+          :class="isRTL ? 'right-0' : 'left-0'"
           v-if="canMoveForward"
         >
-          <Icon :name="isRTL ? 'mdi:chevron-right' : 'mdi:chevron-left'" size="24" />
-        </button>
+          <div class="bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
+            <Icon :name="isRTL ? 'mdi:chevron-right' : 'mdi:chevron-left'" size="24" />
+          </div>
+        </div>
+        
+        <div 
+          @click.stop="moveForward" 
+          class="absolute top-0 bottom-0 flex items-center justify-center w-16 hover:bg-black/10"
+          :class="isRTL ? 'left-0' : 'right-0'"
+          v-if="canMoveBack"
+        >
+          <div class="bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
+            <Icon :name="isRTL ? 'mdi:chevron-left' : 'mdi:chevron-right'" size="24" />
+          </div>
+        </div>
       </div>
     </div>
     
-    <!-- Bottom Navigation Bar -->
-    <div class="bg-gray-800 text-white p-2 rounded-b-lg flex justify-between items-center">
-      <button @click="toggleThumbnails" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600">
-        <Icon name="mdi:image-multiple" class="mr-1" />{{ showThumbnails ? 'Hide' : 'Show' }} Thumbnails
-      </button>
-      
-      <div class="flex gap-2">
-        <button 
-          @click="moveBack" 
-          class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50" 
-          :disabled="!canMoveBack"
-        >
-          {{ isRTL ? 'Next' : 'Previous' }}
+    <!-- CORRECTED AND RE-ORGANIZED Bottom Navigation Bar -->
+    <div class="bg-gray-800 text-white p-2 rounded-b-lg flex justify-between items-center flex-wrap gap-x-4 gap-y-2">
+      <!-- Left Group: Navigation -->
+      <div class="flex items-center gap-2">
+        <button @click="toggleThumbnails" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 flex items-center" title="Show or hide thumbnails">
+          <Icon name="mdi:image-multiple" class="mr-1" />{{ showThumbnails ? 'Hide Thumbnails' : 'Show Thumbnails' }}
         </button>
+        <button @click="toggleViewMode" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 flex items-center" title="Switch between Book and Sweep mode">
+          <Icon :name="viewMode === 'sweep' ? 'mdi:book-open-variant' : 'mdi:gesture-swipe-vertical'" class="mr-1" />
+          {{ viewMode === 'sweep' ? 'Book Mode' : 'Sweep Mode' }}
+        </button>
+        
+        <!-- Custom Language Dropdown -->
+        <div class="relative">
+          <button @click.stop="showLanguageMenu = !showLanguageMenu" class="bg-gray-700 rounded px-3 py-1 text-sm flex items-center hover:bg-gray-600 w-36 justify-between" title="Change language">
+            <div class="flex items-center">
+              <img :src="languageDetails[selectedLanguage]?.image" class="w-5 h-auto mr-2 rounded-sm" />
+              <span>{{ languageDetails[selectedLanguage]?.name }}</span>
+            </div>
+            <Icon name="mdi:chevron-up" v-if="!showLanguageMenu" />
+            <Icon name="mdi:chevron-down" v-else />
+          </button>
+          <div v-if="showLanguageMenu" class="absolute bottom-full mb-2 w-full bg-gray-600 rounded shadow-lg z-20 border border-gray-500">
+            <ul>
+              <li v-for="lang in availableLanguages.filter(l => l !== selectedLanguage)" :key="lang" @click="selectLanguage(lang)" class="px-3 py-2 hover:bg-gray-500 cursor-pointer flex items-center">
+                <img :src="languageDetails[lang]?.image" class="w-5 h-auto mr-2 rounded-sm" />
+                <span>{{ languageDetails[lang]?.name }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Group: Tools & Settings -->
+      <div class="flex items-center gap-2 flex-wrap justify-end">
+
+
+        <button @click="toggleFullscreen" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 flex items-center" title="Toggle fullscreen">
+          <Icon :name="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" class="mr-1" />
+          {{ isFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}
+        </button>
+        
+
+
         <button 
           @click="moveForward" 
-          class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50"
-          :disabled="!canMoveForward"
+          class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 flex items-center" 
+          :disabled="!canMoveBack"
+          title="Go to previous page"
         >
-          {{ isRTL ? 'Previous' : 'Next' }}
+          <Icon name="mdi:chevron-left" size="18" /> Next 
         </button>
+        <span class="text-sm px-2 font-mono" title="Current page">{{ currentPage + 1 }} / {{ totalPages }}</span>
+        <button 
+          @click="moveBack" 
+          class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 flex items-center"
+          :disabled="!canMoveForward"
+          title="Go to next page"
+        >
+         Previous <Icon name="mdi:chevron-right" size="18" />
+        </button>
+
+        <div class="px-2 py-1 bg-gray-700 rounded text-sm flex items-center" title="Current reading direction">
+          <Icon :name="isRTL ? 'mdi:format-horizontal-align-left' : 'mdi:format-horizontal-align-right'" class="mr-1" />
+          {{ isRTL ? 'RTL' : 'LTR' }}
+        </div>
       </div>
     </div>
 
-    <div class="fixed bottom-0 right-0 z-50 w-full md:w-1/2 lg:w-1/3" style="max-height: 70vh;">
+    <!-- Fullscreen Close Button (only shows in fullscreen mode) -->
+    <button 
+      v-if="isFullscreen" 
+      @click="toggleFullscreen"
+      class="absolute top-2 right-2 z-50 bg-black/70 text-white p-2 rounded-full hover:bg-black/90"
+    >
+      <Icon name="mdi:close" size="24" />
+    </button>
+
+    <!-- <div class="fixed bottom-0 right-0 z-50 w-full md:w-1/2 lg:w-1/3" style="max-height: 70vh;">
       <div class="bg-gray-800 text-white p-2 rounded-t-lg flex justify-between items-center cursor-pointer"
           @click="showDebugPanel = !showDebugPanel">
         <div class="flex items-center gap-2">
@@ -268,7 +253,7 @@
       <div v-if="showDebugPanel" class="bg-gray-900 border border-gray-700 p-2 overflow-auto" style="max-height: 60vh;">
         <pre class="text-xs whitespace-pre-wrap" v-html="formatJsonColored(filteredPages)"></pre>
       </div>
-    </div>
+    </div> -->
 
   </div>
     
@@ -303,10 +288,18 @@ const isFullscreen = ref(false);
 const flipbookContainer = ref(null);
 const thumbnailContainer = ref(null);
 const showDebugPanel = ref(false);
+const showLanguageMenu = ref(false); // ADD THIS: To control the new dropdown
 
+// CORRECTED: Object to hold language details with image paths
+const languageDetails = {
+  en: { name: 'English', image: '/flags/en_flag.jpg' },
+  fr: { name: 'Français', image: '/flags/fr_flag.jpg' },
+  ar: { name: 'العربية', image: '/flags/ar_flag.jpg' },
+  ma: { name: 'الدارجة', image: '/flags/ma_flag.jpg' }
+};
 
-// Available languages
-const availableLanguages = ref(['en', 'fr', 'jp']);
+// CORRECTED: Available languages to match LeftMenu
+const availableLanguages = ref(['en', 'fr', 'ar', 'ma']);
 
 // Filter pages based on the current view mode
 const filteredPages = computed(() => {
@@ -376,23 +369,53 @@ const canMoveForward = computed(() => {
 
 // Methods
 const toggleViewMode = () => {
+  // Remember current page content before switching modes
+  const currentPageContent = filteredPages.value[currentPage.value];
+  const currentImageUrl = currentPageContent?.image_url;
+  
+  // If we're in book mode, also remember the secondary page
+  let secondaryImageUrl = null;
+  if (viewMode.value === 'book') {
+    const secondaryPage = getSecondaryPage();
+    secondaryImageUrl = secondaryPage?.image_url;
+  }
+  
+  // Toggle the view mode
   viewMode.value = viewMode.value === 'sweep' ? 'book' : 'sweep';
-  // Reset to first page when toggling view modes
-  currentPage.value = 0;
+  
+  // After switching, find the corresponding page in the new filtered list
+  nextTick(() => {
+    // First try to find an exact match for the current page's image
+    let newIndex = filteredPages.value.findIndex(p => p.image_url === currentImageUrl);
+    
+    // If no match and we had a secondary page in book mode, try that one
+    if (newIndex === -1 && secondaryImageUrl) {
+      newIndex = filteredPages.value.findIndex(p => p.image_url === secondaryImageUrl);
+    }
+    
+    // If we found a matching page, set it as current
+    if (newIndex !== -1) {
+      currentPage.value = newIndex;
+    } else {
+      // If no match was found, just keep the current index if it's valid
+      if (currentPage.value >= filteredPages.value.length) {
+        currentPage.value = 0; // Reset if out of bounds
+      }
+    }
+    
+    ensureViewerFocus();
+  });
 };
 
 const toggleThumbnails = () => {
   showThumbnails.value = !showThumbnails.value;
   
-  // After toggling, always ensure the main viewer has focus for keyboard navigation.
   if (showThumbnails.value) {
-    // If showing, wait for thumbnails to render and scroll before focusing.
     nextTick(() => {
       scrollThumbnailIntoView();
       ensureViewerFocus();
     });
   } else {
-    // If hiding, focus immediately.
     ensureViewerFocus();
   }
 };
@@ -400,27 +423,61 @@ const toggleThumbnails = () => {
 const toggleFullscreen = async () => {
   try {
     if (!isFullscreen.value) {
-      if (flipbookContainer.value.requestFullscreen) {
-        await flipbookContainer.value.requestFullscreen();
-      } else if (flipbookContainer.value.webkitRequestFullscreen) {
-        await flipbookContainer.value.webkitRequestFullscreen();
-      } else if (flipbookContainer.value.msRequestFullscreen) {
-        await flipbookContainer.value.msRequestFullscreen();
-      }
-      isFullscreen.value = true;
+      if (flipbookContainer.value.requestFullscreen) await flipbookContainer.value.requestFullscreen();
+      else if (flipbookContainer.value.webkitRequestFullscreen) await flipbookContainer.value.webkitRequestFullscreen();
+      else if (flipbookContainer.value.msRequestFullscreen) await flipbookContainer.value.msRequestFullscreen();
     } else {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        await document.webkitExitFullscreen();
-      } else if (document.msExitFullscreen) {
-        await document.msExitFullscreen();
-      }
-      isFullscreen.value = false;
+      if (document.exitFullscreen) await document.exitFullscreen();
+      else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+      else if (document.msExitFullscreen) await document.msExitFullscreen();
     }
   } catch (err) {
     console.error('Fullscreen error:', err);
   }
+  ensureViewerFocus();
+};
+
+// CORRECTED NAVIGATION LOGIC
+/* const moveBack = () => {
+  if (!canMoveBack.value) return;
+  isRTL.value ? handleLeftArrow() : handleRightArrow();
+  ensureViewerFocus();
+};
+
+const moveForward = () => {
+  if (!canMoveForward.value) return;
+  isRTL.value ? handleRightArrow() : handleLeftArrow();
+  ensureViewerFocus();
+}; */
+
+// Simplified navigation methods 
+const moveBack = () => {
+  if (isRTL.value) {
+    handleRightArrow(); // In RTL, back button calls right arrow handler
+  } else {
+    handleLeftArrow(); // In LTR, back button calls left arrow handler
+  }
+};
+
+const moveForward = () => {
+  if (isRTL.value) {
+    handleLeftArrow(); // In RTL, forward button calls left arrow handler
+  } else {
+    handleRightArrow(); // In LTR, forward button calls right arrow handler
+  }
+};
+
+
+const changeLanguage = () => {
+  router.push({ query: { ...route.query, lang: selectedLanguage.value } });
+  ensureViewerFocus();
+};
+
+// ADD THIS FUNCTION: To handle language selection from the new dropdown
+const selectLanguage = (lang) => {
+  selectedLanguage.value = lang;
+  showLanguageMenu.value = false; // Close menu after selection
+  changeLanguage(); // Update route and focus
 };
 
 const isFromClick = ref(false);
@@ -501,6 +558,8 @@ const scrollThumbnailIntoView = () => {
   // Find the thumbnail that corresponds to the current page
   for (const thumb of allThumbs) {
     const pageIndices = (thumb.dataset.pageIndices || '').split(',').map(Number);
+    
+    // Check if this thumbnail contains the current page index
     if (pageIndices.includes(currentPage.value)) {
       targetElement = thumb;
       break;
@@ -597,22 +656,7 @@ const rightPageOfSpread = computed(() => {
   return filteredPages.value[rightIndex];
 });
 
-// Simplified navigation methods 
-const moveBack = () => {
-  if (isRTL.value) {
-    handleRightArrow(); // In RTL, back button calls right arrow handler
-  } else {
-    handleLeftArrow(); // In LTR, back button calls left arrow handler
-  }
-};
 
-const moveForward = () => {
-  if (isRTL.value) {
-    handleLeftArrow(); // In RTL, forward button calls left arrow handler
-  } else {
-    handleRightArrow(); // In LTR, forward button calls right arrow handler
-  }
-};
 // CORRECTED and SIMPLIFIED navigation by pairs in book mode
 const handleLeftArrow = (event) => {
   if (event) event.preventDefault();
@@ -698,16 +742,7 @@ const ensureViewerFocus = () => {
   }
 };
 
-// Change language and update URL
-const changeLanguage = () => {
-  // Update the URL without page refresh
-  router.push({
-    query: { 
-      ...route.query,
-      lang: selectedLanguage.value 
-    }
-  });
-};
+
 
 // Touch handling for sweep and flipbook modes
 const handleTouchStart = (e) => {
@@ -853,7 +888,8 @@ onUnmounted(() => {
   if (isFullscreen.value) {
     document.exitFullscreen?.() || document.webkitExitFullscreen?.() || document.msExitFullscreen?.();
   }
-});
+}); // <-- THIS is the correct closing for onUnmounted
+
 </script>
 
 <style scoped>
@@ -890,4 +926,18 @@ onUnmounted(() => {
 /* These can be removed - already handled by Tailwind classes in template */
 /* .w-full { width: 100%; max-width: 100vw; position: relative; } */
 /* .transition-all { transition: all 0.3s ease-in-out; } */
+
+/* Prevent image selection and download */
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+/* Prevent blue highlight on double click */
+.h-full {
+  user-select: none;
+}
 </style>
