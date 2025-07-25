@@ -9,7 +9,7 @@
             <ul>
                 
                 <li class="flex justify-center items-center" @click="toggleMenu">
-                  <nuxt-link   tag="button" to="/">
+                  <nuxt-link   tag="button" >
                   <img src="/simowarch_logo.jpeg" alt="Logo Description" class="w-30 h-30 mr-20" >
                   </nuxt-link>
                 </li>

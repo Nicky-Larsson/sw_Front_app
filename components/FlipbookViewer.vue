@@ -1,19 +1,72 @@
 <template>
   <div class="w-full max-w-screen relative flex flex-col h-screen bg-gray-900" 
   ref="flipbookContainer"
-  @contextmenu.prevent> <!-- Add this to prevent right-click menu -->
+  @contextmenu.prevent>
+
+    <!-- TOP NAVIGATION ROW -->
+    <div class="absolute top-2 w-full flex justify-between z-30 px-2">
+      <!-- Left Menu Button -->
+      <button 
+        @click.stop="emitToggleLeftMenu"
+        class="bg-black/30 text-white p-2 rounded-full hover:bg-black/50 transition-colors"
+        title="Open Menu"
+      >
+        <Icon name="mdi:menu" size="24" />
+      </button>
+      
+      <!-- Center Area (empty for now) -->
+      <div></div>
+      
+      <!-- Right Side Controls -->
+      <div class="flex items-center gap-2">
+        <!-- Back Button -->
+        <button 
+          @click.stop="goBack"
+          class="bg-black/30 text-white p-2 rounded-full hover:bg-black/50 transition-colors"
+          title="Go Back"
+        >
+          <Icon name="mdi:arrow-left" size="24" />
+        </button>
+        
+        <!-- Account Button -->
+        <button 
+          @click.stop="emitToggleRightMenu"
+          class="bg-black/30 text-white p-2 rounded-full hover:bg-black/50 transition-colors"
+          title="Open Account"
+        >
+          <Icon name="mdi:account-circle-outline" size="24" />
+        </button>
+      </div>
+    </div>
+
+
+    <!-- END: Side Menu Trigger Buttons -->
+
     <!-- Top Control Bar -->
 
     
-    <!-- Thumbnail Navigation with CONSISTENT SPREADS -->
+    <!-- Thumbnail Navigation with DYNAMIC POSITION -->
     <div 
-      class="absolute left-0 right-0 z-10 bg-gray-200/30 backdrop-blur-sm p-2 border-t-2 border-gray-400 shadow-lg transition-all duration-300"
-      :class="showThumbnails ? 'bottom-[44px]' : '-bottom-[150px]'"
+      class="absolute z-10 backdrop-blur-sm p-1 shadow-lg transition-all duration-300"
+      :class="[
+        viewMode === 'sweep' 
+          ? 'left-0 top-0 bottom-0 border-r border-gray-600 w-[65px] bg-gray-800/20' 
+          : 'left-0 right-0 bottom-[44px] border-t border-gray-400 bg-gray-800/30'
+      ]"
+      :style="{ 
+        transform: showThumbnails 
+          ? 'translate(0, 0)' 
+          : (viewMode === 'sweep' ? 'translateX(-100%)' : 'translateY(100%)') 
+      }"
       v-show="showThumbnails"
     >
       <div 
-        class="flex overflow-x-auto gap-2 pb-2" 
-        :class="{'flex-row-reverse': isRTL}"
+        :class="[
+          viewMode === 'sweep' 
+            ? 'flex flex-col h-full overflow-y-auto gap-1 px-1' // Reduced gap from gap-2
+            : 'flex overflow-x-auto gap-2 pb-2',
+          {'flex-row-reverse': isRTL && viewMode === 'book'}
+        ]"
         ref="thumbnailContainer"
       >
         <!-- BOOK MODE THUMBNAILS (SPREADS) -->
@@ -26,8 +79,14 @@
           <!-- Inner Spreads -->
           <template v-for="(_, i) in Array(Math.floor((filteredPages.length - 2) / 2))" :key="i">
             <div @click.stop="handleThumbnailClick(i*2+1, $event)" class="min-w-[120px] cursor-pointer rounded overflow-hidden flex hover:opacity-100 opacity-90 border border-gray-500" :class="{ 'ring-4 ring-blue-500': (currentPage === i*2+1 || currentPage === i*2+2) }" :data-page-indices="`${i*2+1},${i*2+2}`">
-              <div class="w-1/2"><img v-if="filteredPages[i*2+2]" :src="filteredPages[i*2+2].image_url" class="w-full h-auto object-contain" /><div v-if="filteredPages[i*2+2]" class="text-xs text-center bg-gray-800 text-white">{{ i*2+3 }}</div></div>
-              <div class="w-1/2"><img v-if="filteredPages[i*2+1]" :src="filteredPages[i*2+1].image_url" class="w-full h-auto object-contain" /><div v-if="filteredPages[i*2+1]" class="text-xs text-center bg-gray-800 text-white">{{ i*2+2 }}</div></div>
+              <div class="w-1/2">
+                <img v-if="filteredPages[i*2+2]" :src="filteredPages[i*2+2].image_url" class="w-full h-auto object-contain" />
+                <div v-if="filteredPages[i*2+2]" class="text-xs text-center text-white" :class="{'bg-yellow-500': filteredPages[i*2+2].type === 'chapter_cover' && (currentPage === i*2+1 || currentPage === i*2+2), 'bg-red-800': filteredPages[i*2+2].type === 'chapter_cover' && !(currentPage === i*2+1 || currentPage === i*2+2), 'bg-gray-800': filteredPages[i*2+2].type !== 'chapter_cover'}">{{ i*2+3 }}</div>
+              </div>
+              <div class="w-1/2">
+                <img v-if="filteredPages[i*2+1]" :src="filteredPages[i*2+1].image_url" class="w-full h-auto object-contain" />
+                <div v-if="filteredPages[i*2+1]" class="text-xs text-center text-white" :class="{'bg-yellow-500': filteredPages[i*2+1].type === 'chapter_cover' && (currentPage === i*2+1 || currentPage === i*2+2), 'bg-red-800': filteredPages[i*2+1].type === 'chapter_cover' && !(currentPage === i*2+1 || currentPage === i*2+2), 'bg-gray-800': filteredPages[i*2+1].type !== 'chapter_cover'}">{{ i*2+2 }}</div>
+              </div>
             </div>
           </template>
           <!-- Back cover -->
@@ -37,25 +96,43 @@
           </div>
         </template>
 
-        <!-- SWEEP MODE THUMBNAILS (SINGLE PAGES) -->
+        <!-- SWEEP MODE THUMBNAILS (THE FIX) -->
         <template v-else>
           <div 
             v-for="(page, index) in filteredPages" :key="`sweep-${index}`"
             @click.stop="handleThumbnailClick(index, $event)"
-            class="min-w-[60px] cursor-pointer rounded overflow-hidden hover:opacity-100 opacity-90"
-            :class="{ 'ring-2 ring-blue-500': currentPage === index }"
+            class="w-full flex-shrink-0 cursor-pointer rounded overflow-hidden hover:opacity-100 opacity-90 border border-gray-500 mb-1" 
+            :class="{ 'ring-3 ring-blue-500 ring-offset-2 ring-offset-gray-800': currentPage === index }"
             :data-page-indices="`${index}`"
           >
-            <img :src="page.image_url" class="w-full h-auto object-contain" />
-            <div class="text-xs text-center bg-gray-800 text-white">{{ index + 1 }}</div>
+            <!-- Larger height -->
+            <div class="w-full h-22 bg-gray-800/40 flex items-center justify-center">
+              <img 
+                v-if="page && page.image_url" 
+                :src="page.image_url" 
+                class="max-h-full max-w-full object-contain" 
+                :alt="`Page ${index + 1}`"
+              />
+            </div>
+            <div 
+              class="text-xs text-center text-white py-1"
+              :class="{
+                'bg-yellow-500': page.type === 'chapter_cover' && currentPage === index,
+                'bg-red-800': page.type === 'chapter_cover' && currentPage !== index,
+                'bg-gray-800': page.type !== 'chapter_cover'
+              }"
+            >
+              {{ index + 1 }}
+            </div>
           </div>
         </template>
       </div>
     </div>
     
-    <!-- Main Content Area -->
+    <!-- Main Content Area -->   <!-- Changed from ml-[100px] -->
     <div 
       class="relative overflow-hidden p-2 focus:outline-none flex-grow"
+      :class="{ 'ml-[65px]': showThumbnails && viewMode === 'sweep' }"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
@@ -63,7 +140,7 @@
       @keydown.right="handleRightArrow"
       @keydown.up="handleUpArrow"
       @keydown.down="handleDownArrow"
-      @click="closeThumbnailsOnClick"
+      @click="handleViewerClick"
       tabindex="0"
       ref="viewerContainer"
     >
@@ -140,7 +217,13 @@
         <!-- Navigation arrows -->
         <div 
           @click.stop="moveBack" 
-          class="absolute top-0 bottom-0 flex items-center justify-center w-16 hover:bg-black/10"
+          @dblclick.stop
+          @mousedown="startNavRepeat('back')"
+          @mouseup="stopNavRepeat"
+          @mouseleave="stopNavRepeat"
+          @touchstart.prevent="startNavRepeat('back')"
+          @touchend="stopNavRepeat"
+          class="absolute top-0 bottom-0 flex items-center justify-center w-16 hover:bg-black/10 cursor-pointer"
           :class="isRTL ? 'right-0' : 'left-0'"
           v-if="canMoveForward"
         >
@@ -151,7 +234,13 @@
         
         <div 
           @click.stop="moveForward" 
-          class="absolute top-0 bottom-0 flex items-center justify-center w-16 hover:bg-black/10"
+          @dblclick.stop
+          @mousedown="startNavRepeat('forward')"
+          @mouseup="stopNavRepeat"
+          @mouseleave="stopNavRepeat"
+          @touchstart.prevent="startNavRepeat('forward')"
+          @touchend="stopNavRepeat"
+          class="absolute top-0 bottom-0 flex items-center justify-center w-16 hover:bg-black/10 cursor-pointer"
           :class="isRTL ? 'left-0' : 'right-0'"
           v-if="canMoveBack"
         >
@@ -163,7 +252,7 @@
     </div>
     
     <!-- CORRECTED AND RE-ORGANIZED Bottom Navigation Bar -->
-    <div class="bg-gray-800 text-white p-2 rounded-b-lg flex justify-between items-center flex-wrap gap-x-4 gap-y-2">
+    <div class="bg-gray-800 text-white p-2 rounded-b-lg flex justify-between items-center flex-wrap gap-x-4 gap-y-2 relative z-20">
       <!-- Left Group: Navigation -->
       <div class="flex items-center gap-2">
         <button @click="toggleThumbnails" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 flex items-center" title="Show or hide thumbnails">
@@ -207,7 +296,12 @@
 
 
         <button 
-          @click="moveForward" 
+          @click.stop="moveForward" 
+          @mousedown.prevent="startNavRepeat('forward')"
+          @mouseup="stopNavRepeat"
+          @mouseleave="stopNavRepeat"
+          @touchstart.prevent="startNavRepeat('forward')"
+          @touchend="stopNavRepeat"
           class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 flex items-center" 
           :disabled="!canMoveBack"
           title="Go to previous page"
@@ -216,7 +310,12 @@
         </button>
         <span class="text-sm px-2 font-mono" title="Current page">{{ currentPage + 1 }} / {{ totalPages }}</span>
         <button 
-          @click="moveBack" 
+          @click.stop="moveBack" 
+          @mousedown.prevent="startNavRepeat('back')"
+          @mouseup="stopNavRepeat"
+          @mouseleave="stopNavRepeat"
+          @touchstart.prevent="startNavRepeat('back')"
+          @touchend="stopNavRepeat"
           class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 flex items-center"
           :disabled="!canMoveForward"
           title="Go to next page"
@@ -263,6 +362,12 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
+import { useMenuActions } from '@/composables/useMenuState';
+
+
+
+const emit = defineEmits(['toggle-left-menu', 'toggle-right-menu']);
+
 const props = defineProps({
   product: Object,
   rtl: {
@@ -273,6 +378,10 @@ const props = defineProps({
 
 const router = useRouter();
 const route = useRoute();
+const menuActions = useMenuActions();
+const touchStartTime = ref(0);
+const hasMoved = ref(false);
+
 
 // State
 const currentPage = ref(0);
@@ -288,7 +397,13 @@ const isFullscreen = ref(false);
 const flipbookContainer = ref(null);
 const thumbnailContainer = ref(null);
 const showDebugPanel = ref(false);
-const showLanguageMenu = ref(false); // ADD THIS: To control the new dropdown
+const showLanguageMenu = ref(false);
+
+// --- START: New state for press-and-hold navigation ---
+const navInterval = ref(null);
+const navSpeed = ref(350); // Initial delay in ms
+const navAccelerationTimeout = ref(null);
+// --- END: New state for press-and-hold navigation ---
 
 // CORRECTED: Object to hold language details with image paths
 const languageDetails = {
@@ -336,10 +451,16 @@ const isSpecialPage = (index) => {
 };
 
 
-// Close thumbnails when clicking on the page content
-const closeThumbnailsOnClick = () => {
-  showThumbnails.value = false;
+// NEW: Single click/tap handler for the main viewer area
+const handleViewerClick = (event) => {
+  // This check prevents a "ghost click" from firing after a touch event.
+  // Clicks triggered programmatically or by touchend have event.detail === 0.
+  if (event.detail === 0) {
+    return;
+  }
+  showThumbnails.value = !showThumbnails.value;
 };
+
 
 const getPageStep = (currentPageIndex, direction) => {
   // Special case: when moving forward from cover (page 0)
@@ -353,6 +474,17 @@ const getPageStep = (currentPageIndex, direction) => {
 
 // Computed properties
 const totalPages = computed(() => filteredPages.value.length || 0);
+
+// THIS IS THE FIX: Add this watcher to automatically scroll the thumbnails.
+watch(currentPage, () => {
+  // When the current page changes for any reason,
+  // scroll the corresponding thumbnail into view if the panel is open.
+  if (showThumbnails.value) {
+    nextTick(() => {
+      scrollThumbnailIntoView();
+    });
+  }
+});
 
 // Navigation availability
 const canMoveBack = computed(() => {
@@ -437,33 +569,78 @@ const toggleFullscreen = async () => {
   ensureViewerFocus();
 };
 
-// CORRECTED NAVIGATION LOGIC
-/* const moveBack = () => {
-  if (!canMoveBack.value) return;
-  isRTL.value ? handleLeftArrow() : handleRightArrow();
-  ensureViewerFocus();
+// --- START: New functions for press-and-hold navigation ---
+const startNavRepeat = (direction) => {
+  // Clear any existing timers to prevent conflicts
+  stopNavRepeat();
+
+  // Function to perform a single navigation step
+  const navigate = () => {
+    if (direction === 'forward') {
+      moveForward();
+    } else {
+      moveBack();
+    }
+  };
+
+  // Set up the repeating interval
+  navInterval.value = setInterval(navigate, navSpeed.value);
+
+  // Set up the acceleration
+  navAccelerationTimeout.value = setTimeout(() => {
+    clearInterval(navInterval.value); // Clear the current interval
+    navSpeed.value = 100; // Set a faster speed
+    navInterval.value = setInterval(navigate, navSpeed.value); // Start a new, faster interval
+  }, 1000); // Accelerate after 1 second
 };
 
-const moveForward = () => {
-  if (!canMoveForward.value) return;
-  isRTL.value ? handleRightArrow() : handleLeftArrow();
-  ensureViewerFocus();
-}; */
+const stopNavRepeat = () => {
+  clearInterval(navInterval.value);
+  clearTimeout(navAccelerationTimeout.value);
+  navInterval.value = null;
+  navAccelerationTimeout.value = null;
+  navSpeed.value = 350; // Reset to initial speed
+};
+// --- END: New functions for press-and-hold navigation ---
 
-// Simplified navigation methods 
+// Add these at the top of your script section
+const clickSpeed = ref(1);
+const lastClickTime = ref(0);
+
+// FINAL CORRECTED VERSION: moveBack and moveForward
 const moveBack = () => {
+  // In SWEEP MODE, "Previous" should act like the UP ARROW key (navigate up).
+  if (viewMode.value === 'sweep') {
+    if (currentPage.value > 0) {
+      goToPage(currentPage.value - 1);
+    }
+    return; // Stop execution here for sweep mode
+  }
+
+  // In BOOK MODE, the original, working logic is preserved.
+  // "Previous" button logic for book mode (RTL/LTR aware).
   if (isRTL.value) {
-    handleRightArrow(); // In RTL, back button calls right arrow handler
+    handleRightArrow(); // In RTL, "Previous" is the right arrow
   } else {
-    handleLeftArrow(); // In LTR, back button calls left arrow handler
+    handleLeftArrow(); // In LTR, "Previous" is the left arrow
   }
 };
 
 const moveForward = () => {
+  // In SWEEP MODE, "Next" should act like the DOWN ARROW key (navigate down).
+  if (viewMode.value === 'sweep') {
+    if (currentPage.value < totalPages.value - 1) {
+      goToPage(currentPage.value + 1);
+    }
+    return; // Stop execution here for sweep mode
+  }
+
+  // In BOOK MODE, the original, working logic is preserved.
+  // "Next" button logic for book mode (RTL/LTR aware).
   if (isRTL.value) {
-    handleLeftArrow(); // In RTL, forward button calls left arrow handler
+    handleLeftArrow(); // In RTL, "Next" is the left arrow
   } else {
-    handleRightArrow(); // In LTR, forward button calls right arrow handler
+    handleRightArrow(); // In LTR, "Next" is the right arrow
   }
 };
 
@@ -555,11 +732,8 @@ const scrollThumbnailIntoView = () => {
   const allThumbs = Array.from(thumbnailContainer.value.children);
   let targetElement = null;
 
-  // Find the thumbnail that corresponds to the current page
   for (const thumb of allThumbs) {
     const pageIndices = (thumb.dataset.pageIndices || '').split(',').map(Number);
-    
-    // Check if this thumbnail contains the current page index
     if (pageIndices.includes(currentPage.value)) {
       targetElement = thumb;
       break;
@@ -567,16 +741,31 @@ const scrollThumbnailIntoView = () => {
   }
   
   if (targetElement) {
-    const containerWidth = thumbnailContainer.value.offsetWidth;
-    const thumbnailWidth = targetElement.offsetWidth;
-    const thumbnailLeft = targetElement.offsetLeft;
-    
-    const scrollPosition = thumbnailLeft - (containerWidth / 2) + (thumbnailWidth / 2);
-    
-    thumbnailContainer.value.scrollTo({
-      left: scrollPosition,
-      behavior: 'smooth'
-    });
+    if (viewMode.value === 'sweep') {
+      // VERTICAL SCROLLING for sweep mode
+      const containerHeight = thumbnailContainer.value.offsetHeight;
+      const thumbnailHeight = targetElement.offsetHeight;
+      const thumbnailTop = targetElement.offsetTop;
+      
+      const scrollPosition = thumbnailTop - (containerHeight / 2) + (thumbnailHeight / 2);
+      
+      thumbnailContainer.value.scrollTo({
+        top: scrollPosition,
+        behavior: 'smooth'
+      });
+    } else {
+      // HORIZONTAL SCROLLING for book mode (your existing code)
+      const containerWidth = thumbnailContainer.value.offsetWidth;
+      const thumbnailWidth = targetElement.offsetWidth;
+      const thumbnailLeft = targetElement.offsetLeft;
+      
+      const scrollPosition = thumbnailLeft - (containerWidth / 2) + (thumbnailWidth / 2);
+      
+      thumbnailContainer.value.scrollTo({
+        left: scrollPosition,
+        behavior: 'smooth'
+      });
+    }
   }
 };
 
@@ -661,13 +850,17 @@ const rightPageOfSpread = computed(() => {
 const handleLeftArrow = (event) => {
   if (event) event.preventDefault();
   
+  // For SWEEP MODE: LEFT arrow ONLY controls thumbnails
   if (viewMode.value === 'sweep') {
-    if (!isRTL.value && currentPage.value > 0) goToPage(currentPage.value - 1);
-    else if (isRTL.value && currentPage.value < totalPages.value - 1) goToPage(currentPage.value + 1);
+    // In sweep mode: LEFT ONLY closes thumbnails. It NEVER navigates.
+    if (showThumbnails.value) {
+      showThumbnails.value = false;
+    }
+    // IMPORTANT: Stop all further execution for sweep mode.
     return;
   }
   
-  // BOOK MODE
+  // BOOK MODE NAVIGATION - This part is unchanged and only runs if not in sweep mode.
   if (!isRTL.value) { // LTR: Left arrow means PREVIOUS
     if (currentPage.value > 0) {
       if (currentPage.value === 1) {
@@ -690,13 +883,20 @@ const handleLeftArrow = (event) => {
 const handleRightArrow = (event) => {
   if (event) event.preventDefault();
   
+  // For SWEEP MODE: RIGHT arrow ONLY controls thumbnails
   if (viewMode.value === 'sweep') {
-    if (!isRTL.value && currentPage.value < totalPages.value - 1) goToPage(currentPage.value + 1);
-    else if (isRTL.value && currentPage.value > 0) goToPage(currentPage.value - 1);
+    // In sweep mode: RIGHT ONLY opens thumbnails. It NEVER navigates.
+    if (!showThumbnails.value) {
+      showThumbnails.value = true;
+      nextTick(() => {
+        scrollThumbnailIntoView();
+      });
+    }
+    // IMPORTANT: Stop all further execution for sweep mode.
     return;
   }
   
-  // BOOK MODE
+  // BOOK MODE NAVIGATION - This part is unchanged and only runs if not in sweep mode.
   if (!isRTL.value) { // LTR: Right arrow means NEXT
     if (currentPage.value < totalPages.value - 1) {
       if (currentPage.value === 0) {
@@ -717,21 +917,35 @@ const handleRightArrow = (event) => {
 };
 
 // Up/down keys only work in sweep mode
+// CORRECTED: Up/Down arrow handlers
 const handleUpArrow = (event) => {
-  // Prevent default scrolling behavior
   event.preventDefault();
   
   if (viewMode.value === 'sweep') {
-    moveBack(); // Up arrow should go to previous page (up the document)
+    // In sweep mode: UP ONLY navigates to the previous page.
+    if (currentPage.value > 0) {
+      goToPage(currentPage.value - 1);
+    }
+  } else {
+    // In book mode: UP ONLY shows thumbnails.
+    showThumbnails.value = true;
+    nextTick(() => {
+      scrollThumbnailIntoView();
+    });
   }
 };
 
 const handleDownArrow = (event) => {
-  // Prevent default scrolling behavior
   event.preventDefault();
   
   if (viewMode.value === 'sweep') {
-    moveForward(); // Down arrow should go to next page (down the document)
+    // In sweep mode: DOWN ONLY navigates to the next page.
+    if (currentPage.value < totalPages.value - 1) {
+      goToPage(currentPage.value + 1);
+    }
+  } else {
+    // In book mode: DOWN ONLY hides thumbnails.
+    showThumbnails.value = false;
   }
 };
 
@@ -748,55 +962,83 @@ const ensureViewerFocus = () => {
 const handleTouchStart = (e) => {
   touchStartY.value = e.touches[0].clientY;
   touchStartX.value = e.touches[0].clientX;
+  touchStartTime.value = Date.now();
+  hasMoved.value = false;
 };
 
 const handleTouchMove = (e) => {
-  // Only prevent default in sweep mode to allow scrolling in book mode with thumbnails open
+  // Track if user has moved finger
+  const touchY = e.touches[0].clientY;
+  const touchX = e.touches[0].clientX;
+  const diffY = touchY - touchStartY.value;
+  const diffX = touchX - touchStartX.value;
+  
+  if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
+    hasMoved.value = true;
+  }
+  
+  // Only prevent default in sweep mode or for horizontal swipes
   if (viewMode.value === 'sweep') {
     e.preventDefault();
-  } else {
-    // For book mode, only prevent default if it would cause page navigation in browser
-    const touchY = e.touches[0].clientY;
-    const touchX = e.touches[0].clientX;
-    const diffY = touchY - touchStartY.value;
-    const diffX = touchX - touchStartX.value;
-    
-    // If horizontal swipe is significant, prevent browser navigation
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
-      e.preventDefault();
-    }
+  } else if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+    e.preventDefault(); // Prevent horizontal browser navigation
   }
 };
 
-
-// Fixed touch handling for sweep mode in smartphones
 const handleTouchEnd = (e) => {
   const touchEndY = e.changedTouches[0].clientY;
   const touchEndX = e.changedTouches[0].clientX;
   const diffY = touchEndY - touchStartY.value;
   const diffX = touchEndX - touchStartX.value;
+  const touchDuration = Date.now() - touchStartTime.value;
   
-  // Determine if horizontal or vertical swipe is more dominant
-  if (Math.abs(diffY) > Math.abs(diffX)) {
-    // Vertical swipe - only handle in sweep mode
-    if (viewMode.value === 'sweep' && Math.abs(diffY) > 50) {
-      if (diffY > 0) {
-        // Swipe down - natural scrolling direction
-        moveForward(); // Go to next page (down the document)
-      } else {
-        // Swipe up - natural scrolling direction
-        moveBack(); // Go to previous page (up the document)
+  // Handle tap (touch without movement)
+  if (!hasMoved.value && touchDuration < 300) {
+    showThumbnails.value = !showThumbnails.value;
+    return;
+  }
+  
+  // Check for dominant swipe direction
+  const isVerticalSwipe = Math.abs(diffY) > Math.abs(diffX);
+  const isHorizontalSwipe = Math.abs(diffX) > Math.abs(diffY);
+
+  // --- SWEEP MODE LOGIC ---
+  if (viewMode.value === 'sweep') {
+    if (isVerticalSwipe && Math.abs(diffY) > 50) {
+      // Vertical swipe in sweep mode: NAVIGATE pages directly.
+      if (diffY > 0 && currentPage.value > 0) {
+        // Swipe DOWN, go to PREVIOUS page
+        goToPage(currentPage.value - 1);
+      } else if (diffY < 0 && currentPage.value < totalPages.value - 1) {
+        // Swipe UP, go to NEXT page
+        goToPage(currentPage.value + 1);
+      }
+    } else if (isHorizontalSwipe && Math.abs(diffX) > 50) {
+      // Horizontal swipe in sweep mode: control thumbnails.
+      if (diffX > 0) { // Swipe RIGHT
+        showThumbnails.value = true;
+      } else { // Swipe LEFT
+        showThumbnails.value = false;
       }
     }
-  } else {
-    // Horizontal swipe
-    if (Math.abs(diffX) > 50) {
-      if (diffX > 0) {
-        // Swipe right
-        handleRightArrow(new Event('keydown'));
-      } else {
-        // Swipe left
+    return; // Stop after handling sweep mode
+  }
+
+  // --- BOOK MODE LOGIC ---
+  if (viewMode.value === 'book') {
+    if (isVerticalSwipe && Math.abs(diffY) > 50) {
+      // Vertical swipe in book mode: control thumbnails.
+      if (diffY < 0) { // Swipe UP
+        showThumbnails.value = true;
+      } else { // Swipe DOWN
+        showThumbnails.value = false;
+      }
+    } else if (isHorizontalSwipe && Math.abs(diffX) > 50) {
+      // Horizontal swipe in book mode: NAVIGATE pages.
+      if (diffX > 0) { // Swipe RIGHT
         handleLeftArrow(new Event('keydown'));
+      } else { // Swipe LEFT
+        handleRightArrow(new Event('keydown'));
       }
     }
   }
@@ -838,6 +1080,42 @@ const formatJsonColored = (json) => {
 };
 
 
+/* 
+const emitToggleLeftMenu = () => {
+  console.log("Toggling left menu");
+    // null (red)
+    .replace(/: (null)/g, ': <span class="text-red-400">$1</span>')
+    // Brackets and braces (gray)
+    .replace(/[[\]{}]/g, '<span class="text-gray-400">$&</span>');
+};
+
+
+/* 
+const emitToggleLeftMenu = () => {
+  console.log("Toggling left menu");
+  emit('toggle-left-menu');
+};
+
+const emitToggleRightMenu = () => {
+  emit('toggle-right-menu');
+};
+*/
+
+// Replace your toggle functions with these:
+const emitToggleLeftMenu = () => {
+  console.log("Toggling left menu from FlipbookViewer");
+  menuActions.toggleLeftMenu();
+};
+
+const emitToggleRightMenu = () => {
+  console.log("Toggling right menu from FlipbookViewer");
+  menuActions.toggleRightMenu();
+};
+
+
+const goBack = () => {
+  router.go(-1); // Go back to previous page in browser history
+};
 // Lifecycle hooks
 onMounted(() => {
   window.addEventListener('resize', handleResize);
@@ -846,6 +1124,13 @@ onMounted(() => {
   document.addEventListener('mozfullscreenchange', handleFullscreenChange);
   document.addEventListener('MSFullscreenChange', handleFullscreenChange);
   
+
+  // Add this near the beginning of onMounted
+  console.log("Filtered Pages:", filteredPages.value);
+  filteredPages.value.forEach((page, index) => {
+    console.log(`Page ${index} image URL:`, page.image_url);
+  });
+
   // Ensure viewer has focus initially
   nextTick(() => {
     ensureViewerFocus();
@@ -859,23 +1144,6 @@ onMounted(() => {
   });
 
   // CORRECTED: Watcher for currentPage
-  watch(currentPage, (newPage, oldPage) => {
-    // This check prevents the watcher from running on initial component load
-    if (newPage === oldPage) return;
-
-    nextTick(() => {
-      ensureViewerFocus();
-      
-      // If navigation was NOT from a click, scroll the active thumbnail into view.
-      // This is the logic for keyboard navigation.
-      if (showThumbnails.value && !isFromClick.value) {
-        scrollThumbnailIntoView();
-      }
-      
-      // Always reset the flag after the operation so the next navigation is handled correctly.
-      isFromClick.value = false;
-    });
-  });
 });
 
 onUnmounted(() => {
@@ -889,6 +1157,7 @@ onUnmounted(() => {
     document.exitFullscreen?.() || document.webkitExitFullscreen?.() || document.msExitFullscreen?.();
   }
 }); // <-- THIS is the correct closing for onUnmounted
+
 
 </script>
 
@@ -940,4 +1209,25 @@ img {
 .h-full {
   user-select: none;
 }
+
+/* Move scrollbar to left side for sweep mode */
+.flex-col.overflow-y-auto::-webkit-scrollbar {
+  width: 6px; /* Set scrollbar width */
+  position: absolute;
+  left: 0; /* Position scrollbar on left */
+}
+
+.flex-col.overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(107, 114, 128, 0.5);
+  border-radius: 3px;
+}
+
+.flex-col.overflow-y-auto {
+  direction: rtl; /* This moves scrollbar to left */
+}
+
+.flex-col.overflow-y-auto > * {
+  direction: ltr; /* Reset direction for content */
+}
+
 </style>
