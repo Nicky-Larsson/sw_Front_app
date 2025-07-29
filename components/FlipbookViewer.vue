@@ -50,7 +50,8 @@
       class="absolute z-10 backdrop-blur-sm p-1 shadow-lg transition-all duration-300"
       :class="[
         viewMode === 'sweep' 
-          ? 'left-0 top-0 bottom-0 border-r border-gray-600 w-[65px] bg-gray-800/20' 
+          // CHANGED: Increased width from w-[65px] to w-[90px] for a wider bar.
+          ? 'left-0 top-0 bottom-0 border-r border-gray-600 w-[90px] bg-gray-800/20' 
           : 'left-0 right-0 bottom-[44px] border-t border-gray-400 bg-gray-800/30'
       ]"
       :style="{ 
@@ -63,11 +64,12 @@
       <div 
         :class="[
           viewMode === 'sweep' 
-            ? 'flex flex-col h-full overflow-y-auto gap-1 px-1' // Reduced gap from gap-2
+            ? 'flex flex-col h-full overflow-y-auto gap-1 px-1'
             : 'flex overflow-x-auto gap-2 pb-2',
           {'flex-row-reverse': isRTL && viewMode === 'book'}
         ]"
         ref="thumbnailContainer"
+        @wheel="handleThumbnailWheel"
       >
         <!-- BOOK MODE THUMBNAILS (SPREADS) -->
         <template v-if="viewMode === 'book'">
@@ -106,7 +108,8 @@
             :data-page-indices="`${index}`"
           >
             <!-- Larger height -->
-            <div class="w-full h-22 bg-gray-800/40 flex items-center justify-center">
+            <!-- CHANGED: Increased height from h-22 to h-28 for bigger images. -->
+            <div class="w-full h-28 bg-gray-800/40 flex items-center justify-center">
               <img 
                 v-if="page && page.image_url" 
                 :src="page.image_url" 
@@ -129,10 +132,9 @@
       </div>
     </div>
     
-    <!-- Main Content Area -->   <!-- Changed from ml-[100px] -->
+    <!-- Main Content Area -->
     <div 
       class="relative overflow-hidden p-2 focus:outline-none flex-grow"
-      :class="{ 'ml-[65px]': showThumbnails && viewMode === 'sweep' }"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
@@ -140,17 +142,33 @@
       @keydown.right="handleRightArrow"
       @keydown.up="handleUpArrow"
       @keydown.down="handleDownArrow"
+      @keydown.tab="handleTabSwitch"
+      @keydown.space="handleTabSwitch"
       @click="handleViewerClick"
+      @wheel="handleWheel"
       tabindex="0"
       ref="viewerContainer"
     >
-      <!-- Sweep Mode (Vertical Scrolling) -->
-      <div v-if="viewMode === 'sweep'" class="h-full overflow-y-auto snap-y snap-mandatory">
+      
+        <!-- Sweep Mode V2 (Vertical Scrolling) -->
+        <div 
+          v-if="viewMode === 'sweep'" 
+          class="h-full overflow-y-auto smooth-scroll"
+          :class="{ 'is-dragging': isDragging || isPanning }"
+          @scroll="handleSweepScroll"
+          @mousedown="handleMouseDown"          
+          @mousemove="handleDragMove"           
+          @mouseup="handleDragEnd"              
+          @mouseleave="handleDragEnd"   
+          @touchstart="handleSweepTouchStart"
+          @touchmove="handleSweepTouchMove"
+          @touchend="handleSweepTouchEnd"
+        >
         <div
           v-for="(page, index) in filteredPages"
           :key="index"
-          class="h-full flex flex-col items-center justify-center snap-start"
-          :class="{ 'hidden': index !== currentPage }"
+          class="h-full flex flex-col items-center justify-center mb-1"
+          :id="`sweep-page-${index}`"
         >
           <div class="relative h-full w-full flex items-center justify-center">
             <!-- Base image -->
@@ -159,6 +177,7 @@
               :src="page.image_url"
               :alt="`Page ${index + 1}`"
               class="max-h-full max-w-full object-contain"
+              :style="{ pointerEvents: 'auto' }" 
             />
             
             <!-- Text overlay -->
@@ -171,11 +190,12 @@
           </div>
         </div>
       </div>
-      
+
+
       <!-- Book Mode -->
       <div v-else class="h-full flex items-center justify-center">
-        <!-- Book spread with proper page handling -->
-        <div class="h-full flex items-center justify-center" :class="{'flex-row-reverse': isRTL}">
+        <!-- Book distance spread with proper page handling -->
+        <div class="h-full flex items-center justify-center gap-x-10" :class="{'flex-row-reverse': isRTL}">
           <!-- Display pages using the new deterministic computed properties -->
           
           <!-- LEFT PAGE OF SPREAD -->
@@ -221,33 +241,43 @@
           @mousedown="startNavRepeat('back')"
           @mouseup="stopNavRepeat"
           @mouseleave="stopNavRepeat"
-          @touchstart.prevent="startNavRepeat('back')"
+          @touchstart.stop.prevent="startNavRepeat('back')" 
           @touchend="stopNavRepeat"
-          class="absolute top-0 bottom-0 flex items-center justify-center w-16 hover:bg-black/10 cursor-pointer"
+          @touchcancel="stopNavRepeat" 
+          class="absolute top-0 bottom-0 flex items-center justify-center w-32 hover:bg-black/20 cursor-pointer transition-colors" 
           :class="isRTL ? 'right-0' : 'left-0'"
           v-if="canMoveForward"
         >
-          <div class="bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
-            <Icon :name="isRTL ? 'mdi:chevron-right' : 'mdi:chevron-left'" size="24" />
+          <div class="bg-black/70 text-white p-6 rounded-full hover:bg-black/90 shadow-lg">
+            <Icon :name="isRTL ? 'mdi:chevron-right' : 'mdi:chevron-left'" size="48" />
           </div>
         </div>
-        
+
         <div 
           @click.stop="moveForward" 
           @dblclick.stop
           @mousedown="startNavRepeat('forward')"
           @mouseup="stopNavRepeat"
           @mouseleave="stopNavRepeat"
-          @touchstart.prevent="startNavRepeat('forward')"
+          @touchstart.stop.prevent="startNavRepeat('forward')" 
           @touchend="stopNavRepeat"
-          class="absolute top-0 bottom-0 flex items-center justify-center w-16 hover:bg-black/10 cursor-pointer"
+          @touchcancel="stopNavRepeat" 
+          class="absolute top-0 bottom-0 flex items-center justify-center w-32 hover:bg-black/20 cursor-pointer transition-colors" 
           :class="isRTL ? 'left-0' : 'right-0'"
           v-if="canMoveBack"
         >
-          <div class="bg-black/50 text-white p-2 rounded-full hover:bg-black/70">
-            <Icon :name="isRTL ? 'mdi:chevron-left' : 'mdi:chevron-right'" size="24" />
+          <div class="bg-black/70 text-white p-6 rounded-full hover:bg-black/90 shadow-lg">
+            <Icon :name="isRTL ? 'mdi:chevron-left' : 'mdi:chevron-right'" size="48" />
           </div>
         </div>
+
+      <div 
+        v-if="isPanning"
+        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 bg-black/50 text-white p-4 rounded-full pointer-events-none flex items-center justify-center"
+        title="Panning Mode Active"
+      >
+        <Icon name="mdi:arrow-all" size="48" />
+      </div>        
       </div>
     </div>
     
@@ -255,8 +285,15 @@
     <div class="bg-gray-800 text-white p-2 rounded-b-lg flex justify-between items-center flex-wrap gap-x-4 gap-y-2 relative z-20">
       <!-- Left Group: Navigation -->
       <div class="flex items-center gap-2">
-        <button @click="toggleThumbnails" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 flex items-center" title="Show or hide thumbnails">
-          <Icon name="mdi:image-multiple" class="mr-1" />{{ showThumbnails ? 'Hide Thumbnails' : 'Show Thumbnails' }}
+        <button
+          @click="toggleThumbnails"
+          class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 flex items-center justify-center w-45"  
+          title="Show or hide thumbnails"
+        >
+          <Icon name="mdi:image-multiple" class="mr-1" />
+          <span class="block w-full text-center truncate">
+            {{ showThumbnails ? 'Hide Thumbnails' : 'Show Thumbnails' }}
+          </span>
         </button>
         <button @click="toggleViewMode" class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 flex items-center" title="Switch between Book and Sweep mode">
           <Icon :name="viewMode === 'sweep' ? 'mdi:book-open-variant' : 'mdi:gesture-swipe-vertical'" class="mr-1" />
@@ -296,6 +333,7 @@
 
 
         <button 
+          data-nav-arrow 
           @click.stop="moveForward" 
           @mousedown.prevent="startNavRepeat('forward')"
           @mouseup="stopNavRepeat"
@@ -309,7 +347,8 @@
           <Icon name="mdi:chevron-left" size="18" /> Next 
         </button>
         <span class="text-sm px-2 font-mono" title="Current page">{{ currentPage + 1 }} / {{ totalPages }}</span>
-        <button 
+        <button
+          data-nav-arrow 
           @click.stop="moveBack" 
           @mousedown.prevent="startNavRepeat('back')"
           @mouseup="stopNavRepeat"
@@ -382,6 +421,24 @@ const menuActions = useMenuActions();
 const touchStartTime = ref(0);
 const hasMoved = ref(false);
 
+const isDragging = ref(false);
+const lastClientY = ref(0);
+const grabCursorActive = ref(false);
+
+// --- START: New state for Inertia Scrolling ---
+const velocityY = ref(0);
+const lastDragTime = ref(0);
+const inertiaFrameId = ref(null);
+const touchInProgress = ref(false); // To prevent conflict between touch and mouse
+// --- END: New state for Inertia Scrolling ---
+
+// --- START: New state for Wheel and Pan controls ---
+const wheelDebounceTimer = ref(null);
+const isPanning = ref(false);
+const panLastY = ref(0);
+// --- END: New state for Wheel and Pan controls ---
+
+
 
 // State
 const currentPage = ref(0);
@@ -403,7 +460,12 @@ const showLanguageMenu = ref(false);
 const navInterval = ref(null);
 const navSpeed = ref(350); // Initial delay in ms
 const navAccelerationTimeout = ref(null);
+
+
+
 // --- END: New state for press-and-hold navigation ---
+
+
 
 // CORRECTED: Object to hold language details with image paths
 const languageDetails = {
@@ -454,11 +516,373 @@ const isSpecialPage = (index) => {
 // NEW: Single click/tap handler for the main viewer area
 const handleViewerClick = (event) => {
   // This check prevents a "ghost click" from firing after a touch event.
-  // Clicks triggered programmatically or by touchend have event.detail === 0.
-  if (event.detail === 0) {
+  if (Date.now() - touchStartTime.value < 500) {
     return;
   }
-  showThumbnails.value = !showThumbnails.value;
+
+  // Also, if the click was actually the end of a drag, do nothing.
+  if (isDragging.value) {
+    return;
+  }
+
+  // Check if click was on navigation arrows in book mode
+  if (viewMode.value === 'book') {
+    const target = event.target;
+    const isNavArrow = target.closest('[data-nav-arrow]');
+    
+    if (!isNavArrow) {
+      // Toggle thumbnails on any click (including images) in book mode
+      showThumbnails.value = !showThumbnails.value;
+    }
+    return;
+  }
+  
+  // SWEEP MODE LOGIC remains unchanged
+  if (viewMode.value === 'sweep') {
+    if (event.target.tagName !== 'IMG') {
+      showThumbnails.value = !showThumbnails.value;
+    }
+  }
+};
+
+
+const handleSweepScroll = (e) => {
+  if (viewMode.value !== 'sweep') return;
+  
+  // Find which page is most visible in the viewport
+  const container = e.target;
+  const containerRect = container.getBoundingClientRect();
+  const containerCenter = containerRect.top + (containerRect.height / 2);
+  
+  // Find the page element whose center is closest to the container's center
+  let closestPage = null;
+  let closestDistance = Infinity;
+  
+  for (let i = 0; i < filteredPages.value.length; i++) {
+    const pageEl = document.getElementById(`sweep-page-${i}`);
+    if (!pageEl) continue;
+    
+    const pageRect = pageEl.getBoundingClientRect();
+    const pageCenter = pageRect.top + (pageRect.height / 2);
+    const distance = Math.abs(pageCenter - containerCenter);
+    
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestPage = i;
+    }
+  }
+  
+  // Update currentPage if needed, but don't force scroll
+  if (closestPage !== null && closestPage !== currentPage.value) {
+    currentPage.value = closestPage;
+  }
+};
+
+// --- START: FINAL DRAG HANDLERS with INERTIA ---
+// This block makes mouse-drag feel exactly like touch-drag.
+
+const handleDragStart = (e) => {
+  // This function is for MOUSE events only.
+  // It prevents firing if a touch action is already in progress.
+  if (e.type !== 'mousedown' || touchInProgress.value) return;
+
+  // Stop any previous inertia animation
+  if (inertiaFrameId.value) {
+    cancelAnimationFrame(inertiaFrameId.value);
+    inertiaFrameId.value = null;
+  }
+
+  isDragging.value = true;
+  lastClientY.value = e.clientY;
+  velocityY.value = 0;
+  lastDragTime.value = Date.now();
+  e.preventDefault(); // Prevent text selection
+};
+
+
+// --- START: MODIFIED handleDragMove function ---
+const handleDragMove = (e) => {
+  // First, check if we are in the new "pan" mode.
+  if (isPanning.value) {
+    const container = viewerContainer.value.querySelector('.overflow-y-auto');
+    if (!container) return;
+
+    const deltaY = e.clientY - panLastY.value;
+    container.scrollTop -= deltaY; // Scroll by the amount the mouse moved.
+    panLastY.value = e.clientY; // Update the last position for the next move.
+    return; // Stop here, don't do the regular drag logic.
+  }
+
+  // Below is the existing logic for left-click dragging, which remains unchanged.
+  if (!isDragging.value || e.type !== 'mousemove') return;
+  
+  const container = viewerContainer.value.querySelector('.overflow-y-auto');
+  if (!container) return;
+
+  const now = Date.now();
+  const deltaTime = now - lastDragTime.value;
+  const deltaY = e.clientY - lastClientY.value;
+
+  // Apply the movement to the scroll container
+  container.scrollTop -= deltaY;
+
+  // Calculate velocity (pixels per millisecond) for the inertia effect
+  if (deltaTime > 0) {
+    velocityY.value = deltaY / deltaTime;
+  }
+
+  lastClientY.value = e.clientY;
+  lastDragTime.value = now;
+};
+// --- END: MODIFIED handleDragMove function ---
+
+
+const handleDragEnd = () => {
+  if (!isDragging.value) return;
+  isDragging.value = false;
+  
+  // Start the inertia animation
+  inertiaStep();
+};
+
+const handleTabSwitch = (event) => {
+  // Switch on Tab (not Shift+Tab) or Space key
+  if (
+    (event.key === 'Tab' && !event.shiftKey) ||
+    event.code === 'Space' || event.key === ' ' || event.key === 'Spacebar'
+  ) {
+    event.preventDefault();
+    toggleViewMode();
+  }
+};
+
+const inertiaStep = () => {
+  if (Math.abs(velocityY.value) < 0.05) {
+    velocityY.value = 0;
+    return; // Stop animation when velocity is negligible
+  }
+
+  const container = viewerContainer.value.querySelector('.overflow-y-auto');
+  if (!container) return;
+
+  // Apply the current velocity to the scroll position
+  container.scrollTop -= velocityY.value * 8; // Multiply by ~16ms for frame rate
+  
+  // Apply friction to slow down the velocity
+  velocityY.value *= 0.86;               //  Intery & friction
+
+  // Request the next animation frame
+  inertiaFrameId.value = requestAnimationFrame(inertiaStep);
+};
+// --- END: FINAL DRAG HANDLERS with INERTIA ---
+
+// --- START: NEW Mouse Control Functions ---
+
+const handleWheel = (event) => {
+  // Get scroll speed multiplier - how many pages to jump (ONLY for book mode)
+  const scrollMultiplier = .5;
+  
+  if (viewMode.value === 'book') {
+    // BOOK MODE: Prevent default and use enhanced page navigation
+    event.preventDefault();
+
+    // If debounce timer is active, skip this event
+    if (wheelDebounceTimer.value) return;
+
+    // REVERSED: Positive deltaY now goes backward, negative goes forward
+    if (event.deltaY > 1) {
+      // Scroll down - move BACKWARD multiple pages (reversed)
+      for (let i = 0; i < scrollMultiplier; i++) {
+        if (canMoveForward.value) moveBack();
+      }
+    } else if (event.deltaY < -1) {
+      // Scroll up - move FORWARD multiple pages (reversed)
+      for (let i = 0; i < scrollMultiplier; i++) {
+        if (canMoveBack.value) moveForward();
+      }
+    }
+
+    // Use a shorter debounce timer for more responsive scrolling
+    wheelDebounceTimer.value = setTimeout(() => {
+      wheelDebounceTimer.value = null;
+    }, 1);
+  }
+  else if (viewMode.value === 'sweep') {
+    // SWEEP MODE: Add multiplier to slow down scrolling speed
+    const container = viewerContainer.value.querySelector('.overflow-y-auto');
+    if (!container) return;
+
+    event.preventDefault();
+    // Reduce scroll speed by multiplying deltaY by 0.4 (adjust as needed)
+    container.scrollBy({
+      top: event.deltaY * 0.4,         //  Middle Wheel Sweep
+      behavior: 'auto'
+    });
+
+    //Lower value = slower scroll (e.g. 0.1 is slower, 0.05 is very slow).
+    //Higher value = faster scroll (e.g. 0.5 is faster).
+    
+    // Let the scroll event bubble up for handleSweepScroll to detect current page
+  }
+};
+
+
+const handleMouseDown = (e) => {
+  // For LEFT CLICK: Handle drag with inertia
+  if (e.button === 0) {
+    if (isPanning.value) {
+      // Cancel panning mode on left click
+      isPanning.value = false;
+      return;
+    }
+    
+    // Only handle left-click drag if not in touch mode
+    if (touchInProgress.value) return;
+    
+    // Stop any previous inertia
+    if (inertiaFrameId.value) {
+      cancelAnimationFrame(inertiaFrameId.value);
+      inertiaFrameId.value = null;
+    }
+    
+    // Start dragging
+    isDragging.value = true;
+    lastClientY.value = e.clientY;
+    velocityY.value = 0;
+    lastDragTime.value = Date.now();
+    e.preventDefault();
+  }
+  
+  // For MIDDLE CLICK: Use standard middle mouse scrolling
+  // Let the browser handle it naturally, don't prevent default
+};
+
+const togglePanningMode = () => {
+  isPanning.value = !isPanning.value;
+  if (isPanning.value) {
+    // When entering panning mode, attach a document-level mousemove handler
+    document.addEventListener('mousemove', handlePanMove);
+    document.addEventListener('mouseup', () => {
+      // Clean up when mouse is released
+      isPanning.value = false;
+      document.removeEventListener('mousemove', handlePanMove);
+    }, { once: true });
+  }
+};
+
+const handleSweepMouseDown = (e) => {
+  // Middle Mouse Button (button code 1) toggles the panning mode.
+  if (e.button === 1) {
+    e.preventDefault();
+    isPanning.value = !isPanning.value;
+    // If we just entered panning mode, store the initial mouse position.
+    if (isPanning.value) {
+      panLastY.value = e.clientY;
+    }
+    return;
+  }
+
+  // Left Mouse Button (button code 0) handles normal dragging.
+  if (e.button === 0) {
+    // If we are in panning mode, a left click will disable it.
+    if (isPanning.value) {
+      isPanning.value = false;
+      return;
+    }
+    // Otherwise, start a normal drag, just like before.
+    handleDragStart(e);
+  }
+};
+
+// --- END: NEW Mouse Control Functions ---
+
+const handleSweepTouchStart = (e) => {
+  // Signal a touch event is in progress to block mouse events
+  touchInProgress.value = true;
+  
+  // Stop any leftover mouse inertia animation
+  if (inertiaFrameId.value) {
+    cancelAnimationFrame(inertiaFrameId.value);
+    inertiaFrameId.value = null;
+  }
+  
+  // IMPORTANT: Only track start position for swipe detection
+  // DON'T call handleTouchDragStart - this was fighting with native scrolling
+  touchStartX.value = e.touches[0].clientX;
+  touchStartY.value = e.touches[0].clientY;
+  touchStartTime.value = Date.now();
+  hasMoved.value = false;
+  
+  // NO preventDefault() - let the browser handle scrolling naturally
+};
+
+const handleSweepTouchMove = (e) => {
+  // IMPORTANT: DON'T call handleTouchDragMove - it was fighting native scrolling
+  
+  // Just track movement for horizontal swipe detection
+  const touchX = e.touches[0].clientX;
+  const touchY = e.touches[0].clientY;
+  const diffX = touchX - touchStartX.value;
+  const diffY = touchY - touchStartY.value;
+  
+  if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
+    hasMoved.value = true;
+  }
+  
+  // NO preventDefault() - let the browser handle scrolling naturally
+};
+
+const handleSweepTouchEnd = (e) => {
+  // Get touch end position and duration
+  const touchEndX = e.changedTouches[0].clientX;
+  const touchEndY = e.changedTouches[0].clientY;
+  const diffX = touchEndX - touchStartX.value;
+  const diffY = touchEndY - touchStartY.value;
+  const touchDuration = Date.now() - touchStartTime.value;
+
+  // Handle horizontal swipe for thumbnails (this is your existing logic)
+  if (hasMoved.value && touchDuration < 500) {
+    const isHorizontalSwipe = Math.abs(diffX) > Math.abs(diffY);
+
+    if (isHorizontalSwipe && Math.abs(diffX) > 30) {
+      if (diffX > 0) { // Swipe RIGHT - SHOW thumbnails
+        showThumbnails.value = true;
+      } else { // Swipe LEFT - HIDE thumbnails
+        showThumbnails.value = false;
+      }
+    }
+  }
+
+  touchInProgress.value = false;
+};
+
+
+// Update for touch compatibility
+const handleTouchDragStart = (e) => {
+  lastClientY.value = e.touches[0].clientY;
+  isDragging.value = true;
+  // Don't prevent default here - allow native scrolling momentum
+};
+
+const handleTouchDragMove = (e) => {
+  if (!isDragging.value) return;
+  
+  const clientY = e.touches[0].clientY;
+  const container = viewerContainer.value.querySelector('.overflow-y-auto');
+  if (!container) return;
+  
+  const deltaY = lastClientY.value - clientY;
+  container.scrollTop += deltaY;
+  lastClientY.value = clientY;
+  // Don't prevent default here - allow native scrolling momentum
+};
+
+
+const ensureViewerFocus = () => {
+  // Try to focus the main viewer container if it exists
+  if (viewerContainer.value && typeof viewerContainer.value.focus === 'function') {
+    viewerContainer.value.focus();
+  }
 };
 
 
@@ -659,46 +1083,70 @@ const selectLanguage = (lang) => {
 
 const isFromClick = ref(false);
 
-// CORRECTED: goToPage function
+
+
 const goToPage = (pageNumber, isClick = false) => {
   if (pageNumber >= 0 && pageNumber < totalPages.value) {
-    // Set the flag to indicate the source of the navigation.
     isFromClick.value = isClick;
     currentPage.value = pageNumber;
+
+    // If in sweep mode, scroll the view to the new page.
+    if (viewMode.value === 'sweep' && isClick) { // Only scroll if user clicked or used keyboard
+      nextTick(() => {
+        const pageElement = document.getElementById(`sweep-page-${pageNumber}`);
+        if (pageElement) {
+          pageElement.scrollIntoView({ 
+            behavior: 'auto', 
+            block: 'center' 
+          });
+        }
+      });
+    }
   }
+};
+
+const handleThumbnailWheel = (event) => {
+  // Only handle in book mode (horizontal scroll)
+  if (viewMode.value === 'book') {
+    const container = thumbnailContainer.value;
+    if (!container) return;
+    container.scrollLeft += event.deltaY;
+    event.preventDefault(); // Prevent parent from handling
+  }
+  // In sweep mode, let vertical scrolling happen natively
 };
 
 // REVISED: Restores edge-scrolling logic with selection
 const handleThumbnailClick = (pageNumber, event) => {
   const container = thumbnailContainer.value;
+  // Fallback if something goes wrong.
   if (!container || !event.currentTarget) {
-    goToPage(pageNumber, true); // Fallback
-    ensureViewerFocus(); // Add focus on fallback
+    goToPage(pageNumber, true); 
+    ensureViewerFocus();
     return;
   }
 
   const allThumbs = Array.from(container.children);
   const clickedElement = event.currentTarget;
 
-  // Find which thumbnails are currently visible inside the container
+  // STEP 1: Find which thumbnails are currently visible inside the container.
   const containerRect = container.getBoundingClientRect();
   const visibleThumbs = allThumbs.filter(thumb => {
     const thumbRect = thumb.getBoundingClientRect();
     return thumbRect.left < containerRect.right && thumbRect.right > containerRect.left;
   });
 
-  // If there are few enough thumbnails that all are effectively "edges", 
-  // then any click should navigate and center.
+  // STEP 2: If only a few thumbnails are visible, any click should scroll.
   if (visibleThumbs.length <= 4) {
     goToPage(pageNumber, true);
     nextTick(() => {
       scrollThumbnailIntoView();
-      ensureViewerFocus(); // Add focus here
+      ensureViewerFocus();
     });
     return;
   }
 
-  // Identify the two thumbnails at each edge
+  // STEP 3: Identify the thumbnails at the far left and far right edges.
   const edgeThumbs = [
     visibleThumbs[0],
     visibleThumbs[1],
@@ -706,20 +1154,21 @@ const handleThumbnailClick = (pageNumber, event) => {
     visibleThumbs[visibleThumbs.length - 1]
   ];
 
-  // Check if the clicked thumbnail is one of the edge thumbnails
+  // STEP 4: Check if the thumbnail you clicked is an "edge" thumbnail.
   if (edgeThumbs.includes(clickedElement)) {
-    // It's an edge thumbnail: NAVIGATE and SCROLL to center it.
+    // YES, it's an edge thumbnail.
+    // ACTION: Change the page AND scroll the thumbnail bar.
     goToPage(pageNumber, true);
     nextTick(() => {
       scrollThumbnailIntoView();
-      ensureViewerFocus(); // Add focus here
+      ensureViewerFocus();
     });
   } else {
-    // It's a "middle" thumbnail: NAVIGATE ONLY. Do not scroll.
+    // NO, it's a "middle" thumbnail.
+    // ACTION: Change the page ONLY. Do NOT scroll the thumbnail bar.
     goToPage(pageNumber, true);
-    // Use nextTick to ensure focus is set after any potential DOM updates.
     nextTick(() => {
-      ensureViewerFocus(); // Add focus here
+      ensureViewerFocus();
     });
   }
 };
@@ -742,32 +1191,52 @@ const scrollThumbnailIntoView = () => {
   
   if (targetElement) {
     if (viewMode.value === 'sweep') {
-      // VERTICAL SCROLLING for sweep mode
+      // VERTICAL SCROLLING for sweep mode (remains instant)
       const containerHeight = thumbnailContainer.value.offsetHeight;
       const thumbnailHeight = targetElement.offsetHeight;
       const thumbnailTop = targetElement.offsetTop;
-      
       const scrollPosition = thumbnailTop - (containerHeight / 2) + (thumbnailHeight / 2);
       
-      thumbnailContainer.value.scrollTo({
-        top: scrollPosition,
-        behavior: 'smooth'
-      });
+      thumbnailContainer.value.scrollTo({ top: scrollPosition, behavior: 'auto' });
+
     } else {
-      // HORIZONTAL SCROLLING for book mode (your existing code)
-      const containerWidth = thumbnailContainer.value.offsetWidth;
-      const thumbnailWidth = targetElement.offsetWidth;
-      const thumbnailLeft = targetElement.offsetLeft;
+      // HORIZONTAL SCROLLING for book mode (with new custom, faster animation)
+      const container = thumbnailContainer.value;
+      const scrollPosition = targetElement.offsetLeft - (container.offsetWidth / 2) + (targetElement.offsetWidth / 2);
       
-      const scrollPosition = thumbnailLeft - (containerWidth / 2) + (thumbnailWidth / 2);
+      // THIS IS THE FIX: A custom smooth scroll that we can control.
+      const start = container.scrollLeft;
+      const change = scrollPosition - start;
+      // CHANGED: Duration reduced from 250 to 150 for a much faster, more reactive animation.
+      const duration = 100; 
+      let startTime = null;
+
+      const animateScroll = (currentTime) => {
+        if (startTime === null) startTime = currentTime;
+        const timeElapsed = currentTime - startTime;
+        
+        // Easing function for a smooth start and end
+        const easeInOutQuad = (t, b, c, d) => {
+          t /= d / 2;
+          if (t < 1) return c / 2 * t * t + b;
+          t--;
+          return -c / 2 * (t * (t - 2) - 1) + b;
+        };
+        
+        container.scrollLeft = easeInOutQuad(timeElapsed, start, change, duration);
+        
+        if (timeElapsed < duration) {
+          requestAnimationFrame(animateScroll);
+        } else {
+          container.scrollLeft = scrollPosition; // Ensure it ends at the exact spot
+        }
+      };
       
-      thumbnailContainer.value.scrollTo({
-        left: scrollPosition,
-        behavior: 'smooth'
-      });
+      requestAnimationFrame(animateScroll);
     }
   }
 };
+
 
 // Get secondary page index based on reading direction and special page rules
 const getSecondaryPageIndex = () => {
@@ -917,45 +1386,46 @@ const handleRightArrow = (event) => {
 };
 
 // Up/down keys only work in sweep mode
-// CORRECTED: Up/Down arrow handlers
 const handleUpArrow = (event) => {
-  event.preventDefault();
-  
   if (viewMode.value === 'sweep') {
-    // In sweep mode: UP ONLY navigates to the previous page.
-    if (currentPage.value > 0) {
-      goToPage(currentPage.value - 1);
+    // Prevent default to handle our own scrolling
+    event.preventDefault();
+    const container = viewerContainer.value.querySelector('.overflow-y-auto');
+    if (container) {
+      // Scroll smoothly UP by a reasonable amount (adjust 100 as needed)
+      container.scrollBy({
+        top: -20,
+        behavior: 'auto'
+      });
     }
-  } else {
-    // In book mode: UP ONLY shows thumbnails.
-    showThumbnails.value = true;
-    nextTick(() => {
-      scrollThumbnailIntoView();
-    });
+    return;
   }
+  // Book mode logic unchanged
+  event.preventDefault();
+  showThumbnails.value = true;
+  nextTick(() => {
+    scrollThumbnailIntoView();
+  });
 };
 
 const handleDownArrow = (event) => {
-  event.preventDefault();
-  
   if (viewMode.value === 'sweep') {
-    // In sweep mode: DOWN ONLY navigates to the next page.
-    if (currentPage.value < totalPages.value - 1) {
-      goToPage(currentPage.value + 1);
+    // Prevent default to handle our own scrolling
+    event.preventDefault();
+    const container = viewerContainer.value.querySelector('.overflow-y-auto');
+    if (container) {
+      // Scroll smoothly DOWN by a reasonable amount (adjust 100 as needed)
+      container.scrollBy({
+        top: 20,
+        behavior: 'auto'
+      });
     }
-  } else {
-    // In book mode: DOWN ONLY hides thumbnails.
-    showThumbnails.value = false;
+    return;
   }
+  // Book mode logic unchanged
+  event.preventDefault();
+  showThumbnails.value = false;
 };
-
-// Make sure viewer container has focus when needed
-const ensureViewerFocus = () => {
-  if (viewerContainer.value) {
-    viewerContainer.value.focus();
-  }
-};
-
 
 
 // Touch handling for sweep and flipbook modes
@@ -966,7 +1436,7 @@ const handleTouchStart = (e) => {
   hasMoved.value = false;
 };
 
-const handleTouchMove = (e) => {
+/* const handleTouchMove = (e) => {
   // Track if user has moved finger
   const touchY = e.touches[0].clientY;
   const touchX = e.touches[0].clientX;
@@ -983,6 +1453,24 @@ const handleTouchMove = (e) => {
   } else if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
     e.preventDefault(); // Prevent horizontal browser navigation
   }
+}; */
+
+const handleTouchMove = (e) => {
+  // Track if user has moved finger
+  const touchY = e.touches[0].clientY;
+  const touchX = e.touches[0].clientX;
+  const diffY = touchY - touchStartY.value;
+  const diffX = touchX - touchStartX.value;
+  
+  if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
+    hasMoved.value = true;
+  }
+  
+  // IMPORTANT FIX: Only prevent default for horizontal swipes in book mode
+  // This allows natural touch scrolling in sweep mode
+  if (viewMode.value === 'book' && Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+    e.preventDefault(); // Prevent horizontal browser navigation only in book mode
+  }
 };
 
 const handleTouchEnd = (e) => {
@@ -991,13 +1479,27 @@ const handleTouchEnd = (e) => {
   const diffY = touchEndY - touchStartY.value;
   const diffX = touchEndX - touchStartX.value;
   const touchDuration = Date.now() - touchStartTime.value;
-  
-  // Handle tap (touch without movement)
-  if (!hasMoved.value && touchDuration < 300) {
-    showThumbnails.value = !showThumbnails.value;
-    return;
+
+  // SIMPLE TAP DETECTION - minimal movement, short duration
+  if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10 && touchDuration < 300) {
+    // Book Mode: Toggle thumbnails on any tap except nav arrows
+    if (viewMode.value === 'book') {
+      const element = document.elementFromPoint(touchEndX, touchEndY);
+      const isNavArrow = element?.closest('[data-nav-arrow]');
+      if (!isNavArrow) {
+        showThumbnails.value = !showThumbnails.value;
+      }
+      return;
+    }
+
+    // Sweep Mode: Only toggle on image touches
+    if (viewMode.value === 'sweep') {
+      showThumbnails.value = !showThumbnails.value;
+
+      return;
+    }
   }
-  
+
   // Check for dominant swipe direction
   const isVerticalSwipe = Math.abs(diffY) > Math.abs(diffX);
   const isHorizontalSwipe = Math.abs(diffX) > Math.abs(diffY);
@@ -1162,14 +1664,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Snap scrolling - no direct Tailwind equivalent */
-.snap-y {
-  scroll-snap-type: y mandatory;
-}
-
-.snap-start {
-  scroll-snap-align: start;
-}
 
 /* Remove focus outline - already using focus:outline-none in template */
 
@@ -1202,7 +1696,7 @@ img {
   -webkit-user-drag: none;
   -moz-user-select: none;
   -webkit-user-select: none;
-  pointer-events: none;
+  /* pointer-events: none;  <-- REMOVE or comment out this line */
 }
 
 /* Prevent blue highlight on double click */
@@ -1228,6 +1722,35 @@ img {
 
 .flex-col.overflow-y-auto > * {
   direction: ltr; /* Reset direction for content */
+}
+
+@supports (-webkit-touch-callout: none) {
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* FINAL CURSOR LOGIC: Default cursor is normal. "grabbing" only when dragging. */
+.smooth-scroll.is-dragging {
+  cursor: grabbing !important;
+}
+.smooth-scroll.is-dragging * { /* Apply to all children during drag */
+  cursor: grabbing !important;
+}
+
+/* Make the scrollbar completely invisible in sweep mode */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 0px; /* Hide scrollbar but keep functionality */
+}
+
+/* For Firefox */
+.overflow-y-auto {
+  scrollbar-width: none;
+}
+
+/* For IE and Edge */
+.overflow-y-auto {
+  -ms-overflow-style: none;
 }
 
 </style>
