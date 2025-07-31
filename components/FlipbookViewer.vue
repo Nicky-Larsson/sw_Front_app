@@ -134,7 +134,7 @@
     
     <!-- Main Content Area -->
     <div 
-      class="relative overflow-hidden p-2 focus:outline-none flex-grow"
+      class="relative overflow-hidden p-0 focus:outline-none flex-grow"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
@@ -143,8 +143,9 @@
       @keydown.up="handleUpArrow"
       @keydown.down="handleDownArrow"
       @keydown.tab="handleTabSwitch"
-      @keydown.space="handleTabSwitch"
-      @click="handleViewerClick"
+      @keydown.space="handeSpacebarThumbnail"
+      @click="handleViewerClick; ensureViewerFocus()"
+      @mouseenter="ensureViewerFocus"
       @wheel="handleWheel"
       tabindex="0"
       ref="viewerContainer"
@@ -194,44 +195,63 @@
 
       <!-- Book Mode -->
       <div v-else class="h-full flex items-center justify-center">
-        <!-- Book distance spread with proper page handling -->
-        <div class="h-full flex items-center justify-center gap-x-10" :class="{'flex-row-reverse': isRTL}">
-          <!-- Display pages using the new deterministic computed properties -->
-          
-          <!-- LEFT PAGE OF SPREAD -->
-          <div 
-            class="relative h-full"
-            :class="isDesktop && rightPageOfSpread ? 'w-1/2' : 'w-full'"
-          >
-            <img
-              v-if="leftPageOfSpread"
-              :src="leftPageOfSpread.image_url"
-              :alt="`Left Page`"
-              class="max-h-full w-full object-contain"
-            />
-            <img
-              v-if="leftPageOfSpread?.overlay_url"
-              :src="leftPageOfSpread.overlay_url"
-              class="absolute top-0 left-0 w-full h-full object-contain"
-            />
-          </div>
 
-          <!-- RIGHT PAGE OF SPREAD -->
-          <div 
-            v-if="isDesktop && rightPageOfSpread"
-            class="relative h-full w-1/2"
-          >
-            <img
-              :src="rightPageOfSpread.image_url"
-              :alt="`Right Page`"
-              class="max-h-full w-full object-contain"
-            />
-            <img
-              v-if="rightPageOfSpread.overlay_url"
-              :src="rightPageOfSpread.overlay_url"
-              class="absolute top-0 left-0 w-full h-full object-contain"
-            />
-          </div>
+
+
+        <!-- Book distance spread with proper page handling -->
+        <div
+          class="h-full flex items-center justify-center"
+          :class="[bookSpreadGapClass, { 'flex-row-reverse': isRTL }]"
+        >
+          <!-- Display pages using the new deterministic computed properties -->
+
+          <img
+            v-if="insideBookBgUrl && currentPage !== 0 && currentPage !== totalPages - 1"
+            :src="insideBookBgUrl"
+            class="absolute inset-0 w-full h-full object-contain pointer-events-none z-0"
+            :style="{
+              opacity: 1,
+              left: insideBookBgPosition.left + 'px',
+              top: insideBookBgPosition.top + 'px',
+              transform: `scale(${insideBookBgPosition.scale})`
+            }"
+            alt="Inside Book Background"
+          />
+
+          <!-- LEFT PAGE OF SPREAD -->
+        <div 
+          class="relative h-full"
+          :class="isDesktop && rightPageOfSpread ? 'w-1/2' : 'w-full'"
+        >
+          <img
+            v-if="leftPageOfSpread"
+            :src="leftPageOfSpread.image_url"
+            :alt="`Left Page`"
+            class="h-full w-full object-cover" 
+          />
+          <img
+            v-if="leftPageOfSpread?.overlay_url"
+            :src="leftPageOfSpread.overlay_url"
+            class="absolute top-0 left-0 w-full h-full object-cover"
+          />
+        </div>
+
+        <!-- RIGHT PAGE OF SPREAD -->
+        <div 
+          v-if="isDesktop && rightPageOfSpread"
+          class="relative h-full w-1/2"
+        >
+          <img
+            :src="rightPageOfSpread.image_url"
+            :alt="`Right Page`"
+            class="h-full w-full object-cover" 
+          />
+          <img
+            v-if="rightPageOfSpread.overlay_url"
+            :src="rightPageOfSpread.overlay_url"
+            class="absolute top-0 left-0 w-full h-full object-cover"
+          />
+        </div>
         </div>
         
         <!-- Navigation arrows -->
@@ -497,6 +517,45 @@ const filteredPages = computed(() => {
   });
 });
 
+
+const insideBookBgPosition = ref({
+  left: 0,   // px
+  top: 0,    // px
+  scale: 1   // 1 = 100%
+});
+
+const insideBookTemplate = computed(() => props.product?.template?.inside_book || {});
+
+const insideBookBgUrl = computed(() => {
+  if (viewMode.value !== 'book' || !insideBookTemplate.value.ranges) return null;
+  const percent = Math.round(((currentPage.value + 1) / totalPages.value) * 100);
+  const found = insideBookTemplate.value.ranges.find(r => percent >= r.min && percent <= r.max);
+  return found?.url || insideBookTemplate.value.default || null;
+});
+
+// Optionally, preload the previous image for smoother transitions
+const previousInsideBookBgUrl = computed(() => {
+  if (viewMode.value !== 'book' || !insideBookTemplate.value.ranges) return null;
+  if (currentPage.value === 0) return null;
+  const prevPercent = Math.round((currentPage.value / totalPages.value) * 100);
+  const found = insideBookTemplate.value.ranges.find(r => prevPercent >= r.min && prevPercent <= r.max);
+  return found?.url || insideBookTemplate.value.default || null;
+});
+
+
+const bookSpreadGapClass = computed(() => {
+  // If either left or right page is a volume cover, use small gap
+  if (
+    leftPageOfSpread.value?.type === 'volume_cover' ||
+    rightPageOfSpread.value?.type === 'volume_cover'
+  ) {
+    return 'gap-x-1';
+  }
+  // Default gap
+  return 'gap-x-17';
+});
+
+
 // Check if current page is a special page that should be displayed alone
 const isSpecialPage = (index) => {
   const page = filteredPages.value[index];
@@ -656,6 +715,15 @@ const handleTabSwitch = (event) => {
   }
 };
 
+const handeSpacebarThumbnail = (event) => {
+  if ( event.code === 'Space' || event.key === ' ' || event.key === 'Spacebar' )
+  {
+    event.preventDefault();
+    showThumbnails.value = !showThumbnails.value;
+  }
+}
+
+
 const inertiaStep = () => {
   if (Math.abs(velocityY.value) < 0.05) {
     velocityY.value = 0;
@@ -683,26 +751,23 @@ const handleWheel = (event) => {
   const scrollMultiplier = .5;
   
   if (viewMode.value === 'book') {
-    // BOOK MODE: Prevent default and use enhanced page navigation
     event.preventDefault();
 
-    // If debounce timer is active, skip this event
     if (wheelDebounceTimer.value) return;
 
-    // REVERSED: Positive deltaY now goes backward, negative goes forward
+    // INVERTED: Positive deltaY now goes FORWARD, negative goes BACKWARD
     if (event.deltaY > 1) {
-      // Scroll down - move BACKWARD multiple pages (reversed)
-      for (let i = 0; i < scrollMultiplier; i++) {
-        if (canMoveForward.value) moveBack();
-      }
-    } else if (event.deltaY < -1) {
-      // Scroll up - move FORWARD multiple pages (reversed)
+      // Scroll down - move FORWARD
       for (let i = 0; i < scrollMultiplier; i++) {
         if (canMoveBack.value) moveForward();
       }
+    } else if (event.deltaY < -1) {
+      // Scroll up - move BACKWARD
+      for (let i = 0; i < scrollMultiplier; i++) {
+        if (canMoveForward.value) moveBack();
+      }
     }
 
-    // Use a shorter debounce timer for more responsive scrolling
     wheelDebounceTimer.value = setTimeout(() => {
       wheelDebounceTimer.value = null;
     }, 1);
