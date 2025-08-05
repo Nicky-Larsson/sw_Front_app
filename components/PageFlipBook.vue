@@ -71,9 +71,10 @@ onMounted(async () => {
     clickEventForward: false,
     useSwipe: true,
     swipeDistance: 30,           // LOWER: more responsive touch (was 15)
-    touchEventForce: 40,         // LOWER: less force needed (was 100)
+    touchEventForce: 0,         // LOWER: less force needed (was 100)
     disableFlipByClick: false,   // Allow clicking to flip
-    direction: props.rtl ? 2 : 1 // 1 = LTR, 2 = RTL
+    direction: props.rtl ? 2 : 1,
+    pageMargin: 12
   });
 
 
@@ -241,17 +242,17 @@ watch(() => props.currentPage, (newPage) => {
   touch-action: manipulation; /* Better touch behavior */
 }
 
-/* :deep(.stf__block:first-child .stpage),
-:deep(.stf__block:last-child .stpage) {
-  background:  transparent !important;
-  box-shadow: none !important;
-  border: none !important;
+
+/* Control the gap between pages (spread) */
+:deep(.stf__item) {
+  margin-right: 120px !important; /* Adjust this value for more/less gap */
 }
 
-:deep(.stf__block:first-child .stpage img),
-:deep(.stf__block:last-child .stpage img) {
-  background: transparent !important;
+/* For RTL, you may want margin-left instead */
+:deep([dir="rtl"] .stf__item) {
+  margin-left: 12px !important;
+  margin-right: 0 !important;
 }
- */
+
 
 </style>

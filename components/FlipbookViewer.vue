@@ -47,7 +47,7 @@
     
     <!-- Thumbnail Navigation with DYNAMIC POSITION -->
     <div 
-      class="absolute z-10 backdrop-blur-sm p-1 shadow-lg transition-all duration-300"
+      class="absolute z-50 backdrop-blur-sm p-1 shadow-lg transition-all duration-300"
       :class="[
         viewMode === 'sweep' 
           // CHANGED: Increased width from w-[65px] to w-[90px] for a wider bar.
@@ -134,6 +134,7 @@
     
     <!-- Main Content Area -->
     <div 
+      ref="viewerContainer"
       class="relative overflow-hidden p-0 focus:outline-none flex-grow"
       @touchstart="handleTouchStart"
       @touchmove="handleTouchMove"
@@ -148,7 +149,6 @@
       @mouseenter="ensureViewerFocus"
       @wheel="handleWheel"
       tabindex="0"
-      ref="viewerContainer"
     >
       
         <!-- Sweep Mode V2 (Vertical Scrolling) -->
@@ -193,103 +193,119 @@
       </div>
 
 
-      <!-- Book Mode -->
-      <div v-else class="h-full flex items-center justify-center">
+    <!-- Book Mode -->
+    <div v-else class="h-full flex items-center justify-center">
+      <!-- **CRITICAL FIX**: This wrapper now holds the background image for BOTH modes -->
+      <div
+        class="h-full flex items-center justify-center"
+        :class="[bookSpreadGapClass, { 'flex-row-reverse': isRTL }]"
+      >
+        <!-- The background image is now outside the template switch, so it applies to both -->
+        <img
+          v-if="insideBookBgUrl && currentPage !== 0 && currentPage !== totalPages - 1"
+          :src="insideBookBgUrl"
+          class="absolute inset-0 w-full h-full object-contain pointer-events-none z-0"
+          :style="{
+            opacity: 1,
+            left: insideBookBgPosition.left + 'px',
+            top: insideBookBgPosition.top + 'px',
+            transform: `scale(${insideBookBgPosition.scale})`
+          }"
+          alt="Inside Book Background"
+        />
 
-
-
-        <!-- Book distance spread with proper page handling -->
-        <div
-          class="h-full flex items-center justify-center"
-          :class="[bookSpreadGapClass, { 'flex-row-reverse': isRTL }]"
-        >
-          <!-- Display pages using the new deterministic computed properties -->
-
-          <img
-            v-if="insideBookBgUrl && currentPage !== 0 && currentPage !== totalPages - 1"
-            :src="insideBookBgUrl"
-            class="absolute inset-0 w-full h-full object-contain pointer-events-none z-0"
-            :style="{
-              opacity: 1,
-              left: insideBookBgPosition.left + 'px',
-              top: insideBookBgPosition.top + 'px',
-              transform: `scale(${insideBookBgPosition.scale})`
-            }"
-            alt="Inside Book Background"
-          />
-
+        <!-- Normal Book View (Static) -->
+        <template v-if="bookViewStyle === 'normal'">
           <!-- LEFT PAGE OF SPREAD -->
-        <div 
-          class="relative h-full"
-          :class="isDesktop && rightPageOfSpread ? 'w-1/2' : 'w-full'"
-        >
-          <img
-            v-if="leftPageOfSpread"
-            :src="leftPageOfSpread.image_url"
-            :alt="`Left Page`"
-            class="h-full w-full object-cover" 
-          />
-          <img
-            v-if="leftPageOfSpread?.overlay_url"
-            :src="leftPageOfSpread.overlay_url"
-            class="absolute top-0 left-0 w-full h-full object-cover"
-          />
-        </div>
+          <div 
+            class="relative h-full"
+            :class="isDesktop && rightPageOfSpread ? 'w-1/2' : 'w-full'"
+          >
+            <img
+              v-if="leftPageOfSpread"
+              :src="leftPageOfSpread.image_url"
+              :alt="`Left Page`"
+              class="h-full w-full object-cover" 
+            />
+            <img
+              v-if="leftPageOfSpread?.overlay_url"
+              :src="leftPageOfSpread.overlay_url"
+              class="absolute top-0 left-0 w-full h-full object-cover"
+            />
+          </div>
 
-        <!-- RIGHT PAGE OF SPREAD -->
-        <div 
-          v-if="isDesktop && rightPageOfSpread"
-          class="relative h-full w-1/2"
-        >
-          <img
-            :src="rightPageOfSpread.image_url"
-            :alt="`Right Page`"
-            class="h-full w-full object-cover" 
-          />
-          <img
-            v-if="rightPageOfSpread.overlay_url"
-            :src="rightPageOfSpread.overlay_url"
-            class="absolute top-0 left-0 w-full h-full object-cover"
-          />
-        </div>
-        </div>
+          <!-- RIGHT PAGE OF SPREAD -->
+          <div 
+            v-if="isDesktop && rightPageOfSpread"
+            class="relative h-full w-1/2"
+          >
+            <img
+              :src="rightPageOfSpread.image_url"
+              :alt="`Right Page`"
+              class="h-full w-full object-cover" 
+            />
+            <img
+              v-if="rightPageOfSpread.overlay_url"
+              :src="rightPageOfSpread.overlay_url"
+              class="absolute top-0 left-0 w-full h-full object-cover"
+            />
+          </div>
+        </template>
         
-        <!-- Navigation arrows -->
-        <div 
-          @click.stop="moveBack" 
-          @dblclick.stop
-          @mousedown="startNavRepeat('back')"
-          @mouseup="stopNavRepeat"
-          @mouseleave="stopNavRepeat"
-          @touchstart.stop.prevent="startNavRepeat('back')" 
-          @touchend="stopNavRepeat"
-          @touchcancel="stopNavRepeat" 
-          class="absolute top-0 bottom-0 flex items-center justify-center w-32 hover:bg-black/20 cursor-pointer transition-colors" 
-          :class="isRTL ? 'right-0' : 'left-0'"
-          v-if="canMoveForward"
-        >
-          <div class="bg-black/70 text-white p-6 rounded-full hover:bg-black/90 shadow-lg">
-            <Icon :name="isRTL ? 'mdi:chevron-right' : 'mdi:chevron-left'" size="48" />
-          </div>
+        <!-- Animated Book View with StPageFlip -->
+        <div v-else class="w-full h-full relative" style="max-width: 900px; margin: 0 auto;">
+          
+          <!-- The flipbook will now be positioned precisely over the background -->
+        <PageFlipBook
+          :pages="filteredPages"
+          :currentPage="currentPage"
+          :rtl="isRTL"
+          v-model:currentPage="currentPage"
+          class="relative z-10 w-full h-full"
+          :style="{
+            transform: `scale(${insideBookBgPosition.scale})`,
+            visibility: 'visible !important'
+          }"
+        />
         </div>
+      </div>
+      
+      <!-- Navigation arrows - keep these outside the templates -->
+      <div 
+        @click.stop="moveBack" 
+        @dblclick.stop
+        @mousedown="startNavRepeat('back')"
+        @mouseup="stopNavRepeat"
+        @mouseleave="stopNavRepeat"
+        @touchstart.stop.prevent="startNavRepeat('back')" 
+        @touchend="stopNavRepeat"
+        @touchcancel="stopNavRepeat" 
+        class="absolute top-0 bottom-0 flex items-center justify-center w-32 hover:bg-black/20 cursor-pointer transition-colors" 
+        :class="isRTL ? 'right-0' : 'left-0'"
+        v-if="canMoveForward"
+      >
+        <div class="bg-black/70 text-white p-6 rounded-full hover:bg-black/90 shadow-lg">
+          <Icon :name="isRTL ? 'mdi:chevron-right' : 'mdi:chevron-left'" size="48" />
+        </div>
+      </div>
 
-        <div 
-          @click.stop="moveForward" 
-          @dblclick.stop
-          @mousedown="startNavRepeat('forward')"
-          @mouseup="stopNavRepeat"
-          @mouseleave="stopNavRepeat"
-          @touchstart.stop.prevent="startNavRepeat('forward')" 
-          @touchend="stopNavRepeat"
-          @touchcancel="stopNavRepeat" 
-          class="absolute top-0 bottom-0 flex items-center justify-center w-32 hover:bg-black/20 cursor-pointer transition-colors" 
-          :class="isRTL ? 'left-0' : 'right-0'"
-          v-if="canMoveBack"
-        >
-          <div class="bg-black/70 text-white p-6 rounded-full hover:bg-black/90 shadow-lg">
-            <Icon :name="isRTL ? 'mdi:chevron-left' : 'mdi:chevron-right'" size="48" />
-          </div>
+      <div 
+        @click.stop="moveForward" 
+        @dblclick.stop
+        @mousedown="startNavRepeat('forward')"
+        @mouseup="stopNavRepeat"
+        @mouseleave="stopNavRepeat"
+        @touchstart.stop.prevent="startNavRepeat('forward')" 
+        @touchend="stopNavRepeat"
+        @touchcancel="stopNavRepeat" 
+        class="absolute top-0 bottom-0 flex items-center justify-center w-32 hover:bg-black/20 cursor-pointer transition-colors" 
+        :class="isRTL ? 'left-0' : 'right-0'"
+        v-if="canMoveBack"
+      >
+        <div class="bg-black/70 text-white p-6 rounded-full hover:bg-black/90 shadow-lg">
+          <Icon :name="isRTL ? 'mdi:chevron-left' : 'mdi:chevron-right'" size="48" />
         </div>
+      </div>
 
       <div 
         v-if="isPanning"
@@ -297,8 +313,10 @@
         title="Panning Mode Active"
       >
         <Icon name="mdi:arrow-all" size="48" />
-      </div>        
       </div>
+    </div>
+
+
     </div>
     
     <!-- CORRECTED AND RE-ORGANIZED Bottom Navigation Bar -->
@@ -320,6 +338,17 @@
           {{ viewMode === 'sweep' ? 'Book Mode' : 'Sweep Mode' }}
         </button>
         
+        <!-- Animation toggle button - only show in Book Mode -->
+        <button 
+          v-if="viewMode === 'book'" 
+          @click="toggleBookViewStyle" 
+          class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 flex items-center"
+          title="Toggle between normal and animated book view"
+        >
+          <Icon :name="bookViewStyle === 'normal' ? 'mdi:animation' : 'mdi:animation-play-outline'" class="mr-1" />
+          {{ bookViewStyle === 'normal' ? 'Enable Animation' : 'Disable Animation' }}
+        </button>
+
         <!-- Custom Language Dropdown -->
         <div class="relative">
           <button @click.stop="showLanguageMenu = !showLanguageMenu" class="bg-gray-700 rounded px-3 py-1 text-sm flex items-center hover:bg-gray-600 w-36 justify-between" title="Change language">
@@ -361,7 +390,7 @@
           @touchstart.prevent="startNavRepeat('forward')"
           @touchend="stopNavRepeat"
           class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 flex items-center" 
-          :disabled="!canMoveBack"
+          :disabled="!canMoveBack || bookViewStyle === 'animated'"
           title="Go to previous page"
         >
           <Icon name="mdi:chevron-left" size="18" /> Next 
@@ -376,7 +405,7 @@
           @touchstart.prevent="startNavRepeat('back')"
           @touchend="stopNavRepeat"
           class="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 flex items-center"
-          :disabled="!canMoveForward"
+          :disabled="!canMoveForward || bookViewStyle === 'animated'" 
           title="Go to next page"
         >
          Previous <Icon name="mdi:chevron-right" size="18" />
@@ -423,7 +452,10 @@ import { useRouter, useRoute } from 'vue-router';
 
 import { useMenuActions } from '@/composables/useMenuState';
 
+import { PageFlip } from 'page-flip'
+import PageFlipBook from './PageFlipBook.vue'
 
+const bookViewStyle = ref('normal');
 
 const emit = defineEmits(['toggle-left-menu', 'toggle-right-menu']);
 
@@ -475,6 +507,8 @@ const flipbookContainer = ref(null);
 const thumbnailContainer = ref(null);
 const showDebugPanel = ref(false);
 const showLanguageMenu = ref(false);
+
+
 
 // --- START: New state for press-and-hold navigation ---
 const navInterval = ref(null);
@@ -556,6 +590,22 @@ const bookSpreadGapClass = computed(() => {
 });
 
 
+
+
+let swipeTouchStartX = 0;
+const preventBrowserNav = (e) => {
+  if (e.touches && e.touches.length === 1) {
+    const diffX = Math.abs(e.touches[0].clientX - swipeTouchStartX);
+    if (diffX > 10) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+};
+
+
+
+
 // Check if current page is a special page that should be displayed alone
 const isSpecialPage = (index) => {
   const page = filteredPages.value[index];
@@ -574,6 +624,9 @@ const isSpecialPage = (index) => {
 
 // NEW: Single click/tap handler for the main viewer area
 const handleViewerClick = (event) => {
+
+  if (bookViewStyle.value === 'animated') return;
+
   // This check prevents a "ghost click" from firing after a touch event.
   if (Date.now() - touchStartTime.value < 500) {
     return;
@@ -919,6 +972,14 @@ const handleSweepTouchEnd = (e) => {
   }
 
   touchInProgress.value = false;
+};
+
+
+const toggleBookViewStyle = () => {
+  bookViewStyle.value = bookViewStyle.value === 'normal' ? 'animated' : 'normal';
+  nextTick(() => {
+    ensureViewerFocus();
+  });
 };
 
 
@@ -1545,6 +1606,8 @@ const handleTouchEnd = (e) => {
   const diffX = touchEndX - touchStartX.value;
   const touchDuration = Date.now() - touchStartTime.value;
 
+  if (bookViewStyle.value === 'animated') return;
+
   // SIMPLE TAP DETECTION - minimal movement, short duration
   if (Math.abs(diffX) < 10 && Math.abs(diffY) < 10 && touchDuration < 300) {
     // Book Mode: Toggle thumbnails on any tap except nav arrows
@@ -1711,6 +1774,16 @@ onMounted(() => {
   });
 
   // CORRECTED: Watcher for currentPage
+
+  if (viewerContainer.value) {
+    viewerContainer.value.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length === 1) {
+        swipeTouchStartX = e.touches[0].clientX;
+      }
+    }, { passive: false });
+    viewerContainer.value.addEventListener('touchmove', preventBrowserNav, { passive: false });
+  }
+
 });
 
 onUnmounted(() => {
@@ -1723,6 +1796,11 @@ onUnmounted(() => {
   if (isFullscreen.value) {
     document.exitFullscreen?.() || document.webkitExitFullscreen?.() || document.msExitFullscreen?.();
   }
+
+  if (viewerContainer.value) {
+    viewerContainer.value.removeEventListener('touchmove', preventBrowserNav);
+  }
+
 }); // <-- THIS is the correct closing for onUnmounted
 
 
