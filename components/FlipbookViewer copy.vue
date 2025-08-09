@@ -170,9 +170,8 @@
           :key="index"
           class="h-full flex flex-col items-center justify-center mb-1"
           :id="`sweep-page-${index}`"
-          @click="toggleThumbnails"
         >
-          <div class="relative h-full w-full flex items-center justify-center"  >
+          <div class="relative h-full w-full flex items-center justify-center">
             <!-- Base image -->
             <img
               v-if="page.image_url"
@@ -180,7 +179,6 @@
               :alt="`Page ${index + 1}`"
               class="max-h-full max-w-full object-contain"
               :style="{ pointerEvents: 'auto' }" 
-              
             />
             
             <!-- Text overlay -->
@@ -196,7 +194,7 @@
 
 
     <!-- Book Mode -->
-    <div v-else class="h-full flex items-center justify-center"  @click="toggleThumbnails">
+    <div v-else class="h-full flex items-center justify-center">
       <!-- **CRITICAL FIX**: This wrapper now holds the background image for BOTH modes -->
       <div
         class="h-full flex items-center justify-center"
@@ -217,7 +215,7 @@
         />
 
         <!-- Normal Book View (Static) -->
-        <template v-if="bookViewStyle === 'normal'" >
+        <template v-if="bookViewStyle === 'normal'">
           <!-- LEFT PAGE OF SPREAD -->
           <div 
             class="relative h-full"
@@ -253,37 +251,23 @@
             />
           </div>
         </template>
-
-        <div v-else class="w-full h-full relative" >
-            <CssFlipBook
-              :pages="filteredPages"
-              :currentPage="currentPage"
-              @flippingChange="handleFlippingChange"
-              class="relative z-10 w-full h-full"
-              :style="{
-                transform: `scale(${insideBookBgPosition.scale})`,
-                visibility: 'visible !important'
-              }"
-            />       
-        </div>
-
+        
         <!-- Animated Book View with StPageFlip -->
-        <!-- The flipbook will now be positioned precisely over the background -->
-        <!-- <div v-else class="w-full h-full relative" style="max-width: 900px; margin: 0 auto;">
-          <PageFlipBook
-            :pages="filteredPages"
-            :currentPage="currentPage"
-            :rtl="isRTL"
-            v-model:currentPage="currentPage"
-            class="relative z-10 w-full h-full"
-            :style="{
-              transform: `scale(${insideBookBgPosition.scale})`,
-              visibility: 'visible !important'
-            }"
-          />       
-        </div> -->
-
-
+        <div v-else class="w-full h-full relative" style="max-width: 900px; margin: 0 auto;">
+          
+          <!-- The flipbook will now be positioned precisely over the background -->
+        <PageFlipBook
+          :pages="filteredPages"
+          :currentPage="currentPage"
+          :rtl="isRTL"
+          v-model:currentPage="currentPage"
+          class="relative z-10 w-full h-full"
+          :style="{
+            transform: `scale(${insideBookBgPosition.scale})`,
+            visibility: 'visible !important'
+          }"
+        />
+        </div>
       </div>
       
       <!-- Navigation arrows - keep these outside the templates -->
@@ -468,11 +452,8 @@ import { useRouter, useRoute } from 'vue-router';
 
 import { useMenuActions } from '@/composables/useMenuState';
 
-// import { PageFlip } from 'page-flip'
-// import PageFlipBook from './PageFlipBook.vue'
-import CssFlipBook from './CssFlipBook.vue'
-
-
+import { PageFlip } from 'page-flip'
+import PageFlipBook from './PageFlipBook.vue'
 
 const bookViewStyle = ref('normal');
 
@@ -605,7 +586,7 @@ const bookSpreadGapClass = computed(() => {
     return 'gap-x-1';
   }
   // Default gap
-  return 'gap-x-14';
+  return 'gap-x-17';
 });
 
 
@@ -1179,12 +1160,6 @@ const lastClickTime = ref(0);
 // FINAL CORRECTED VERSION: moveBack and moveForward
 const moveBack = () => {
   // In SWEEP MODE, "Previous" should act like the UP ARROW key (navigate up).
-  
-
-  // stop command whil turning pages
-  // if (isBookFlipping.value && bookViewStyle.value === 'animated') return;
-
-
   if (viewMode.value === 'sweep') {
     if (currentPage.value > 0) {
       goToPage(currentPage.value - 1);
@@ -1202,10 +1177,6 @@ const moveBack = () => {
 };
 
 const moveForward = () => {
-  
-  // stop command whil turning pages  
-  // if (isBookFlipping.value && bookViewStyle.value === 'animated') return;
-
   // In SWEEP MODE, "Next" should act like the DOWN ARROW key (navigate down).
   if (viewMode.value === 'sweep') {
     if (currentPage.value < totalPages.value - 1) {
@@ -1775,22 +1746,6 @@ const emitToggleRightMenu = () => {
 const goBack = () => {
   router.go(-1); // Go back to previous page in browser history
 };
-
-
-
-
-
-const isBookFlipping = ref(false);
-
-const handleFlippingChange = (flipping) => {
-  isBookFlipping.value = flipping;
-};
-
-
-
-
-
-
 // Lifecycle hooks
 onMounted(() => {
   window.addEventListener('resize', handleResize);

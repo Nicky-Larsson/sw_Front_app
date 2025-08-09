@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted, watch, nextTick, onUnmounted } from 'vue'
 import { PageFlip } from 'page-flip'
+import { createCustomFlipbook } from '@/scripts/customPageFlip';
+
 
 const props = defineProps({
   pages: Array,
@@ -58,7 +60,7 @@ onMounted(async () => {
     size: 'stretch',
     showCover: true,
     drawShadow: true,
-    maxShadowOpacity: 0.3,
+    maxShadowOpacity: 0.6,
     flippingTime: 700,
     usePortrait: false,
     startPage: props.currentPage,
